@@ -1,0 +1,29 @@
+import cors from "cors";
+import express from "express";
+import cookieParser from "cookie-parser";
+
+import { reqLogger } from "./middlewares/reqLogger.js";
+import { errorHandler, notFoundHandler } from "./middlewares/errorHandler.js";
+
+import { userRouter } from "./routes/user.js";
+import { rateLimiter } from "./middlewares/rateLimiter.js";
+import { credentials } from "./middlewares/credentials.js";
+import { corsOptions } from "./configs/corsOptions.js";
+
+export const app = express();
+
+// Middleware
+app.use(reqLogger); // Log incoming requests (1st)
+app.use(rateLimiter); // Rate limiting (before body parsing)
+app.use(credentials); // Set Access-Control-Allow-Credentials header
+app.use(cors(corsOptions)); // Must follow `credentials`
+app.use(express.json({ limit: "5mb" })); // Parse JSON body
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser()); // Parse cookies
+
+// Routes
+app.use("/api/user", userRouter);
+
+// Error handler
+app.use(notFoundHandler);
+app.use(errorHandler);
