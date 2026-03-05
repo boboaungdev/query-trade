@@ -67,7 +67,11 @@ export const signupVerify = async (req, res, next) => {
       "utf8",
     );
 
-    await sendEmail(user.email, `[${APP_NAME}] Signup Success`, htmlFile);
+    await sendEmail({
+      to: user.email,
+      subject: `[${APP_NAME}] Signup Success`,
+      html: htmlFile,
+    });
 
     resCookie(req, res, "refreshToken", refreshToken);
     return resJson(res, 201, "Signup successful.", { user, accessToken });

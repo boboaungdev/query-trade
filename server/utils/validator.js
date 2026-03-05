@@ -4,10 +4,11 @@ import { Token } from "./token.js";
 
 export const validateBody = (schema) => {
   return (req, res, next) => {
-    const { error } = schema.validate(req.body);
+    const { error, value } = schema.validate(req.body);
     if (error) {
       return next(resError(400, error.details[0].message));
     }
+    req.body = value;
     next();
   };
 };
@@ -46,7 +47,7 @@ export const validateCookie = () => {
   };
 };
 
-export const validateParam = (schema, param) => {
+export const validateParam = ({ schema, param }) => {
   return (req, res, next) => {
     const obj = {};
     obj[`${param}`] = req.params[`${param}`];
@@ -71,7 +72,7 @@ export const validateQuery = (schema) => {
   };
 };
 
-export const validateMessage = (schema, data) => {
+export const validateMessage = ({ schema, data }) => {
   const { error, value } = schema.validate(data);
   if (error) {
     return { valid: false, error: error.details[0].message };

@@ -6,7 +6,7 @@ import {
   // validateQuery,
   validateToken,
 } from "../utils/validator.js";
-import { UserSchema } from "../utils/schema.js";
+import { UserSchema } from "../utils/schemas/user.js";
 import { signup } from "../controllers/user/signup.js";
 import { signin, signinGoogle } from "../controllers/user/signin.js";
 import { signout } from "../controllers/user/signout.js";

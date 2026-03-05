@@ -135,11 +135,11 @@ export const signinGoogle = async (req, res, next) => {
       "utf8",
     );
 
-    await sendEmail(
-      user.email,
-      `[${APP_NAME}] Signin Success with Google Account`,
-      htmlFile,
-    );
+    await sendEmail({
+      to: user.email,
+      subject: `[${APP_NAME}] Signin Success with Google Account`,
+      html: htmlFile,
+    });
 
     // 7. Send response with tokens
     resCookie(req, res, "refreshToken", refreshToken);

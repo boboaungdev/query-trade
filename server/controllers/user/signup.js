@@ -56,7 +56,11 @@ export const signup = async (req, res, next) => {
     // );
 
     // Send Email
-    await sendEmail(email, `[${APP_NAME}] Verify Your Email`, htmlFile);
+    await sendEmail({
+      to: email,
+      subject: `[${APP_NAME}] Verify Your Email`,
+      html: htmlFile,
+    });
 
     return resJson(
       res,

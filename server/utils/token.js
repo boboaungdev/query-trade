@@ -8,7 +8,7 @@ export const Token = {
     jwt.verify(payload, process.env.REFRESH_TOKEN_SECRET),
 
   makeAccessToken: (payload) =>
-    jwt.sign(payload, process.env.ACCESS_TOKEN_SECRET, { expiresIn: "1d" }),
+    jwt.sign(payload, process.env.ACCESS_TOKEN_SECRET, { expiresIn: "7d" }),
 
   verifyAccessToken: (payload) =>
     jwt.verify(payload, process.env.ACCESS_TOKEN_SECRET),

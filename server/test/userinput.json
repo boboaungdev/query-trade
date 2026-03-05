@@ -1,0 +1,97 @@
+{
+  "exchange": "binance",
+  "symbol": "BTC/USDT",
+  "timeframe": "1h",
+  "startTime": "2024-01-01T00:00:00Z",
+  "endTime": "2024-02-01T00:00:00Z",
+  "initialBalance": 10000,
+  "amountPerTrade": 1000,
+  "marketType": "futures",
+  "entryOrderType": "limit",
+  "exitOrderType": "market",
+  "strategy": {
+    "indicators": [
+      {
+        "name": "ema",
+        "period": 10,
+        "source": "close"
+      },
+      {
+        "name": "ema",
+        "period": 20,
+        "source": "close"
+      },
+      {
+        "name": "rsi",
+        "period": 14,
+        "source": "close"
+      },
+      {
+        "name": "macd",
+        "fastPeriod": 12,
+        "slowPeriod": 26,
+        "signalPeriod": 9,
+        "source": "close"
+      },
+      {
+        "name": "bb",
+        "period": 20,
+        "stdDev": 2
+      }
+    ],
+    "entry": {
+      "buy": {
+        "logic": "and",
+        "conditions": [
+          {
+            "left": "ema_10",
+            "operator": ">",
+            "right": "ema_20"
+          },
+          {
+            "left": "rsi_14",
+            "operator": ">",
+            "right": 55
+          }
+        ]
+      },
+      "sell": {
+        "logic": "and",
+        "conditions": [
+          {
+            "left": "ema_10",
+            "operator": "<",
+            "right": "ema_20"
+          },
+          {
+            "left": "rsi_14",
+            "operator": "<",
+            "right": 45
+          }
+        ]
+      }
+    },
+    "exit": {
+      "buy": {
+        "logic": "or",
+        "conditions": [
+          {
+            "left": "ema_10",
+            "operator": "<",
+            "right": "ema_20"
+          }
+        ]
+      },
+      "sell": {
+        "logic": "or",
+        "conditions": [
+          {
+            "left": "ema_10",
+            "operator": ">",
+            "right": "ema_20"
+          }
+        ]
+      }
+    }
+  }
+}

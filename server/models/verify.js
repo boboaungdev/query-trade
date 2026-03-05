@@ -12,6 +12,7 @@ const verifySchema = new Schema(
   },
   {
     timestamps: true,
+    versionKey: false,
   },
 );
 
