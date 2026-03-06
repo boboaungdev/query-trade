@@ -1,12 +1,14 @@
 {
-  "name": "server",
+  "name": "query-trade-server",
   "version": "1.0.0",
   "description": "",
   "license": "ISC",
-  "author": "Bo Bo Aung",
+  "author": "Bo Bo",
   "type": "module",
   "main": "server.js",
   "scripts": {
+    "start": "node server.js",
+    "build": "npm install",
     "dev": "node --watch server.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
