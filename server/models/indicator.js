@@ -11,7 +11,7 @@ const indicatorSchema = new Schema(
       trim: true,
     },
 
-    displayName: {
+    fullName: {
       type: String,
       required: true,
       trim: true,

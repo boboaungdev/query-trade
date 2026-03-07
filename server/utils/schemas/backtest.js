@@ -82,7 +82,7 @@ const indicatorSchema = Joi.object(baseIndicator)
 ------------------------------*/
 
 export const BacktestSchema = {
-  runBacktest: Joi.object({
+  run: Joi.object({
     symbol: Joi.string().required(),
     exchange: Joi.string().default("binance"),
     timeframe: Joi.string().default("15m"),

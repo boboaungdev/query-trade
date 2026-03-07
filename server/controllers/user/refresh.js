@@ -1,20 +1,16 @@
 import { UserDB } from "../../models/user.js";
 import { Token } from "../../utils/token.js";
-import { resCookie, resError, resJson } from "../../utils/response.js";
+import { resCookie, resJson } from "../../utils/response.js";
 
 export const refresh = async (req, res, next) => {
   try {
-    const userId = req.decodedId;
-    const user = await UserDB.exists({ _id: userId });
-    if (!user) {
-      throw resError(401, "Authenticated user not found!");
-    }
+    const user = req.user;
 
     const accessToken = Token.makeAccessToken({
-      id: userId,
+      id: user._id,
     });
     const refreshToken = Token.makeRefreshToken({
-      id: userId,
+      id: user._id,
     });
 
     const updatedUser = await UserDB.findByIdAndUpdate(

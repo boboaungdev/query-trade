@@ -1,0 +1,75 @@
+import Joi from "joi";
+
+export const IndicatorSchema = {
+  create: Joi.object({
+    name: Joi.string().trim().lowercase().min(2).max(20).required(),
+
+    fullName: Joi.string().trim().min(2).max(50).required(),
+
+    category: Joi.string()
+      .valid("trend", "momentum", "volatility", "volume", "support_resistance")
+      .required(),
+
+    source: Joi.string()
+      .valid("open", "high", "low", "close", "volume")
+      .default("close"),
+
+    params: Joi.object()
+      .pattern(
+        Joi.string(),
+        Joi.alternatives().try(Joi.number(), Joi.string(), Joi.boolean()),
+      )
+      .default({}),
+  }),
+
+  update: Joi.object({
+    name: Joi.string().trim().lowercase().min(2).max(20),
+
+    fullName: Joi.string().trim().min(2).max(50),
+
+    category: Joi.string().valid(
+      "trend",
+      "momentum",
+      "volatility",
+      "volume",
+      "support_resistance",
+    ),
+
+    source: Joi.string().valid("open", "high", "low", "close", "volume"),
+
+    params: Joi.object().pattern(
+      Joi.string(),
+      Joi.alternatives().try(Joi.number(), Joi.string(), Joi.boolean()),
+    ),
+  }).min(1),
+
+  params: {
+    indicatorId: Joi.object({
+      indicatorId: Joi.string().hex().length(24).required(),
+    }),
+  },
+
+  query: {
+    getIndicators: Joi.object({
+      page: Joi.number().integer().min(1).default(1),
+
+      limit: Joi.number().integer().min(1).max(60).default(12),
+
+      search: Joi.string().trim().allow(""),
+
+      category: Joi.string().valid(
+        "trend",
+        "momentum",
+        "volatility",
+        "volume",
+        "support_resistance",
+      ),
+
+      sortBy: Joi.string()
+        .valid("name", "fullName", "category", "createdAt")
+        .default("name"),
+
+      order: Joi.string().valid("asc", "desc").default("asc"),
+    }),
+  },
+};

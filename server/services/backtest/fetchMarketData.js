@@ -30,7 +30,6 @@ export const fetchMarketData = async ({
   }
 
   const market = exchangeInstance.market(symbol);
-  console.log(market.maker);
 
   // Get fees directly from CCXT market
   const entryFeeRate =

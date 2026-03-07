@@ -8,7 +8,7 @@ const verifySchema = new Schema(
     email: { type: String, require: true },
     password: { type: String },
     code: { type: String, require: true },
-    expireAt: { type: Date, require: true },
+    expiresIn: { type: Date, require: true },
   },
   {
     timestamps: true,

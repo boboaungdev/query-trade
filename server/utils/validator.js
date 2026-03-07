@@ -1,5 +1,5 @@
 import { UserDB } from "../models/user.js";
-import { resError } from "./response.js";
+import { clearCookie, resError } from "./response.js";
 import { Token } from "./token.js";
 
 export const validateBody = (schema) => {
@@ -22,11 +22,17 @@ export const validateToken = () => {
 
     const token = authHeader.split(" ")[1];
     const decoded = Token.verifyAccessToken(token);
-    req.userId = decoded.id;
+
+    if (!decoded) {
+      return next(resError(401, "Invalid or expired token!"));
+    }
+
     const user = await UserDB.findById(decoded.id).select("-password");
+
     if (!user) {
       return next(resError(401, "Authenticated user not found!"));
     }
+
     req.user = user;
     next();
   };
@@ -34,28 +40,50 @@ export const validateToken = () => {
 
 export const validateCookie = () => {
   return async (req, res, next) => {
+    const user = req.user;
+
     const refreshToken = req.cookies.refreshToken;
-    // if (!refreshToken) return next(resError(401, "Need refresh token cookie!"));
     if (!refreshToken) {
-      return next();
+      return next(resError(400, "Cookie not found, please signin again!"));
     }
+
     const decoded = Token.verifyRefreshToken(refreshToken);
-    if (decoded) {
-      req.decodedId = decoded.id;
+    if (!decoded || !decoded.id) {
+      clearCookie(req, res, "refreshToken");
+      return next(
+        resError(401, "Invalid or expired cookie, please signin again!"),
+      );
     }
+
+    const decodedUser = await UserDB.exists({ _id: decoded.id });
+
+    if (!decodedUser) {
+      clearCookie(req, res, "refreshToken");
+      return next(
+        resError(404, "Authenticated user not found, please signin again!"),
+      );
+    }
+
+    if (user._id.toString() !== decodedUser._id.toString()) {
+      clearCookie(req, res, "refreshToken");
+      return next(
+        resError(
+          403,
+          "Permission denied! Cookie does not match the authenticated user!",
+        ),
+      );
+    }
+
     next();
   };
 };
 
-export const validateParam = ({ schema, param }) => {
+export const validateParam = (schema) => {
   return (req, res, next) => {
-    const obj = {};
-    obj[`${param}`] = req.params[`${param}`];
-    const result = schema.validate(obj);
-    if (result.error) {
-      const error = new Error(result.error.message);
-      error.status = 400;
-      return next(error);
+    const { error } = schema.validate(req.params);
+
+    if (error) {
+      return next(resError(400, error.details[0].message));
     }
     next();
   };
@@ -63,11 +91,31 @@ export const validateParam = ({ schema, param }) => {
 
 export const validateQuery = (schema) => {
   return (req, res, next) => {
-    // eslint-disable-next-line no-unused-vars
     const { error, value } = schema.validate(req.query);
-    if (error) return next(resError(400, error.details[0].message));
 
-    // req.query = value;
+    if (error) {
+      return next(resError(400, error.details[0].message));
+    }
+
+    req.validatedQuery = value;
+    next();
+  };
+};
+
+export const validateRole = (...roles) => {
+  return (req, res, next) => {
+    const user = req.user;
+
+    if (!user) {
+      return next(resError(401, "Authenticated user not found!"));
+    }
+
+    if (!roles.includes(user.role)) {
+      return next(
+        resError(403, `Permission denied! Required role: ${roles.join(", ")}`),
+      );
+    }
+
     next();
   };
 };

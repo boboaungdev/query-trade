@@ -88,9 +88,7 @@ export const UserSchema = {
 
   params: {
     userId: Joi.object({
-      userId: Joi.string()
-        .regex(/^[0-9a-fA-F]{24}$/)
-        .required(),
+      userId: Joi.string().hex().length(24).required(),
     }),
   },
 };

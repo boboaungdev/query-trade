@@ -8,7 +8,7 @@ const router = express.Router();
 router.post(
   "/run",
   validateToken(),
-  validateBody(BacktestSchema.runBacktest),
+  validateBody(BacktestSchema.run),
   runBacktest,
 );
 
