@@ -105,9 +105,15 @@ export const backtestEngine = async ({
     }
   }
 
-  return calculateMetrics({
+  const metrics = calculateMetrics({
     initialBalance,
     balance,
     trades,
   });
+
+  return {
+    startTime: candles[0]?.timestamp,
+    endTime: candles.at(-1)?.timestamp,
+    ...metrics,
+  };
 };

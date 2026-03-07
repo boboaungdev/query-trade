@@ -1,12 +1,12 @@
 {
   "exchange": "binance",
   "symbol": "BTC/USDT",
-  "timeframe": "1h",
-  "startTime": "2024-01-01T00:00:00Z",
-  "endTime": "2024-02-01T00:00:00Z",
+  "timeframe": "5m",
+  "startTime": "2026-02-01T00:00:00Z",
+  "endTime": "2026-03-01T00:00:00Z",
   "initialBalance": 10000,
   "amountPerTrade": 1000,
-  "marketType": "futures",
+  "marketType": "spot",
   "entryOrderType": "limit",
   "exitOrderType": "market",
   "strategy": {

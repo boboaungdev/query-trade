@@ -87,7 +87,10 @@ export const BacktestSchema = {
     exchange: Joi.string().default("binance"),
     timeframe: Joi.string().default("15m"),
     startTime: Joi.date().iso().required(),
-    endTime: Joi.date().iso().greater(Joi.ref("startTime")).default(Date.now),
+    endTime: Joi.date()
+      .iso()
+      .greater(Joi.ref("startTime"))
+      .default(() => new Date().toISOString()),
 
     initialBalance: Joi.number().positive().default(10000),
     amountPerTrade: Joi.number().positive().default(100),

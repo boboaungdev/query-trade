@@ -9,6 +9,7 @@ export const fetchMarketData = async ({
   endTime,
   entryOrderType,
   exitOrderType,
+  limit = 10000,
 }) => {
   /** @type {import("ccxt").Exchange} */
   const exchangeInstance = getExchange({ exchange, marketType });
@@ -32,26 +33,39 @@ export const fetchMarketData = async ({
   const market = exchangeInstance.market(symbol);
 
   // Get fees directly from CCXT market
+  const since = Date.parse(startTime);
+  const endTimestamp = Date.parse(endTime);
+  
   const entryFeeRate =
     entryOrderType === "market" ? market.taker : market.maker;
-
   const exitFeeRate = exitOrderType === "market" ? market.taker : market.maker;
 
-  const since = startTime ? new Date(startTime).getTime() : undefined;
+  let rawCandles = [];
+  let cursor = since;
 
-  if (startTime && endTime && since > new Date(endTime).getTime()) {
-    throw new Error("startTime must be before endTime");
+  while (rawCandles.length < limit) {
+    const candles = await exchangeInstance.fetchOHLCV(
+      symbol,
+      timeframe,
+      cursor,
+      Math.min(1000, limit - rawCandles.length),
+    );
+
+    if (!candles.length) break;
+
+    rawCandles.push(...candles);
+
+    const lastTimestamp = candles[candles.length - 1][0];
+
+    if (lastTimestamp >= endTimestamp) break;
+
+    cursor = lastTimestamp + 1;
+
+    await exchangeInstance.sleep(exchangeInstance.rateLimit);
   }
 
-  const rawCandles = await exchangeInstance.fetchOHLCV(
-    symbol,
-    timeframe,
-    since,
-    1000,
-  );
-
   const candles = rawCandles
-    .filter((c) => !endTime || c[0] <= new Date(endTime).getTime())
+    .filter((c) => !endTimestamp || c[0] <= endTimestamp)
     .map((c) => ({
       timestamp: c[0],
       open: c[1],
