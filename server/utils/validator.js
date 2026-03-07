@@ -44,18 +44,20 @@ export const validateCookie = () => {
 
     const refreshToken = req.cookies.refreshToken;
     if (!refreshToken) {
-      return next(resError(400, "Cookie not found, please signin again!"));
+      return next(resError(400, "Session not found, please signin again!"));
     }
 
     const decoded = Token.verifyRefreshToken(refreshToken);
-    if (!decoded || !decoded.id) {
-      clearCookie(req, res, "refreshToken");
+    if (!decoded) {
+      clearCookie(req, res, "_id refreshToken");
       return next(
-        resError(401, "Invalid or expired cookie, please signin again!"),
+        resError(401, "Invalid or expired session, please signin again!"),
       );
     }
 
-    const decodedUser = await UserDB.exists({ _id: decoded.id });
+    const decodedUser = await UserDB.findById(decoded.id).select(
+      "refreshToken",
+    );
 
     if (!decodedUser) {
       clearCookie(req, res, "refreshToken");
@@ -64,12 +66,19 @@ export const validateCookie = () => {
       );
     }
 
-    if (user._id.toString() !== decodedUser._id.toString()) {
+    if (decodedUser._id.toString() !== user._id.toString()) {
+      clearCookie(req, res, "refreshToken");
+      return next(
+        resError(403, "Permission denied! User mismatch, please signin again!"),
+      );
+    }
+
+    if (decodedUser.refreshToken !== refreshToken) {
       clearCookie(req, res, "refreshToken");
       return next(
         resError(
           403,
-          "Permission denied! Cookie does not match the authenticated user!",
+          "Session expired or signed in other device, please signin again!",
         ),
       );
     }

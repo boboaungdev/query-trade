@@ -1,5 +1,4 @@
 import { resJson } from "../../utils/response.js";
-import { fetchMarketData } from "../../services/backtest/fetchMarketData.js";
 import { backtestEngine } from "../../services/backtest/backtestEngine.js";
 
 export const runBacktest = async (req, res, next) => {
@@ -18,24 +17,18 @@ export const runBacktest = async (req, res, next) => {
       strategy,
     } = req.body;
 
-    const { candles, entryFeeRate, exitFeeRate } = await fetchMarketData({
+    const backtest = await backtestEngine({
       exchange,
       symbol,
       timeframe,
-      marketType,
       startTime,
       endTime,
+      amountPerTrade,
+      initialBalance,
+      marketType,
       entryOrderType,
       exitOrderType,
-    });
-
-    const backtest = backtestEngine({
-      candles,
       strategy,
-      initialBalance,
-      amountPerTrade,
-      entryFeeRate,
-      exitFeeRate,
     });
 
     return resJson(res, 200, "Backtest completed.", { backtest });

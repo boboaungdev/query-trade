@@ -1,16 +1,35 @@
 import { calculateIndicators } from "./calculateIndicators.js";
-import { evaluateConditions } from "./conditionEvaluator.js";
+import { calculateCondition } from "./calculateCondition.js";
 import { openPosition, closePosition } from "./tradeExecutor.js";
 import { calculateMetrics } from "./calculateMetrics.js";
+import { fetchMarketData } from "./fetchMarketData.js";
 
-export const backtestEngine = ({
-  candles,
-  strategy,
-  initialBalance,
+export const backtestEngine = async ({
+  exchange,
+  symbol,
+  timeframe,
+  startTime,
+  endTime,
   amountPerTrade,
-  entryFeeRate,
-  exitFeeRate,
+  initialBalance,
+  marketType,
+  entryOrderType,
+  exitOrderType,
+  strategy,
 }) => {
+  // Fetch market data and fee rates
+  const { candles, entryFeeRate, exitFeeRate } = await fetchMarketData({
+    exchange,
+    symbol,
+    timeframe,
+    marketType,
+    startTime,
+    endTime,
+    entryOrderType,
+    exitOrderType,
+  });
+
+  // Pre-calculate all indicators for the entire dataset
   const indicatorsData = calculateIndicators({
     candles,
     indicators: strategy.indicators,
@@ -39,20 +58,21 @@ export const backtestEngine = ({
 
     // ENTRY
     if (!position) {
-      const buySignal = evaluateConditions({
+      const buySignal = calculateCondition({
         block: strategy.entry?.buy,
         context,
       });
-      const sellSignal = evaluateConditions({
+      const sellSignal = calculateCondition({
         block: strategy.entry?.sell,
         context,
       });
 
       if (buySignal || sellSignal) {
-        const type = buySignal ? "buy" : "sell";
+        const side = buySignal ? "buy" : "sell";
 
         position = openPosition({
-          type,
+          symbol,
+          side,
           price,
           amountPerTrade,
           entryFeeRate,
@@ -66,9 +86,9 @@ export const backtestEngine = ({
     // EXIT
     if (position) {
       const exitBlock =
-        position.type === "buy" ? strategy.exit?.buy : strategy.exit?.sell;
+        position.side === "buy" ? strategy.exit?.buy : strategy.exit?.sell;
 
-      const shouldExit = evaluateConditions({ block: exitBlock, context });
+      const shouldExit = calculateCondition({ block: exitBlock, context });
 
       if (shouldExit) {
         const { trade, pnl } = closePosition({

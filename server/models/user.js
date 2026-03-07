@@ -58,7 +58,6 @@ const userSchema = new Schema(
   },
 );
 userSchema.index({ name: 1 });
-userSchema.index({ refreshToken: 1 });
 userSchema.index({ pushToken: 1 });
 userSchema.index(
   { "authProviders.provider": 1, "authProviders.providerId": 1 },

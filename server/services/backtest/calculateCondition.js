@@ -7,7 +7,7 @@ const OPERATORS = {
   "!=": (a, b) => a != b,
 };
 
-export const evaluateConditions = ({ block, context }) => {
+export const calculateCondition = ({ block, context }) => {
   if (!block) return false;
 
   const results = block.conditions.map((cond) => {

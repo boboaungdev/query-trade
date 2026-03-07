@@ -1,46 +1,59 @@
 export const openPosition = ({
-  type,
+  symbol,
+  side,
   price,
   amountPerTrade,
   entryFeeRate,
   timestamp,
 }) => {
-  const size = amountPerTrade / price;
+  const amount = amountPerTrade / price;
   const entryFee = amountPerTrade * entryFeeRate;
 
   return {
-    type,
-    entryPrice: price,
-    size,
+    symbol,
+    side,
+    status: "open",
+    amount,
+    amountInUSD: amountPerTrade,
     entryFee,
+    entryPrice: price,
     entryTime: timestamp,
   };
 };
 
 export const closePosition = ({ position, price, exitFeeRate, timestamp }) => {
-  const exitValue = position.size * price;
+  const exitValue = position.amount * price;
   const exitFee = exitValue * exitFeeRate;
 
   let pnl;
 
-  if (position.type === "buy") {
+  if (position.side === "buy") {
     pnl =
-      (price - position.entryPrice) * position.size -
+      (price - position.entryPrice) * position.amount -
       position.entryFee -
       exitFee;
   } else {
     pnl =
-      (position.entryPrice - price) * position.size -
+      (position.entryPrice - price) * position.amount -
       position.entryFee -
       exitFee;
   }
 
+  const totalFees = position.entryFee + exitFee;
+  const duration = timestamp - position.entryTime;
+  const pnlPercent = (pnl / position.amountInUSD) * 100;
+
   return {
     trade: {
       ...position,
+      status: "closed",
+      exitFee,
       exitPrice: price,
       exitTime: timestamp,
+      totalFees,
+      duration,
       pnl,
+      pnlPercent,
     },
     pnl,
   };
