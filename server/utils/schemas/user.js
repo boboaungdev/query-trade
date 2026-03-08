@@ -9,13 +9,11 @@ export const UserSchema = {
       .required(),
     username: Joi.string()
       .pattern(/^[a-z0-9]+$/)
-      .min(5)
+      .min(6)
       .max(20)
       .required(),
     email: Joi.string().email({ minDomainSegments: 2 }).lowercase().required(),
-    password: Joi.string()
-      .pattern(new RegExp('^[a-zA-Z0-9!@#$%^&*()_+={}|:"<>?\\,-.]{8,30}$'))
-      .required(),
+    password: Joi.string().min(6).max(50).required(),
   }),
 
   signupVerify: Joi.object({
@@ -25,9 +23,11 @@ export const UserSchema = {
 
   signin: Joi.object({
     email: Joi.string().email({ minDomainSegments: 2 }).lowercase().required(),
-    password: Joi.string()
-      .pattern(new RegExp('^[a-zA-Z0-9!@#$%^&*()_+={}|:"<>?\\,-.]{8,30}$'))
-      .required(),
+    password: Joi.string().min(6).max(50).required(),
+  }),
+
+  existUser: Joi.object({
+    email: Joi.string().email({ minDomainSegments: 2 }).lowercase().required(),
   }),
 
   signinGoogle: Joi.object({
@@ -35,6 +35,20 @@ export const UserSchema = {
     avatar: Joi.string().required(),
     googleId: Joi.string().required(),
     email: Joi.string().email({ minDomainSegments: 2 }).lowercase().required(),
+  }),
+
+  forgotPassword: Joi.object({
+    email: Joi.string().email({ minDomainSegments: 2 }).lowercase().required(),
+  }),
+
+  forgotPasswordVerify: Joi.object({
+    code: Joi.string().required(),
+    email: Joi.string().email({ minDomainSegments: 2 }).lowercase().required(),
+  }),
+
+  resetPassword: Joi.object({
+    email: Joi.string().email({ minDomainSegments: 2 }).lowercase().required(),
+    newPassword: Joi.string().min(6).max(50).required(),
   }),
 
   changePassword: Joi.object({
@@ -58,31 +72,11 @@ export const UserSchema = {
       .required(),
   }),
 
-  existEmail: Joi.object({
-    email: Joi.string().email({ minDomainSegments: 2 }).lowercase().required(),
-  }),
-
   existUsername: Joi.object({
     username: Joi.string()
       .pattern(/^[a-z0-9]+$/)
       .min(5)
       .max(20)
-      .required(),
-  }),
-
-  forgotPassword: Joi.object({
-    email: Joi.string().email({ minDomainSegments: 2 }).lowercase().required(),
-  }),
-
-  forgotPasswordVerify: Joi.object({
-    code: Joi.string().required(),
-    email: Joi.string().email({ minDomainSegments: 2 }).lowercase().required(),
-  }),
-
-  resetPassword: Joi.object({
-    email: Joi.string().email({ minDomainSegments: 2 }).lowercase().required(),
-    newPassword: Joi.string()
-      .pattern(new RegExp('^[a-zA-Z0-9!@#$%^&*()_+={}|:"<>?\\,-.]{8,30}$'))
       .required(),
   }),
 

@@ -18,6 +18,14 @@ export const signin = async (req, res, next) => {
       throw resError(404, "User not found!");
     }
 
+    // If user registered with Google (no password in DB)
+    if (!existUser.password) {
+      throw resError(
+        400,
+        "This email was created with Google Account. Please sign in with Google or reset your password by clicking 'forgot password?' to use email login.",
+      );
+    }
+
     const correctPassword = Encoder.compare(password, existUser.password);
     if (!correctPassword) {
       throw resError(401, "Incorrect password!");
@@ -41,7 +49,7 @@ export const signin = async (req, res, next) => {
     ).select("-password");
 
     resCookie(req, res, "refreshToken", refreshToken);
-    return resJson(res, 200, "Success signin.", { user, accessToken });
+    return resJson(res, 200, "Signin success.", { user, accessToken });
   } catch (error) {
     next(error);
   }

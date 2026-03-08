@@ -1,4 +1,4 @@
-const baseOrigins = ["http://localhost:3000", "http://127.0.0.1:3000"];
+const baseOrigins = ["http://localhost:3000", "http://localhost:5173"];
 
 // Parse additional origins from .env
 const extraOrigins = process.env.EXTRA_ALLOWED_ORIGINS

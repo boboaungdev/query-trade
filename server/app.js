@@ -10,6 +10,7 @@ import { corsOptions } from "./middlewares/corsOptions.js";
 import { userRouter } from "./routes/user.js";
 import { backtestRouter } from "./routes/backtest.js";
 import { indicatorRouter } from "./routes/indicator.js";
+import { authRouter } from "./routes/auth.js";
 
 export const app = express();
 
@@ -23,6 +24,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser()); // Parse cookies
 
 // Routes
+app.use("/api/auth", authRouter);
 app.use("/api/user", userRouter);
 app.use("/api/backtest", backtestRouter);
 app.use("/api/indicator", indicatorRouter);
