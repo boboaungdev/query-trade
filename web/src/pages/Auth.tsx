@@ -18,6 +18,8 @@ import {
 import { FcGoogle } from "react-icons/fc"
 import { SiBinance } from "react-icons/si"
 
+import { useAuthStore } from "@/store/auth"
+
 import {
   checkUserExist,
   forgotPassword,
@@ -34,6 +36,8 @@ import axios from "axios"
 
 export default function Auth() {
   const navigate = useNavigate()
+
+  const setAuth = useAuthStore((state) => state.setAuth)
 
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -111,6 +115,10 @@ export default function Auth() {
       else if (showPassword && !forgotStep) {
         const data = await signin({ email, password })
 
+        const { user, accessToken } = data.result
+
+        setAuth(user, accessToken)
+
         toast.success(data.message)
 
         navigate("/dashboard")
@@ -141,6 +149,10 @@ export default function Auth() {
           newPassword,
         })
 
+        const { user, accessToken } = data.result
+
+        setAuth(user, accessToken)
+
         toast.success(data.message)
 
         navigate("/dashboard")
@@ -160,6 +172,9 @@ export default function Auth() {
       // STEP 4 - verify email
       else if (verifyStep) {
         const data = await signupVerify({ email, code })
+        const { user, accessToken } = data.result
+
+        setAuth(user, accessToken)
 
         toast.success(data.message)
 
@@ -196,11 +211,11 @@ export default function Auth() {
           googleId,
         })
 
+        const { user, accessToken } = data.result
+
+        setAuth(user, accessToken)
+
         toast.success(data.message)
-
-        console.log("server response", data)
-
-        // localStorage.setItem("token", data.result.token)
 
         navigate("/dashboard")
       } catch (error: any) {
