@@ -11,13 +11,19 @@ export const updateIndicator = async (req, res, next) => {
       throw resError(404, "Indicator not found!");
     }
 
-    const existsIndicatorName = await IndicatorDB.exists({
-      _id: { $ne: indicatorId },
-      name: req.body.name,
-    });
+    if (!req.body) {
+      throw resError(400, "Need something to update!");
+    }
 
-    if (existsIndicatorName) {
-      throw resError(409, `'${req.body.name}' Indicator already exists!`);
+    if (req.body.name) {
+      const existsIndicatorName = await IndicatorDB.exists({
+        _id: { $ne: indicatorId },
+        name: req.body.name,
+      });
+
+      if (existsIndicatorName) {
+        throw resError(409, `'${req.body.name}' Indicator already exists!`);
+      }
     }
 
     const indicator = await IndicatorDB.findByIdAndUpdate(

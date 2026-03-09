@@ -51,34 +51,60 @@ export const UserSchema = {
     newPassword: Joi.string().min(6).max(50).required(),
   }),
 
-  changePassword: Joi.object({
-    oldPassword: Joi.string()
-      .pattern(new RegExp('^[a-zA-Z0-9!@#$%^&*()_+={}|:"<>?\\,-.]{8,30}$'))
-      .required(),
-    newPassword: Joi.string()
-      .pattern(new RegExp('^[a-zA-Z0-9!@#$%^&*()_+={}|:"<>?\\,-.]{8,30}$'))
-      .required(),
-  }),
-
-  createPassword: Joi.object({
-    newPassword: Joi.string()
-      .pattern(new RegExp('^[a-zA-Z0-9!@#$%^&*()_+={}|:"<>?\\,-.]{8,30}$'))
-      .required(),
-  }),
-
-  deleteAccount: Joi.object({
-    password: Joi.string()
-      .pattern(new RegExp('^[a-zA-Z0-9!@#$%^&*()_+={}|:"<>?\\,-.]{8,30}$'))
-      .required(),
-  }),
-
-  existUsername: Joi.object({
-    username: Joi.string()
-      .pattern(/^[a-z0-9]+$/)
-      .min(5)
+  update: Joi.object({
+    name: Joi.string()
+      .trim()
+      .pattern(/^[A-Za-z0-9 ]+$/)
+      .min(1)
       .max(20)
-      .required(),
-  }),
+      .optional(),
+
+    username: Joi.string()
+      .trim()
+      .pattern(/^[a-z0-9]+$/)
+      .min(6)
+      .max(20)
+      .optional(),
+
+    avatar: Joi.string().allow("").optional(),
+
+    email: Joi.string()
+      .email({ minDomainSegments: 2 })
+      .lowercase()
+      .trim()
+      .optional(),
+
+    password: Joi.string().min(6).max(50).optional(),
+  }).min(1),
+
+  // changePassword: Joi.object({
+  //   oldPassword: Joi.string()
+  //     .pattern(new RegExp('^[a-zA-Z0-9!@#$%^&*()_+={}|:"<>?\\,-.]{8,30}$'))
+  //     .required(),
+  //   newPassword: Joi.string()
+  //     .pattern(new RegExp('^[a-zA-Z0-9!@#$%^&*()_+={}|:"<>?\\,-.]{8,30}$'))
+  //     .required(),
+  // }),
+
+  // createPassword: Joi.object({
+  //   newPassword: Joi.string()
+  //     .pattern(new RegExp('^[a-zA-Z0-9!@#$%^&*()_+={}|:"<>?\\,-.]{8,30}$'))
+  //     .required(),
+  // }),
+
+  // deleteAccount: Joi.object({
+  //   password: Joi.string()
+  //     .pattern(new RegExp('^[a-zA-Z0-9!@#$%^&*()_+={}|:"<>?\\,-.]{8,30}$'))
+  //     .required(),
+  // }),
+
+  // existUsername: Joi.object({
+  //   username: Joi.string()
+  //     .pattern(/^[a-z0-9]+$/)
+  //     .min(5)
+  //     .max(20)
+  //     .required(),
+  // }),
 
   params: {
     userId: Joi.object({

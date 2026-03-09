@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react"
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useMemo, useRef, useState, type ChangeEvent } from "react"
 import { Navigate } from "react-router-dom"
 import { CircleHelp, Loader2, PencilLine, X } from "lucide-react"
 import { toast } from "sonner"
@@ -21,6 +22,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { editProfile } from "@/api/auth"
 
 function sanitizeUsername(value: string) {
   return value
@@ -46,20 +48,10 @@ export default function Profile() {
   const avatarInputRef = useRef<HTMLInputElement | null>(null)
 
   const [form, setForm] = useState<FormState>({
-    name: "",
-    username: "",
-    avatar: "",
+    name: user?.name || "",
+    username: user?.username || "",
+    avatar: user?.avatar || "",
   })
-
-  useEffect(() => {
-    if (!user) return
-
-    setForm({
-      name: user.name || "",
-      username: user.username || "",
-      avatar: user.avatar || "",
-    })
-  }, [user])
 
   const initials =
     user?.name
@@ -80,6 +72,21 @@ export default function Profile() {
     )
   }, [form, user])
 
+  const isFormValid = useMemo(() => {
+    if (!user) return false
+
+    const nextName = form.name.trim()
+    const nextUsername = form.username.trim()
+    const isNameChanged = nextName !== user.name
+    const isUsernameChanged = nextUsername !== user.username
+
+    if (isNameChanged && !/^[A-Za-z0-9 ]{1,20}$/.test(nextName)) return false
+    if (isUsernameChanged && !/^[a-z0-9]{6,20}$/.test(nextUsername))
+      return false
+
+    return true
+  }, [form.name, form.username, user])
+
   if (!user) {
     return <Navigate to="/auth" replace />
   }
@@ -91,6 +98,15 @@ export default function Profile() {
       avatar: user.avatar || "",
     })
     setIsEditing(false)
+  }
+
+  const onStartEditing = () => {
+    setForm({
+      name: user.name || "",
+      username: user.username || "",
+      avatar: user.avatar || "",
+    })
+    setIsEditing(true)
   }
 
   const onAvatarSelect = (event: ChangeEvent<HTMLInputElement>) => {
@@ -125,44 +141,51 @@ export default function Profile() {
     event.target.value = ""
   }
 
-  const onSave = () => {
+  const onSave = async () => {
     const nextName = form.name.trim()
     const nextUsername = form.username.trim()
     const nextAvatar = form.avatar.trim()
+    const payload: { name?: string; username?: string; avatar?: string } = {}
 
-    if (!nextName || !nextUsername) {
-      toast.error("Name and username are required")
-      return
+    if (!isFormValid) return
+
+    if (nextName !== user.name) {
+      payload.name = nextName
     }
 
-    if (!/^[A-Za-z0-9 ]{1,20}$/.test(nextName)) {
-      toast.error("Name must be 1-20 chars: letters, numbers, and spaces only")
-      return
+    if (nextUsername !== user.username) {
+      payload.username = nextUsername
     }
 
-    if (!/^[a-z0-9]{6,20}$/.test(nextUsername)) {
-      toast.error(
-        "Username must be 6-20 chars: lowercase letters and numbers only"
-      )
-      return
+    if ((nextAvatar || "") !== (user.avatar || "")) {
+      payload.avatar = nextAvatar
     }
+
+    if (Object.keys(payload).length === 0) return
 
     setIsSaving(true)
 
-    try {
-      updateUser({
-        name: nextName,
-        username: nextUsername,
-        avatar: nextAvatar || undefined,
-      })
+    const promise = editProfile(payload)
 
-      toast.success("Profile updated")
-      setIsEditing(false)
-    } catch {
-      toast.error("Failed to update profile")
-    } finally {
-      setIsSaving(false)
-    }
+    toast.promise(promise, {
+      loading: "Updating profile...",
+      success: (data) => {
+        updateUser({
+          name: payload.name ?? user.name,
+          username: payload.username ?? user.username,
+          avatar:
+            payload.avatar !== undefined
+              ? payload.avatar || undefined
+              : user.avatar,
+        })
+        setIsEditing(false)
+        return data.message
+      },
+      error: (error: any) =>
+        error?.response?.data?.message || "Failed to update profile!",
+    })
+
+    promise.finally(() => setIsSaving(false))
   }
 
   return (
@@ -190,7 +213,9 @@ export default function Profile() {
               </Avatar>
 
               <div>
-                <p className="text-lg font-semibold">{form.name || user.name}</p>
+                <p className="text-lg font-semibold">
+                  {form.name || user.name}
+                </p>
                 <p className="text-sm text-muted-foreground">
                   @{form.username || user.username}
                 </p>
@@ -212,7 +237,7 @@ export default function Profile() {
               </div>
 
               {!isEditing ? (
-                <Button onClick={() => setIsEditing(true)}>
+                <Button onClick={onStartEditing}>
                   <PencilLine className="mr-2 h-4 w-4" />
                   Edit
                 </Button>
@@ -326,12 +351,13 @@ export default function Profile() {
               </div>
 
               {isEditing && (
-                <Button onClick={onSave} disabled={!hasChanged || isSaving}>
+                <Button
+                  onClick={onSave}
+                  disabled={!hasChanged || isSaving || !isFormValid}
+                  className="w-30"
+                >
                   {isSaving ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
+                    <Loader2 className="animate-spin" />
                   ) : (
                     "Save Changes"
                   )}

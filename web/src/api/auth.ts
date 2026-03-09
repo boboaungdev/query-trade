@@ -112,3 +112,21 @@ export async function signout() {
 
   return data
 }
+
+export async function editProfile({
+  name,
+  username,
+  avatar,
+}: {
+  name?: string
+  username?: string
+  avatar?: string
+}) {
+  const { data } = await api.patch("/auth/update", {
+    name,
+    username,
+    avatar,
+  })
+
+  return data
+}
