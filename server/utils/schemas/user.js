@@ -3,7 +3,7 @@ import Joi from "joi";
 export const UserSchema = {
   signup: Joi.object({
     name: Joi.string()
-      .pattern(/^[A-Za-z ]+$/)
+      .pattern(/^[A-Za-z0-9 ]+$/)
       .min(1)
       .max(20)
       .required(),
