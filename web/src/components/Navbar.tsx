@@ -16,6 +16,8 @@ import {
 
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 
+import { SidebarTrigger } from "@/components/ui/sidebar"
+
 export default function Navbar() {
   const user = useAuthStore((state) => state.user)
   const logout = useAuthStore((state) => state.logout)
@@ -36,13 +38,17 @@ export default function Navbar() {
 
   return (
     <nav className="flex items-center justify-between border-b px-6 py-4">
-      {/* Left */}
+      {/* LEFT */}
+      <div className="flex items-center gap-3">
+        {/* Sidebar toggle only when logged in */}
+        {user && <SidebarTrigger />}
 
-      <Link to="/" className="text-lg font-bold">
-        {APP_NAME}
-      </Link>
+        <Link to="/" className="text-lg font-bold">
+          {APP_NAME}
+        </Link>
+      </div>
 
-      {/* Right */}
+      {/* RIGHT */}
 
       <div className="flex items-center gap-4">
         <ThemeToggle />
@@ -73,11 +79,11 @@ export default function Navbar() {
               <DropdownMenuSeparator />
 
               <DropdownMenuItem asChild>
-                <Link to="/dashboard">Dashboard</Link>
+                <Link to="/billing">Billing</Link>
               </DropdownMenuItem>
 
               <DropdownMenuItem asChild>
-                <Link to="/profile">Profile</Link>
+                <Link to="/help">Help</Link>
               </DropdownMenuItem>
 
               <DropdownMenuItem asChild>

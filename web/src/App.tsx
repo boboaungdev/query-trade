@@ -1,22 +1,38 @@
 import { Routes, Route } from "react-router-dom"
 import { Toaster } from "@/components/ui/sonner"
 
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
+import { AppSidebar } from "@/components/AppSidebar"
+
 import Navbar from "./components/Navbar"
+
 import Home from "./pages/Home"
 import Auth from "./pages/Auth"
 import Dashboard from "./pages/dashboard"
 
-export default function App() {
-  return (
-    <div className="min-h-svh">
-      <Navbar />
-      <Toaster position="bottom-center" />
+import { useAuthStore } from "@/store/auth"
 
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/auth" element={<Auth />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-      </Routes>
-    </div>
+export default function App() {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+
+  return (
+    <SidebarProvider>
+      {/* Sidebar only when logged in */}
+      {isAuthenticated && <AppSidebar />}
+
+      <SidebarInset>
+        <Navbar />
+
+        <main className="flex-1 p-6">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+          </Routes>
+        </main>
+
+        <Toaster position="bottom-center" />
+      </SidebarInset>
+    </SidebarProvider>
   )
 }
