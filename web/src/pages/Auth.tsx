@@ -100,34 +100,38 @@ export default function Auth() {
     return () => clearTimeout(timer)
   }, [resendTimer, forgotStep, verifyStep])
 
-  const handleResendVerification = async () => {
+  const handleResendVerification = () => {
     if (!isValidEmail || !validName || !validUsername || !validPassword) {
       toast.error("Please fill valid signup details before resending code")
       return
     }
 
     setLoading(true)
-    try {
-      await signup({
-        email: normalizedEmail,
-        name: name.trim(),
-        username: username.trim(),
-        password,
+
+    const promise = signup({
+      email: normalizedEmail,
+      name: name.trim(),
+      username: username.trim(),
+      password,
+    })
+
+    toast.promise(promise, {
+      loading: "Resending verification code...",
+      success: "Email code resend success.",
+      error: (error: any) =>
+        error?.response?.data?.message || "Something went wrong",
+    })
+
+    promise
+      .then(() => {
+        setResendTimer(60)
+        setCanResend(false)
+        setCode("")
       })
-
-      toast.success("Email code resend success.")
-
-      setResendTimer(60)
-      setCanResend(false)
-      setCode("")
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Something went wrong")
-    } finally {
-      setLoading(false)
-    }
+      .finally(() => setLoading(false))
   }
 
-  const handleContinue = async () => {
+  const handleContinue = () => {
     if (!normalizedEmail) return
 
     if (!isValidEmail) {
@@ -175,90 +179,131 @@ export default function Auth() {
 
     setLoading(true)
 
-    try {
-      // STEP 1 — check email
-      if (!showPassword && !isSignup) {
-        const data = await checkUserExist(normalizedEmail)
+    // STEP 1 — check email
+    if (!showPassword && !isSignup) {
+      const promise = checkUserExist(normalizedEmail)
 
-        if (data.result.exist) {
-          setShowPassword(true)
-        } else {
-          setIsSignup(true)
-        }
-      }
+      toast.promise(promise, {
+        loading: "Checking account...",
+        success: () => {
+          promise.then((data) => {
+            if (data.result.exist) {
+              setShowPassword(true)
+            } else {
+              setIsSignup(true)
+            }
+          })
+          return "Email checked"
+        },
+        error: (error: any) =>
+          error?.response?.data?.message || "Something went wrong",
+      })
 
-      // STEP 2 — sign in
-      else if (showPassword && !forgotStep) {
-        const data = await signin({ email: normalizedEmail, password })
+      promise.finally(() => setLoading(false))
+    }
 
-        const { user, accessToken } = data.result
+    // STEP 2 — sign in
+    else if (showPassword && !forgotStep) {
+      const promise = signin({ email: normalizedEmail, password })
 
-        setAuth(user, accessToken)
+      toast.promise(promise, {
+        loading: "Signing in...",
+        success: (data) => {
+          const { user, accessToken } = data.result
+          setAuth(user, accessToken)
+          navigate("/dashboard")
+          return data.message
+        },
+        error: (error: any) =>
+          error?.response?.data?.message || "Signin failed",
+      })
 
-        toast.success(data.message)
+      promise.finally(() => setLoading(false))
+    }
 
-        navigate("/dashboard")
-      }
+    // Forgot verify
+    else if (forgotStep && !resetStep) {
+      const promise = forgotPasswordVerify({
+        email: normalizedEmail,
+        code,
+      })
 
-      // Forgot password
-      else if (forgotStep && !resetStep) {
-        const data = await forgotPasswordVerify({
-          email: normalizedEmail,
-          code,
-        })
+      toast.promise(promise, {
+        loading: "Verifying code...",
+        success: (data) => {
+          setResetStep(true)
+          return data.message
+        },
+        error: (error: any) =>
+          error?.response?.data?.message || "Verification failed",
+      })
 
-        toast.success(data.message)
+      promise.finally(() => setLoading(false))
+    }
 
-        setResetStep(true)
-      }
+    // Reset password
+    else if (resetStep) {
+      const promise = resetPassword({
+        email: normalizedEmail,
+        newPassword,
+      })
 
-      // Reset password
-      else if (resetStep) {
-        const data = await resetPassword({
-          email: normalizedEmail,
-          newPassword,
-        })
+      toast.promise(promise, {
+        loading: "Resetting password...",
+        success: (data) => {
+          const { user, accessToken } = data.result
+          setAuth(user, accessToken)
+          navigate("/dashboard")
+          return data.message
+        },
+        error: (error: any) =>
+          error?.response?.data?.message || "Reset password failed",
+      })
 
-        const { user, accessToken } = data.result
+      promise.finally(() => setLoading(false))
+    }
 
-        setAuth(user, accessToken)
+    // STEP 3 — signup
+    else if (isSignup && !verifyStep) {
+      const promise = signup({
+        email: normalizedEmail,
+        name: name.trim(),
+        username: username.trim(),
+        password,
+      })
 
-        toast.success(data.message)
+      toast.promise(promise, {
+        loading: "Creating account...",
+        success: (data) => {
+          setVerifyStep(true)
+          setResendTimer(60)
+          setCanResend(false)
+          return data.message
+        },
+        error: (error: any) =>
+          error?.response?.data?.message || "Signup failed",
+      })
 
-        navigate("/dashboard")
-      }
+      promise.finally(() => setLoading(false))
+    }
 
-      // STEP 3 — sign up
-      else if (isSignup && !verifyStep) {
-        const data = await signup({
-          email: normalizedEmail,
-          name: name.trim(),
-          username: username.trim(),
-          password,
-        })
+    // STEP 4 — verify email
+    else if (verifyStep) {
+      const promise = signupVerify({ email: normalizedEmail, code })
 
-        toast.success(data.message)
-        setVerifyStep(true)
+      toast.promise(promise, {
+        loading: "Verifying email...",
+        success: (data) => {
+          const { user, accessToken } = data.result
+          setAuth(user, accessToken)
+          navigate("/dashboard")
+          return data.message
+        },
+        error: (error: any) =>
+          error?.response?.data?.message || "Verification failed",
+      })
 
-        setResendTimer(60)
-        setCanResend(false)
-      }
-
-      // STEP 4 - verify email
-      else if (verifyStep) {
-        const data = await signupVerify({ email: normalizedEmail, code })
-        const { user, accessToken } = data.result
-
-        setAuth(user, accessToken)
-
-        toast.success(data.message)
-
-        navigate("/dashboard")
-      }
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Something went wrong")
-    } finally {
-      setLoading(false)
+      promise.finally(() => setLoading(false))
     }
   }
 
@@ -267,7 +312,6 @@ export default function Auth() {
       setLoading(true)
 
       try {
-        // get user info from google
         const userInfo = await axios.get(
           "https://www.googleapis.com/oauth2/v3/userinfo",
           {
@@ -279,22 +323,26 @@ export default function Auth() {
 
         const { name, email, picture, sub: googleId } = userInfo.data
 
-        const data = await signinGoogle({
+        const promise = signinGoogle({
           name,
           email,
           avatar: picture,
           googleId,
         })
 
-        const { user, accessToken } = data.result
+        toast.promise(promise, {
+          loading: "Signing in with Google...",
+          success: (data) => {
+            const { user, accessToken } = data.result
+            setAuth(user, accessToken)
+            navigate("/dashboard")
+            return data.message
+          },
+          error: (error: any) =>
+            error?.response?.data?.message || "Google signin failed!",
+        })
 
-        setAuth(user, accessToken)
-
-        toast.success(data.message)
-
-        navigate("/dashboard")
-      } catch (error: any) {
-        toast.error(error?.response?.data?.message || "Google signin failed!")
+        await promise
       } finally {
         setLoading(false)
       }
@@ -305,7 +353,7 @@ export default function Auth() {
     },
   })
 
-  const handleForgotPassword = async () => {
+  const handleForgotPassword = () => {
     if (!isValidEmail) {
       toast.error("Please provide a valid email")
       return
@@ -313,23 +361,25 @@ export default function Auth() {
 
     setLoading(true)
 
-    try {
-      const data = await forgotPassword({ email: normalizedEmail })
+    const promise = forgotPassword({ email: normalizedEmail })
 
-      toast.success(data.message)
+    toast.promise(promise, {
+      loading: "Sending reset code...",
+      success: (data) => data.message,
+      error: (error: any) =>
+        error?.response?.data?.message || "Failed to send code!",
+    })
 
-      setForgotStep(true)
-
-      setResendTimer(60)
-      setCanResend(false)
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Failed to send code!")
-    } finally {
-      setLoading(false)
-    }
+    promise
+      .then(() => {
+        setForgotStep(true)
+        setResendTimer(60)
+        setCanResend(false)
+      })
+      .finally(() => setLoading(false))
   }
 
-  const handleResendCode = async () => {
+  const handleResendCode = () => {
     if (!isValidEmail) {
       toast.error("Please provide a valid email")
       return
@@ -337,19 +387,22 @@ export default function Auth() {
 
     setLoading(true)
 
-    try {
-      const data = await forgotPassword({ email: normalizedEmail })
+    const promise = forgotPassword({ email: normalizedEmail })
 
-      toast.success(data.message)
+    toast.promise(promise, {
+      loading: "Resending code...",
+      success: (data) => data.message,
+      error: (error: any) =>
+        error?.response?.data?.message || "Failed to resend code!",
+    })
 
-      setResendTimer(60)
-      setCanResend(false)
-      setCode("")
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Failed to resend code!")
-    } finally {
-      setLoading(false)
-    }
+    promise
+      .then(() => {
+        setResendTimer(60)
+        setCanResend(false)
+        setCode("")
+      })
+      .finally(() => setLoading(false))
   }
 
   const title = showPassword ? "Sign in" : isSignup ? "Sing up" : "Welcome"

@@ -33,7 +33,7 @@ export default function App() {
           </Routes>
         </main>
 
-        <Toaster position="bottom-center" />
+        <Toaster position="top-center" />
       </SidebarInset>
     </SidebarProvider>
   )

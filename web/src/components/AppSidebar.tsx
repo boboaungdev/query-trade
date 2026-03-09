@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Link, useNavigate } from "react-router-dom"
 
 import {
@@ -23,6 +24,8 @@ import { Home, LayoutDashboard, Settings, MoreVertical } from "lucide-react"
 
 import { useAuthStore } from "@/store/auth"
 import { useState } from "react"
+import { signout } from "@/api/auth"
+import { toast } from "sonner"
 
 export function AppSidebar() {
   const { setOpen } = useSidebar()
@@ -32,9 +35,17 @@ export function AppSidebar() {
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
 
-  const handleLogout = () => {
-    logout()
-    navigate("/")
+  const handleSignout = () => {
+    toast.promise(signout(), {
+      loading: "Signing out...",
+      success: (data) => {
+        logout()
+        navigate("/")
+        return data.message
+      },
+      error: (error: any) =>
+        error?.response?.data?.message || "Sign out failed on server.",
+    })
   }
 
   const initials =
@@ -45,15 +56,15 @@ export function AppSidebar() {
       .toUpperCase() || "U"
 
   return (
-   <Sidebar
-  side="left"
-  variant="sidebar"
-  collapsible="icon"
-  onMouseEnter={() => setOpen(true)}
-  onMouseLeave={() => {
-    if (!menuOpen) setOpen(false)
-  }}
->
+    <Sidebar
+      side="left"
+      variant="sidebar"
+      collapsible="icon"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => {
+        if (!menuOpen) setOpen(false)
+      }}
+    >
       {/* TOP MENU */}
       <SidebarContent className="pt-10 pl-2">
         <SidebarMenu>
@@ -99,7 +110,7 @@ export function AppSidebar() {
       <SidebarFooter className="pb-5 pl-1">
         <SidebarMenu>
           <SidebarMenuItem>
-           <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+            <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
               <SidebarMenuButton className="w-full justify-between">
                 {/* LEFT SIDE (avatar + name) */}
                 <Link to="/profile" className="flex items-center gap-2">
@@ -137,7 +148,7 @@ export function AppSidebar() {
                 <DropdownMenuSeparator />
 
                 <DropdownMenuItem
-                  onClick={handleLogout}
+                  onClick={handleSignout}
                   className="text-red-500"
                 >
                   Logout

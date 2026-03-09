@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Link, useNavigate } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
@@ -17,6 +18,8 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 
 import { SidebarTrigger } from "@/components/ui/sidebar"
+import { signout } from "@/api/auth"
+import { toast } from "sonner"
 
 export default function Navbar() {
   const user = useAuthStore((state) => state.user)
@@ -24,9 +27,17 @@ export default function Navbar() {
 
   const navigate = useNavigate()
 
-  const handleLogout = () => {
-    logout()
-    navigate("/")
+  const handleSignout = () => {
+    toast.promise(signout(), {
+      loading: "Signing out...",
+      success: (data) => {
+        logout()
+        navigate("/")
+        return data.message
+      },
+      error: (error: any) =>
+        error?.response?.data?.message || "Sign out failed on server.",
+    })
   }
 
   const initials =
@@ -92,8 +103,11 @@ export default function Navbar() {
 
               <DropdownMenuSeparator />
 
-              <DropdownMenuItem className="text-red-500" onClick={handleLogout}>
-                Logout
+              <DropdownMenuItem
+                className="text-red-500"
+                onClick={handleSignout}
+              >
+                Sign out
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

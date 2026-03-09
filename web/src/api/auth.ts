@@ -106,3 +106,9 @@ export async function resetPassword({
 
   return data
 }
+
+export async function signout() {
+  const { data } = await api.post("/auth/signout")
+
+  return data
+}

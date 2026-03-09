@@ -20,7 +20,7 @@ export const refresh = async (req, res, next) => {
     );
 
     resCookie(req, res, "refreshToken", refreshToken);
-    return resJson(res, 200, "Success refresh.", {
+    return resJson(res, 200, "Token refresh success.", {
       user: updatedUser,
       accessToken,
     });

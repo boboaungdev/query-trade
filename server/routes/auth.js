@@ -12,6 +12,8 @@ import { signup, signupVerify } from "../controllers/auth/signup.js";
 import { forgotPassword } from "../controllers/auth/forgotPassword.js";
 import { forgotPasswordVerify } from "../controllers/auth/forgotPasswrodVerify.js";
 import { resetPassword } from "../controllers/auth/resetPassword.js";
+import { signout } from "../controllers/auth/signout.js";
+import { refresh } from "../controllers/auth/refresh.js";
 
 const router = express.Router();
 
@@ -51,10 +53,10 @@ router.post(
   resetPassword,
 );
 
-// router.post("/signout", validateToken(), signout);
+router.post("/signout", validateToken(), signout);
+
+router.post("/refresh", validateToken(), validateCookie(), refresh);
 
 // router.get("/profile", validateToken(), profile);
-
-// router.post("/refresh", validateToken(), validateCookie(), refresh);
 
 export const authRouter = router;

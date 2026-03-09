@@ -3,9 +3,8 @@ import { clearCookie, resJson } from "../../utils/response.js";
 
 export const signout = async (req, res, next) => {
   try {
-    const user = req.user;
     const updatedUser = await UserDB.findByIdAndUpdate(
-      user._id,
+      req.user._id,
       { $unset: { refreshToken: "" } },
       { $unset: { pushToken: "" } },
       { returnDocument: "after" },
@@ -15,7 +14,7 @@ export const signout = async (req, res, next) => {
 
     if (!updatedUser) return res.status(204).end();
 
-    return resJson(res, 200, "Successfully logged out.");
+    return resJson(res, 200, "Signout success.");
   } catch (error) {
     next(error);
   }
