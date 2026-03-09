@@ -22,6 +22,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Home, LayoutDashboard, Settings, MoreVertical } from "lucide-react"
 
 import { useAuthStore } from "@/store/auth"
+import { useState } from "react"
 
 export function AppSidebar() {
   const { setOpen } = useSidebar()
@@ -29,6 +30,7 @@ export function AppSidebar() {
   const logout = useAuthStore((state) => state.logout)
 
   const navigate = useNavigate()
+  const [menuOpen, setMenuOpen] = useState(false)
 
   const handleLogout = () => {
     logout()
@@ -43,13 +45,15 @@ export function AppSidebar() {
       .toUpperCase() || "U"
 
   return (
-    <Sidebar
-      side="left"
-      variant="sidebar"
-      collapsible="icon"
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
-    >
+   <Sidebar
+  side="left"
+  variant="sidebar"
+  collapsible="icon"
+  onMouseEnter={() => setOpen(true)}
+  onMouseLeave={() => {
+    if (!menuOpen) setOpen(false)
+  }}
+>
       {/* TOP MENU */}
       <SidebarContent className="pt-10 pl-2">
         <SidebarMenu>
@@ -95,9 +99,9 @@ export function AppSidebar() {
       <SidebarFooter className="pb-5 pl-1">
         <SidebarMenu>
           <SidebarMenuItem>
-            <div className="group flex w-full items-center">
-              {/* PROFILE LINK WITH HOVER */}
-              <SidebarMenuButton asChild className="flex-1">
+           <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+              <SidebarMenuButton className="w-full justify-between">
+                {/* LEFT SIDE (avatar + name) */}
                 <Link to="/profile" className="flex items-center gap-2">
                   <Avatar className="h-6 w-6">
                     <AvatarImage src={user?.avatar} />
@@ -108,40 +112,38 @@ export function AppSidebar() {
                     {user?.name || "User"}
                   </span>
                 </Link>
-              </SidebarMenuButton>
 
-              {/* DROPDOWN ICON */}
-              <DropdownMenu>
+                {/* RIGHT SIDE (3 dots) */}
                 <DropdownMenuTrigger asChild>
-                  <button className="rounded p-1 transition group-data-[collapsible=icon]:hidden hover:bg-accent">
+                  <button className="rounded p-1 group-data-[collapsible=icon]:hidden hover:bg-accent">
                     <MoreVertical size={16} />
                   </button>
                 </DropdownMenuTrigger>
+              </SidebarMenuButton>
 
-                <DropdownMenuContent side="right" align="end" className="w-44">
-                  <DropdownMenuItem asChild>
-                    <Link to="/profile">Profile</Link>
-                  </DropdownMenuItem>
+              <DropdownMenuContent side="right" align="end" className="w-44">
+                <DropdownMenuItem asChild>
+                  <Link to="/profile">Profile</Link>
+                </DropdownMenuItem>
 
-                  <DropdownMenuItem asChild>
-                    <Link to="/settings">Settings</Link>
-                  </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/settings">Settings</Link>
+                </DropdownMenuItem>
 
-                  <DropdownMenuItem asChild>
-                    <Link to="/billing">Billing</Link>
-                  </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/billing">Billing</Link>
+                </DropdownMenuItem>
 
-                  <DropdownMenuSeparator />
+                <DropdownMenuSeparator />
 
-                  <DropdownMenuItem
-                    onClick={handleLogout}
-                    className="text-red-500"
-                  >
-                    Logout
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  className="text-red-500"
+                >
+                  Logout
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
