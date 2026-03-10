@@ -12,6 +12,7 @@ import Dashboard from "./pages/dashboard"
 import Profile from "./pages/profile"
 
 import { useAuthStore } from "@/store/auth"
+import Settings from "./pages/settings"
 
 export default function App() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
@@ -30,10 +31,11 @@ export default function App() {
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/settings" element={<Settings />} />
           </Routes>
         </main>
 
-        <Toaster position="top-center" duration={1000}/>
+        <Toaster position="top-center" duration={1000} />
       </SidebarInset>
     </SidebarProvider>
   )
