@@ -130,3 +130,33 @@ export async function editProfile({
 
   return data
 }
+
+export async function checkChangeEmail({
+  newEmail,
+  password,
+}: {
+  newEmail: string
+  password: string
+}) {
+  const { data } = await api.post("/auth/check-change-email", {
+    newEmail,
+    password,
+  })
+
+  return data
+}
+
+export async function verifyChangeEmail({
+  newEmail,
+  newEmailCode,
+}: {
+  newEmail: string
+  newEmailCode: string
+}) {
+  const { data } = await api.patch("/auth/verify-change-email", {
+    newEmail,
+    code: newEmailCode,
+  })
+
+  return data
+}

@@ -5,10 +5,12 @@ import { fileURLToPath } from "url";
 import { UserDB } from "../../models/user.js";
 import { Encoder } from "../../utils/encoder.js";
 import { VerifyDB } from "../../models/verify.js";
-import { APP_NAME } from "../../constants/index.js";
+import { APP_NAME, EXPIRE_MINUTE } from "../../constants/index.js";
 import { sendEmail } from "../../utils/sendEmail.js";
 import { Token } from "../../utils/token.js";
 import { resCookie, resError, resJson } from "../../utils/response.js";
+import { renderTemplate } from "../../utils/renderTemplate.js";
+import { generateEmailCode } from "../../utils/generateEmailCode.js";
 
 export const signup = async (req, res, next) => {
   try {
@@ -27,10 +29,9 @@ export const signup = async (req, res, next) => {
     }
 
     // Generate new token
-    const code = Math.floor(100000 + Math.random() * 900000).toString(); // e.g. "482391"
+    const code = generateEmailCode();
     const hashedPassword = Encoder.encode(password);
-    const expireMinutes = 10; // 10 mins
-    const expiresIn = new Date(Date.now() + expireMinutes * 60 * 1000);
+    const expiresIn = new Date(Date.now() + EXPIRE_MINUTE * 60 * 1000);
 
     // Create new verification
     await VerifyDB.create({
@@ -46,15 +47,23 @@ export const signup = async (req, res, next) => {
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
     let htmlFile = fs.readFileSync(
-      path.join(__dirname, "../../assets/html/signupVerify.html"),
+      path.join(__dirname, "../../assets/html/email.html"),
       "utf8",
     );
 
-    htmlFile = htmlFile.replace("{verificationCode}", code);
-    // htmlFile = htmlFile.replace(
-    //   "{logoImage}",
-    //   `${process.env.SERVER_URL}/image/logo`
-    // );
+    const actionSection = `
+  <div class="code">${code}</div>
+  <p>This verification code will expire in ${EXPIRE_MINUTE} minutes.</p>
+`;
+
+    htmlFile = renderTemplate(htmlFile, {
+      appName: APP_NAME,
+      title: "Verify Your Email",
+      message: "Use the verification code below to complete your signup.",
+      actionSection,
+      footerMessage:
+        "If you did not create this account, you can safely ignore this email.",
+    });
 
     // Send Email
     await sendEmail({
@@ -66,7 +75,7 @@ export const signup = async (req, res, next) => {
     return resJson(
       res,
       201,
-      `Verification code sent to ${email}, please verify within ${expireMinutes} minutes. Don't forget to check your spam folder!`,
+      `Verification code sent to ${email}, please verify within ${EXPIRE_MINUTE} minutes. Don't forget to check your spam folder!`,
     );
   } catch (error) {
     next(error);
@@ -126,10 +135,26 @@ export const signupVerify = async (req, res, next) => {
     // Send verified email
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
-    const htmlFile = fs.readFileSync(
-      path.join(__dirname, "../../assets/html/signupSuccess.html"),
+    let htmlFile = fs.readFileSync(
+      path.join(__dirname, "../../assets/html/email.html"),
       "utf8",
     );
+
+    const actionSection = `
+  <p><strong>Welcome ${user.name} 🎉</strong></p>
+  <p>Your account has been successfully created.</p>
+  <p><b>Username:</b> ${user.username}</p>
+  <p><b>Email:</b> ${user.email}</p>
+`;
+
+    htmlFile = renderTemplate(htmlFile, {
+      appName: APP_NAME,
+      title: "Signup Successful",
+      message: "Your account has been successfully created.",
+      actionSection,
+      footerMessage:
+        "Thank you for joining us. We are excited to have you here!",
+    });
 
     await sendEmail({
       to: user.email,

@@ -15,6 +15,10 @@ import { resetPassword } from "../controllers/auth/resetPassword.js";
 import { signout } from "../controllers/auth/signout.js";
 import { refresh } from "../controllers/auth/refresh.js";
 import { update } from "../controllers/auth/update.js";
+import {
+  checkChangeEmail,
+  verifyChangeEmail,
+} from "../controllers/auth/changeEmail.js";
 
 const router = express.Router();
 
@@ -63,6 +67,20 @@ router.patch(
   validateToken(),
   validateBody(UserSchema.update),
   update,
+);
+
+router.post(
+  "/check-change-email",
+  validateToken(),
+  validateBody(UserSchema.checkChangeEmail),
+  checkChangeEmail,
+);
+
+router.patch(
+  "/verify-change-email",
+  validateToken(),
+  validateBody(UserSchema.verifyChangeEmail),
+  verifyChangeEmail,
 );
 
 // router.get("/profile", validateToken(), profile);

@@ -32,11 +32,11 @@ type AccountSecuritySettings = {
 
 type AccountSectionProps = {
   emailChangeStep: "idle" | "draft" | "verify"
+  emailChangePassword: string
   emailDraft: string
-  currentEmailCode: string
   newEmailCode: string
+  setEmailChangePassword: (value: string) => void
   setEmailDraft: (value: string) => void
-  setCurrentEmailCode: (value: string) => void
   setNewEmailCode: (value: string) => void
   setEmailChangeStep: (value: "idle" | "draft" | "verify") => void
   accountSecuritySettings: AccountSecuritySettings
@@ -46,17 +46,19 @@ type AccountSectionProps = {
   verifyEmailChange: () => void
   saveEmailChange: () => void
   cancelEmailChange: () => void
+  isCheckingChangeEmail: boolean
+  isSavingEmailChange: boolean
   handlePasswordAction: () => void
   handleGoogleProviderAction: () => void
 }
 
 export function AccountSection({
   emailChangeStep,
+  emailChangePassword,
   emailDraft,
-  currentEmailCode,
   newEmailCode,
+  setEmailChangePassword,
   setEmailDraft,
-  setCurrentEmailCode,
   setNewEmailCode,
   setEmailChangeStep,
   accountSecuritySettings,
@@ -64,10 +66,14 @@ export function AccountSection({
   verifyEmailChange,
   saveEmailChange,
   cancelEmailChange,
+  isCheckingChangeEmail,
+  isSavingEmailChange,
   handlePasswordAction,
   handleGoogleProviderAction,
 }: AccountSectionProps) {
   const user = useAuthStore((state) => state.user)
+  const isEmailChangeBusy = isCheckingChangeEmail || isSavingEmailChange
+  const isEmailLocked = emailChangeStep === "verify"
   const [passwordStep, setPasswordStep] = useState<
     "idle" | "verify" | "email-code" | "reset"
   >("idle")
@@ -83,7 +89,8 @@ export function AccountSection({
   )
   const showEmailError =
     emailChangeStep === "draft" && emailDraft.length > 0 && !isValidEmailDraft
-  const isCurrentCodeValid = /^\d{6}$/.test(currentEmailCode)
+  const isEmailChangePasswordValid =
+    emailChangePassword.length >= 6 && emailChangePassword.length <= 50
   const isNewCodeValid = /^\d{6}$/.test(newEmailCode)
   const isCurrentPasswordValid =
     currentPassword.length >= 6 && currentPassword.length <= 50
@@ -106,6 +113,7 @@ export function AccountSection({
 
   if (!user) return null
 
+  const isSameAsCurrentEmail = normalizedEmailDraft === user.email.toLowerCase()
   const hasGoogleProvider = user.authProviders.some(
     (provider) => provider.provider === "google"
   )
@@ -213,22 +221,44 @@ export function AccountSection({
 
         <div className="grid gap-4 md:grid-cols-2">
           <div className="rounded-2xl border border-border/70 p-4">
-            <div className="flex items-start gap-3">
-              <span className="rounded-xl bg-primary/10 p-2 text-primary">
-                <Mail className="size-4" />
-              </span>
-              <div className="space-y-1">
+          <div className="flex items-start gap-3">
+            <span className="rounded-xl bg-primary/10 p-2 text-primary">
+              <Mail className="size-4" />
+            </span>
+            <div className="space-y-1">
                 <p className="font-medium">Email address</p>
                 <p className="text-sm text-muted-foreground">
                   Used for sign-in, receipts, and security notices.
                 </p>
               </div>
             </div>
-            <div className="mt-4 rounded-xl border border-primary/15 bg-primary/[0.06] px-4 py-3">
-              <p className="text-sm text-muted-foreground">Current email</p>
-              <p className="mt-1 font-medium break-all">{user.email}</p>
-            </div>
-            {emailChangeStep !== "idle" && (
+            {emailChangeStep === "idle" ? (
+              <div className="mt-4 flex flex-col gap-3 rounded-xl border border-border/70 bg-muted/30 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="font-medium break-all">{user.email}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Current sign-in email
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  className="w-full rounded-xl sm:w-auto"
+                  onClick={() => {
+                    setEmailChangePassword("")
+                    setEmailDraft("")
+                    setEmailChangeStep("draft")
+                  }}
+                >
+                  Change Email
+                </Button>
+              </div>
+            ) : (
+              <div className="mt-4 rounded-xl border border-primary/15 bg-primary/[0.06] px-4 py-3">
+                <p className="text-sm text-muted-foreground">Current email</p>
+                <p className="mt-1 font-medium break-all">{user.email}</p>
+              </div>
+            )}
+            {emailChangeStep === "draft" || emailChangeStep === "verify" ? (
               <div className="mt-4 space-y-2">
                 <Label htmlFor="account-email">New email</Label>
                 <Input
@@ -237,14 +267,22 @@ export function AccountSection({
                   value={emailDraft}
                   onChange={(event) => setEmailDraft(event.target.value)}
                   placeholder="name@example.com"
-                  disabled={emailChangeStep === "verify"}
+                  disabled={isEmailLocked || isEmailChangeBusy}
                   aria-invalid={showEmailError}
                   onKeyDown={(e) => {
                     if (e.key !== "Enter") return
 
                     e.preventDefault()
 
-                    if (!normalizedEmailDraft || !isValidEmailDraft) return
+                    if (
+                      !normalizedEmailDraft ||
+                      !isValidEmailDraft ||
+                      isSameAsCurrentEmail ||
+                      !isEmailChangePasswordValid ||
+                      isCheckingChangeEmail
+                    ) {
+                      return
+                    }
 
                     verifyEmailChange()
                   }}
@@ -255,45 +293,43 @@ export function AccountSection({
                   </p>
                 )}
               </div>
-            )}
+            ) : null}
+            {emailChangeStep === "draft" ? (
+              <div className="mt-4 space-y-2">
+                <Label htmlFor="email-change-password">Password</Label>
+                <Input
+                  id="email-change-password"
+                  type="password"
+                  value={emailChangePassword}
+                  onChange={(event) =>
+                    setEmailChangePassword(event.target.value)
+                  }
+                  placeholder="Enter current password"
+                  disabled={isEmailChangeBusy}
+                  onKeyDown={(e) => {
+                    if (e.key !== "Enter") return
+
+                    e.preventDefault()
+
+                    if (
+                      !normalizedEmailDraft ||
+                      !isValidEmailDraft ||
+                      !isEmailChangePasswordValid ||
+                      isCheckingChangeEmail
+                    ) {
+                      return
+                    }
+
+                    verifyEmailChange()
+                  }}
+                />
+              </div>
+            ) : null}
             {emailChangeStep === "verify" && (
               <div className="mt-4 grid gap-4">
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <Label htmlFor="current-email-code">
-                      Current email code
-                    </Label>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          className="rounded-full text-muted-foreground transition-colors hover:text-foreground"
-                        >
-                          <CircleHelp className="h-3.5 w-3.5" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" sideOffset={6}>
-                        Verification code sent to your current email. If not
-                        found, check spam folder.
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                  <Input
-                    id="current-email-code"
-                    value={currentEmailCode}
-                    onChange={(event) =>
-                      setCurrentEmailCode(
-                        event.target.value.replace(/\D/g, "").slice(0, 6)
-                      )
-                    }
-                    placeholder="6-digit code"
-                    inputMode="numeric"
-                    maxLength={6}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor="new-email-code">New email code</Label>
+                    <Label htmlFor="new-email-code">New email verification code</Label>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button
@@ -320,12 +356,15 @@ export function AccountSection({
                     placeholder="6-digit code"
                     inputMode="numeric"
                     maxLength={6}
+                    disabled={isEmailChangeBusy}
                     onKeyDown={(e) => {
                       if (e.key !== "Enter") return
 
                       e.preventDefault()
 
-                      if (!isCurrentCodeValid || !isNewCodeValid) return
+                      if (!isNewCodeValid || isSavingEmailChange) {
+                        return
+                      }
 
                       saveEmailChange()
                     }}
@@ -339,7 +378,7 @@ export function AccountSection({
                   <Button
                     className="w-full rounded-xl sm:w-auto"
                     onClick={saveEmailChange}
-                    disabled={!isCurrentCodeValid || !isNewCodeValid}
+                    disabled={!isNewCodeValid || isEmailChangeBusy}
                   >
                     Save Email Change
                   </Button>
@@ -347,6 +386,7 @@ export function AccountSection({
                     variant="outline"
                     className="w-full rounded-xl sm:w-auto"
                     onClick={cancelEmailChange}
+                    disabled={isEmailChangeBusy}
                   >
                     Cancel
                   </Button>
@@ -356,7 +396,13 @@ export function AccountSection({
                   <Button
                     className="w-full rounded-xl sm:w-auto"
                     onClick={verifyEmailChange}
-                    disabled={!normalizedEmailDraft || !isValidEmailDraft}
+                    disabled={
+                      !normalizedEmailDraft ||
+                      !isValidEmailDraft ||
+                      isSameAsCurrentEmail ||
+                      !isEmailChangePasswordValid ||
+                      isEmailChangeBusy
+                    }
                   >
                     Verify
                   </Button>
@@ -364,30 +410,12 @@ export function AccountSection({
                     variant="outline"
                     className="w-full rounded-xl sm:w-auto"
                     onClick={cancelEmailChange}
+                    disabled={isEmailChangeBusy}
                   >
                     Cancel
                   </Button>
                 </>
-              ) : (
-                <Button
-                  className="w-full rounded-xl sm:w-auto"
-                  onClick={() => {
-                    setEmailDraft("")
-                    setEmailChangeStep("draft")
-                  }}
-                >
-                  Change Email
-                </Button>
-              )}
-
-              {emailChangeStep === "idle" && (
-                <Button
-                  variant="outline"
-                  className="w-full rounded-xl sm:w-auto"
-                >
-                  Add Backup Email
-                </Button>
-              )}
+              ) : null}
             </div>
           </div>
 

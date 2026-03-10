@@ -9,6 +9,7 @@ import { Token } from "../../utils/token.js";
 import { APP_NAME } from "../../constants/index.js";
 import { sendEmail } from "../../utils/sendEmail.js";
 import { uploadAvatar } from "../../utils/uploadAvatar.js";
+import { renderTemplate } from "../../utils/renderTemplate.js";
 
 export const signin = async (req, res, next) => {
   try {
@@ -135,17 +136,36 @@ export const signinGoogle = async (req, res, next) => {
       { returnDocument: "after", select: "-password" },
     );
 
+    const actionSection = `
+  <p><b>Account:</b> ${user.email}</p>
+  <p><b>Signin Method:</b> Google</p>
+  <p><b>Signin Time:</b> ${new Date().toLocaleString()}</p>
+`;
+
     // 6. Send signin email
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
-    const htmlFile = fs.readFileSync(
-      path.join(__dirname, "../../assets/html/signinGoogle.html"),
+
+    let htmlFile = fs.readFileSync(
+      path.join(__dirname, "../../assets/html/email.html"),
       "utf8",
     );
 
+    htmlFile = renderTemplate(htmlFile, {
+      appName: APP_NAME,
+      title: "Google Sign-in Successful",
+      name: user.name,
+      message: newUser
+        ? "Welcome! Your account was successfully created using Google."
+        : "You have successfully signed in using your Google account.",
+      actionSection,
+      footerMessage:
+        "If this login wasn't you, please secure your account immediately.",
+    });
+
     await sendEmail({
       to: user.email,
-      subject: `[${APP_NAME}] Signin Success with Google Account`,
+      subject: `[${APP_NAME}] Google Sign-in Notification`,
       html: htmlFile,
     });
 

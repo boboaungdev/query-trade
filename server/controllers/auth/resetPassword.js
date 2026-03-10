@@ -8,6 +8,7 @@ import { Encoder } from "../../utils/encoder.js";
 import { Token } from "../../utils/token.js";
 import { sendEmail } from "../../utils/sendEmail.js";
 import { APP_NAME } from "../../constants/index.js";
+import { renderTemplate } from "../../utils/renderTemplate.js";
 
 export const resetPassword = async (req, res, next) => {
   try {
@@ -35,13 +36,28 @@ export const resetPassword = async (req, res, next) => {
       { returnDocument: "after", select: "-password" },
     );
 
+    const actionSection = `
+  <p><strong>Password Reset Successful</strong></p>
+  <p>Your password was successfully updated.</p>
+  <p><b>Time:</b> ${new Date().toLocaleString()}</p>
+`;
+
     // Send verified email
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
-    const htmlFile = fs.readFileSync(
-      path.join(__dirname, "../../assets/html/resetPasswordSuccess.html"),
+    let htmlFile = fs.readFileSync(
+      path.join(__dirname, "../../assets/html/email.html"),
       "utf8",
     );
+
+    htmlFile = renderTemplate(htmlFile, {
+      appName: APP_NAME,
+      title: "Password Reset Successful",
+      message: "Your password has been successfully reset.",
+      actionSection,
+      footerMessage:
+        "If you did not perform this action, please secure your account immediately.",
+    });
 
     await sendEmail({
       to: updatedUser.email,

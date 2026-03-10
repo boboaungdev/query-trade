@@ -7,6 +7,8 @@ import { resError, resJson } from "../../utils/response.js";
 import { VerifyDB } from "../../models/verify.js";
 import { sendEmail } from "../../utils/sendEmail.js";
 import { APP_NAME } from "../../constants/index.js";
+import { renderTemplate } from "../../utils/renderTemplate.js";
+import { generateEmailCode } from "../../utils/generateEmailCode.js";
 
 export const forgotPassword = async (req, res, next) => {
   try {
@@ -23,7 +25,7 @@ export const forgotPassword = async (req, res, next) => {
     }
 
     // Generate new token
-    const code = Math.floor(100000 + Math.random() * 900000).toString(); // e.g. "482391"
+    const code = generateEmailCode();
     const expiresIn = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
 
     // Create new verification
@@ -33,6 +35,11 @@ export const forgotPassword = async (req, res, next) => {
       expiresIn,
     });
 
+    const actionSection = `
+  <div class="code">${code}</div>
+  <p>This code will expire in 10 minutes.</p>
+`;
+
     // Load the HTML file
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
@@ -41,11 +48,14 @@ export const forgotPassword = async (req, res, next) => {
       "utf8",
     );
 
-    htmlFile = htmlFile.replace("{verificationCode}", code);
-    // htmlFile = htmlFile.replace(
-    //   "{logoImage}",
-    //   `${process.env.SERVER_URL}/image/logo`
-    // );
+    htmlFile = renderTemplate(htmlFile, {
+      appName: APP_NAME,
+      title: "Forgot Password Verification",
+      message: "Use the verification code below to reset your password.",
+      actionSection,
+      footerMessage:
+        "If you did not request a password reset, you can safely ignore this email.",
+    });
 
     // Send Email
     await sendEmail({

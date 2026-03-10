@@ -68,14 +68,24 @@ export const UserSchema = {
 
     avatar: Joi.string().allow("").optional(),
 
-    email: Joi.string()
-      .email({ minDomainSegments: 2 })
-      .lowercase()
-      .trim()
-      .optional(),
-
     password: Joi.string().min(6).max(50).optional(),
   }).min(1),
+
+  checkChangeEmail: Joi.object({
+    newEmail: Joi.string()
+      .email({ minDomainSegments: 2 })
+      .lowercase()
+      .required(),
+    password: Joi.string().min(6).max(50).required(),
+  }),
+
+  verifyChangeEmail: Joi.object({
+    newEmail: Joi.string()
+      .email({ minDomainSegments: 2 })
+      .lowercase()
+      .required(),
+    code: Joi.string().length(6).required(),
+  }),
 
   // changePassword: Joi.object({
   //   oldPassword: Joi.string()

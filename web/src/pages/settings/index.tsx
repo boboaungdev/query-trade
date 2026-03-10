@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react"
 import { Navigate } from "react-router-dom"
+import { toast } from "sonner"
 
+import { checkChangeEmail, verifyChangeEmail } from "@/api/auth"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -26,10 +28,14 @@ export default function Settings() {
   const user = useAuthStore((state) => state.user)
   const updateUser = useAuthStore((state) => state.updateUser)
   const [activeSection, setActiveSection] = useState(sections[0].id)
-  const [emailChangeStep, setEmailChangeStep] = useState<"idle" | "draft" | "verify">("idle")
+  const [emailChangeStep, setEmailChangeStep] = useState<
+    "idle" | "draft" | "verify"
+  >("idle")
+  const [emailChangePassword, setEmailChangePassword] = useState("")
   const [emailDraft, setEmailDraft] = useState("")
-  const [currentEmailCode, setCurrentEmailCode] = useState("")
   const [newEmailCode, setNewEmailCode] = useState("")
+  const [isCheckingChangeEmail, setIsCheckingChangeEmail] = useState(false)
+  const [isSavingEmailChange, setIsSavingEmailChange] = useState(false)
   const [accountSecuritySettings, setAccountSecuritySettings] = useState({
     emailVisibility: "Only me",
     verificationMethod: "Authenticator app",
@@ -70,40 +76,85 @@ export default function Settings() {
 
   const cancelEmailChange = () => {
     setEmailChangeStep("idle")
+    setEmailChangePassword("")
     setEmailDraft("")
-    setCurrentEmailCode("")
     setNewEmailCode("")
   }
 
   const verifyEmailChange = () => {
-    const nextEmail = emailDraft.trim()
+    const nextEmail = emailDraft.trim().toLowerCase()
 
-    if (!nextEmail || nextEmail === user.email) {
-      cancelEmailChange()
+    if (
+      !nextEmail ||
+      nextEmail === user.email.toLowerCase() ||
+      emailChangePassword.length < 6 ||
+      emailChangePassword.length > 50
+    ) {
       return
     }
 
-    setEmailDraft(nextEmail)
-    setEmailChangeStep("verify")
+    setIsCheckingChangeEmail(true)
+    const promise = checkChangeEmail({
+      newEmail: nextEmail,
+      password: emailChangePassword,
+    })
+
+    toast.promise(promise, {
+      loading: "Verifying...",
+      success: (data) => {
+        setEmailDraft(nextEmail)
+        setEmailChangeStep("verify")
+        return data.message || "Email available."
+      },
+      error: (error: unknown) =>
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        typeof (error as { response?: { data?: { message?: string } } })
+          .response?.data?.message === "string"
+          ? (error as { response?: { data?: { message?: string } } }).response!
+              .data!.message!
+          : "Failed to check email.",
+    })
+
+    promise.finally(() => setIsCheckingChangeEmail(false))
   }
 
   const saveEmailChange = () => {
     const nextEmail = emailDraft.trim()
 
-    if (
-      !nextEmail ||
-      nextEmail === user.email ||
-      !currentEmailCode.trim() ||
-      !newEmailCode.trim()
-    ) {
+    if (!nextEmail || nextEmail === user.email || !newEmailCode.trim()) {
       return
     }
 
-    updateUser({ email: nextEmail })
-    setEmailDraft("")
-    setCurrentEmailCode("")
-    setNewEmailCode("")
-    setEmailChangeStep("idle")
+    setIsSavingEmailChange(true)
+
+    const promise = verifyChangeEmail({
+      newEmail: nextEmail,
+      newEmailCode: newEmailCode,
+    })
+
+    toast.promise(promise, {
+      loading: "Changing email...",
+      success: (data) => {
+        updateUser({ email: nextEmail })
+        setEmailDraft("")
+        setNewEmailCode("")
+        setEmailChangeStep("idle")
+        return data.message || "Email changed."
+      },
+      error: (error: unknown) =>
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        typeof (error as { response?: { data?: { message?: string } } })
+          .response?.data?.message === "string"
+          ? (error as { response?: { data?: { message?: string } } }).response!
+              .data!.message!
+          : "Failed to change email.",
+    })
+
+    promise.finally(() => setIsSavingEmailChange(false))
   }
 
   const handlePasswordAction = () => {
@@ -247,11 +298,11 @@ export default function Settings() {
                 {activeSection === "account" && (
                   <AccountSection
                     emailChangeStep={emailChangeStep}
+                    emailChangePassword={emailChangePassword}
                     emailDraft={emailDraft}
                     setEmailDraft={setEmailDraft}
-                    currentEmailCode={currentEmailCode}
+                    setEmailChangePassword={setEmailChangePassword}
                     newEmailCode={newEmailCode}
-                    setCurrentEmailCode={setCurrentEmailCode}
                     setNewEmailCode={setNewEmailCode}
                     setEmailChangeStep={setEmailChangeStep}
                     accountSecuritySettings={accountSecuritySettings}
@@ -259,6 +310,8 @@ export default function Settings() {
                     verifyEmailChange={verifyEmailChange}
                     saveEmailChange={saveEmailChange}
                     cancelEmailChange={cancelEmailChange}
+                    isCheckingChangeEmail={isCheckingChangeEmail}
+                    isSavingEmailChange={isSavingEmailChange}
                     handlePasswordAction={handlePasswordAction}
                     handleGoogleProviderAction={handleGoogleProviderAction}
                   />
