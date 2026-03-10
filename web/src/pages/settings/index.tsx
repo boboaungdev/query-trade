@@ -2,7 +2,11 @@ import { useMemo, useState } from "react"
 import { Navigate } from "react-router-dom"
 import { toast } from "sonner"
 
-import { checkChangeEmail, verifyChangeEmail } from "@/api/auth"
+import {
+  checkChangeEmail,
+  createPassword,
+  verifyChangeEmail,
+} from "@/api/auth"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -157,17 +161,25 @@ export default function Settings() {
     promise.finally(() => setIsSavingEmailChange(false))
   }
 
-  const handlePasswordAction = () => {
+  const handlePasswordAction = async (password: string) => {
     if (user.authProviders.some((provider) => provider.provider === "server")) {
       return
     }
 
+    const data = await createPassword({ password })
+
+    if (data?.result?.user) {
+      updateUser(data.result.user)
+      return
+    }
+
     updateUser({
+      passwordChangedAt: new Date().toISOString(),
       authProviders: [
         ...user.authProviders,
         {
           provider: "server",
-          providerId: `server-${user._id}`,
+          providerId: user._id,
         },
       ],
     })

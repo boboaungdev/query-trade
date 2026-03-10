@@ -54,7 +54,7 @@ type AccountSectionProps = {
   cancelEmailChange: () => void
   isCheckingChangeEmail: boolean
   isSavingEmailChange: boolean
-  handlePasswordAction: () => void
+  handlePasswordAction: (password: string) => Promise<void>
   handleGoogleProviderAction: () => void
 }
 
@@ -90,7 +90,7 @@ export function AccountSection({
   const [isSavingPassword, setIsSavingPassword] = useState(false)
   const [isSendingPasswordReset, setIsSendingPasswordReset] = useState(false)
   const [passwordResendTimer, setPasswordResendTimer] = useState(0)
-  const [currentTimeMs, setCurrentTimeMs] = useState(0)
+  const [currentTimeMs, setCurrentTimeMs] = useState(() => Date.now())
 
   const normalizedEmailDraft = emailDraft.trim().toLowerCase()
   const isValidEmailDraft = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
@@ -119,8 +119,6 @@ export function AccountSection({
   }, [isForgotPasswordMode, passwordResendTimer])
 
   useEffect(() => {
-    setCurrentTimeMs(Date.now())
-
     const timer = setInterval(() => {
       setCurrentTimeMs(Date.now())
     }, 60 * 1000)
@@ -196,13 +194,32 @@ export function AccountSection({
   const savePasswordFlow = () => {
     if (!canSavePassword) return
 
+    setIsSavingPassword(true)
+
     if (!hasServerProvider) {
-      handlePasswordAction()
-      resetPasswordFlow()
+      const promise = handlePasswordAction(newPassword)
+
+      toast.promise(promise, {
+        loading: "Creating password...",
+        success: () => {
+          resetPasswordFlow()
+          return "Password created."
+        },
+        error: (error: unknown) =>
+          typeof error === "object" &&
+          error !== null &&
+          "response" in error &&
+          typeof (error as { response?: { data?: { message?: string } } })
+            .response?.data?.message === "string"
+            ? (error as { response?: { data?: { message?: string } } }).response!
+                .data!.message!
+            : "Failed to create password.",
+      })
+
+      promise.finally(() => setIsSavingPassword(false))
       return
     }
 
-    setIsSavingPassword(true)
     const promise = isForgotPasswordMode
       ? verifyChangePassword({
           email: user.email,
@@ -317,12 +334,15 @@ export function AccountSection({
                 <div>
                   <p className="font-medium break-all">{user.email}</p>
                   <p className="text-sm text-muted-foreground">
-                    Current sign-in email
+                    {hasServerProvider
+                      ? "Current sign-in email"
+                      : "Create password first to change email address."}
                   </p>
                 </div>
                 <Button
                   variant="outline"
                   className="w-full rounded-xl sm:w-auto"
+                  disabled={!hasServerProvider}
                   onClick={() => {
                     setEmailChangePassword("")
                     setEmailDraft("")

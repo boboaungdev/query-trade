@@ -1,6 +1,6 @@
 import api from "./axios"
 
-export async function checkUserExist(email: string) {
+export async function checkUserExist({ email }: { email: string }) {
   const { data } = await api.post("/auth/exist-user", {
     email,
   })
@@ -189,6 +189,14 @@ export async function verifyChangePassword({
     email,
     code,
     newPassword,
+  })
+
+  return data
+}
+
+export async function createPassword({ password }: { password: string }) {
+  const { data } = await api.patch("/auth/create-password", {
+    password,
   })
 
   return data

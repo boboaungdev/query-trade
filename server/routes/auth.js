@@ -23,6 +23,7 @@ import {
   changePassword,
   verifyChangePassword,
 } from "../controllers/auth/changePassword.js";
+import { createPassword } from "../controllers/auth/createPassword.js";
 
 const router = express.Router();
 
@@ -99,6 +100,13 @@ router.patch(
   validateToken(),
   validateBody(UserSchema.verifyChangePassword),
   verifyChangePassword,
+);
+
+router.patch(
+  "/create-password",
+  validateToken(),
+  validateBody(UserSchema.createPassword),
+  createPassword,
 );
 
 // router.get("/profile", validateToken(), profile);

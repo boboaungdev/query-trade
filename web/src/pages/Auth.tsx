@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useState } from "react"
+import { useEffect, useState, type KeyboardEvent } from "react"
 import { useNavigate } from "react-router-dom"
 
 import { useGoogleLogin } from "@react-oauth/google"
@@ -65,6 +65,9 @@ export default function Auth() {
   const [code, setCode] = useState("")
 
   const [loading, setLoading] = useState(false)
+  const [loadingSource, setLoadingSource] = useState<
+    "submit" | "google" | "resend" | "forgot" | null
+  >(null)
   const [forgotStep, setForgotStep] = useState(false)
   const [resetStep, setResetStep] = useState(false)
 
@@ -84,6 +87,19 @@ export default function Auth() {
   const validUsername = USERNAME_REGEX.test(username.trim())
   const validPassword = isValidPassword(password)
   const validNewPassword = isValidPassword(newPassword)
+  const shouldShowContinueSpinner = loading && loadingSource === "submit"
+  const isSubmitDisabled =
+    loading ||
+    (!verifyStep && !forgotStep && !isValidEmail) ||
+    (showPassword && !forgotStep && !validPassword) ||
+    (isSignup &&
+      !verifyStep &&
+      (!validName || !validUsername || !validPassword)) ||
+    (resetStep &&
+      (!validNewPassword ||
+        !confirmNewPassword.trim() ||
+        newPassword !== confirmNewPassword)) ||
+    ((verifyStep || (forgotStep && !resetStep)) && code.length !== 6)
 
   useEffect(() => {
     if (!forgotStep && !verifyStep) return
@@ -100,6 +116,16 @@ export default function Auth() {
     return () => clearTimeout(timer)
   }, [resendTimer, forgotStep, verifyStep])
 
+  const handleSubmitKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== "Enter") return
+
+    e.preventDefault()
+
+    if (isSubmitDisabled) return
+
+    handleContinue()
+  }
+
   const handleResendVerification = () => {
     if (!isValidEmail || !validName || !validUsername || !validPassword) {
       toast.error("Please fill valid signup details before resending code")
@@ -107,6 +133,7 @@ export default function Auth() {
     }
 
     setLoading(true)
+    setLoadingSource("resend")
 
     const promise = signup({
       email: normalizedEmail,
@@ -128,7 +155,10 @@ export default function Auth() {
         setCanResend(false)
         setCode("")
       })
-      .finally(() => setLoading(false))
+      .finally(() => {
+        setLoading(false)
+        setLoadingSource(null)
+      })
   }
 
   const handleContinue = () => {
@@ -178,10 +208,11 @@ export default function Auth() {
     }
 
     setLoading(true)
+    setLoadingSource("submit")
 
     // STEP 1 — check email
     if (!showPassword && !isSignup) {
-      const promise = checkUserExist(normalizedEmail)
+      const promise = checkUserExist({ email: normalizedEmail })
 
       toast.promise(promise, {
         loading: "Checking account...",
@@ -199,7 +230,10 @@ export default function Auth() {
           error?.response?.data?.message || "Something went wrong",
       })
 
-      promise.finally(() => setLoading(false))
+      promise.finally(() => {
+        setLoading(false)
+        setLoadingSource(null)
+      })
     }
 
     // STEP 2 — sign in
@@ -218,7 +252,10 @@ export default function Auth() {
           error?.response?.data?.message || "Signin failed",
       })
 
-      promise.finally(() => setLoading(false))
+      promise.finally(() => {
+        setLoading(false)
+        setLoadingSource(null)
+      })
     }
 
     // Forgot verify
@@ -238,7 +275,10 @@ export default function Auth() {
           error?.response?.data?.message || "Verification failed",
       })
 
-      promise.finally(() => setLoading(false))
+      promise.finally(() => {
+        setLoading(false)
+        setLoadingSource(null)
+      })
     }
 
     // Reset password
@@ -260,7 +300,10 @@ export default function Auth() {
           error?.response?.data?.message || "Reset password failed",
       })
 
-      promise.finally(() => setLoading(false))
+      promise.finally(() => {
+        setLoading(false)
+        setLoadingSource(null)
+      })
     }
 
     // STEP 3 — signup
@@ -284,7 +327,10 @@ export default function Auth() {
           error?.response?.data?.message || "Signup failed",
       })
 
-      promise.finally(() => setLoading(false))
+      promise.finally(() => {
+        setLoading(false)
+        setLoadingSource(null)
+      })
     }
 
     // STEP 4 — verify email
@@ -303,13 +349,17 @@ export default function Auth() {
           error?.response?.data?.message || "Verification failed",
       })
 
-      promise.finally(() => setLoading(false))
+      promise.finally(() => {
+        setLoading(false)
+        setLoadingSource(null)
+      })
     }
   }
 
   const loginGoogle = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       setLoading(true)
+      setLoadingSource("google")
 
       try {
         const userInfo = await axios.get(
@@ -345,10 +395,12 @@ export default function Auth() {
         await promise
       } finally {
         setLoading(false)
+        setLoadingSource(null)
       }
     },
     onError: () => {
       setLoading(false)
+      setLoadingSource(null)
       toast.error("Google signin failed!")
     },
   })
@@ -360,6 +412,7 @@ export default function Auth() {
     }
 
     setLoading(true)
+    setLoadingSource("forgot")
 
     const promise = forgotPassword({ email: normalizedEmail })
 
@@ -376,7 +429,10 @@ export default function Auth() {
         setResendTimer(60)
         setCanResend(false)
       })
-      .finally(() => setLoading(false))
+      .finally(() => {
+        setLoading(false)
+        setLoadingSource(null)
+      })
   }
 
   const handleResendCode = () => {
@@ -386,6 +442,7 @@ export default function Auth() {
     }
 
     setLoading(true)
+    setLoadingSource("resend")
 
     const promise = forgotPassword({ email: normalizedEmail })
 
@@ -402,7 +459,10 @@ export default function Auth() {
         setCanResend(false)
         setCode("")
       })
-      .finally(() => setLoading(false))
+      .finally(() => {
+        setLoading(false)
+        setLoadingSource(null)
+      })
   }
 
   const title = showPassword ? "Sign in" : isSignup ? "Sing up" : "Welcome"
@@ -457,9 +517,7 @@ export default function Auth() {
                 value={email}
                 disabled={showPassword || isSignup || loading}
                 onChange={(e) => setEmail(e.target.value.toLowerCase())}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleContinue()
-                }}
+                onKeyDown={handleSubmitKeyDown}
               />
             </div>
 
@@ -493,9 +551,7 @@ export default function Auth() {
                   value={password}
                   disabled={loading}
                   onChange={(e) => setPassword(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleContinue()
-                  }}
+                  onKeyDown={handleSubmitKeyDown}
                 />
 
                 <div className="flex justify-end">
@@ -544,6 +600,7 @@ export default function Auth() {
                   onChange={(e) =>
                     setCode(e.target.value.replace(/[^0-9]/g, ""))
                   }
+                  onKeyDown={handleSubmitKeyDown}
                 />
 
                 <div className="flex justify-end">
@@ -683,9 +740,7 @@ export default function Auth() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={loading || verifyStep}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleContinue()
-                    }}
+                    onKeyDown={handleSubmitKeyDown}
                   />
                 </div>
               </>
@@ -724,6 +779,7 @@ export default function Auth() {
                   onChange={(e) =>
                     setCode(e.target.value.replace(/[^0-9]/g, ""))
                   }
+                  onKeyDown={handleSubmitKeyDown}
                 />
 
                 <div className="flex justify-end">
@@ -748,22 +804,9 @@ export default function Auth() {
             <Button
               className="w-full"
               onClick={handleContinue}
-              disabled={
-                loading ||
-                (!verifyStep && !forgotStep && !isValidEmail) ||
-                (showPassword && !forgotStep && !validPassword) ||
-                (isSignup &&
-                  !verifyStep &&
-                  (!validName || !validUsername || !validPassword)) ||
-                (resetStep &&
-                  (!validNewPassword ||
-                    !confirmNewPassword.trim() ||
-                    newPassword !== confirmNewPassword)) ||
-                ((verifyStep || (forgotStep && !resetStep)) &&
-                  code.length !== 6)
-              }
+              disabled={isSubmitDisabled}
             >
-              {loading ? (
+              {shouldShowContinueSpinner ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : resetStep ? (
                 "Reset password"

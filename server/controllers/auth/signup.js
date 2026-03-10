@@ -105,6 +105,7 @@ export const signupVerify = async (req, res, next) => {
       username: record.username,
       email: record.email,
       password: record.password,
+      passwordChangedAt: new Date(),
     });
 
     // if (newUser) {
@@ -130,8 +131,8 @@ export const signupVerify = async (req, res, next) => {
           },
         },
       },
-      { returnDocument: "after", select: "-password" },
-    );
+      { returnDocument: "after" },
+    ).select("-password");
 
     await VerifyDB.findByIdAndDelete(record._id);
     // Send verified email

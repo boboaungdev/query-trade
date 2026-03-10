@@ -98,11 +98,9 @@ export const UserSchema = {
     newPassword: Joi.string().min(6).max(50).required(),
   }),
 
-  // createPassword: Joi.object({
-  //   newPassword: Joi.string()
-  //     .pattern(new RegExp('^[a-zA-Z0-9!@#$%^&*()_+={}|:"<>?\\,-.]{8,30}$'))
-  //     .required(),
-  // }),
+  createPassword: Joi.object({
+    password: Joi.string().min(6).max(50).required(),
+  }),
 
   // deleteAccount: Joi.object({
   //   password: Joi.string()
