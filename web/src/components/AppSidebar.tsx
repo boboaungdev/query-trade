@@ -6,6 +6,7 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarMenu,
+  SidebarMenuAction,
   SidebarMenuItem,
   SidebarMenuButton,
 } from "@/components/ui/sidebar"
@@ -111,9 +112,8 @@ export function AppSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
-              <SidebarMenuButton className="w-full justify-between">
-                {/* LEFT SIDE (avatar + name) */}
-                <Link to="/profile" className="flex items-center gap-2">
+              <SidebarMenuButton asChild>
+                <Link to="/profile">
                   <Avatar className="h-6 w-6">
                     <AvatarImage src={user?.avatar} />
                     <AvatarFallback>{initials}</AvatarFallback>
@@ -123,14 +123,16 @@ export function AppSidebar() {
                     {user?.name || "User"}
                   </span>
                 </Link>
-
-                {/* RIGHT SIDE (3 dots) */}
-                <DropdownMenuTrigger asChild>
-                  <button className="rounded p-1 group-data-[collapsible=icon]:hidden hover:bg-accent">
-                    <MoreVertical size={16} />
-                  </button>
-                </DropdownMenuTrigger>
               </SidebarMenuButton>
+
+              <DropdownMenuTrigger asChild>
+                <SidebarMenuAction
+                  className="group-data-[collapsible=icon]:hidden"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <MoreVertical size={16} />
+                </SidebarMenuAction>
+              </DropdownMenuTrigger>
 
               <DropdownMenuContent side="right" align="end" className="w-44">
                 <DropdownMenuItem asChild>
