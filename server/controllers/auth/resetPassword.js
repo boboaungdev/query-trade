@@ -7,7 +7,7 @@ import { resCookie, resError, resJson } from "../../utils/response.js";
 import { Encoder } from "../../utils/encoder.js";
 import { Token } from "../../utils/token.js";
 import { sendEmail } from "../../utils/sendEmail.js";
-import { APP_NAME } from "../../constants/index.js";
+import { APP_NAME, APP_URL } from "../../constants/index.js";
 import { renderTemplate } from "../../utils/renderTemplate.js";
 
 export const resetPassword = async (req, res, next) => {
@@ -32,7 +32,11 @@ export const resetPassword = async (req, res, next) => {
     // Update password and refreshToken, return updated user (excluding password)
     const updatedUser = await UserDB.findByIdAndUpdate(
       user._id,
-      { password: newHashedPassword, refreshToken },
+      {
+        password: newHashedPassword,
+        passwordChangedAt: new Date(),
+        refreshToken,
+      },
       { returnDocument: "after", select: "-password" },
     );
 
@@ -52,6 +56,8 @@ export const resetPassword = async (req, res, next) => {
 
     htmlFile = renderTemplate(htmlFile, {
       appName: APP_NAME,
+      appUrl: APP_URL,
+      year: new Date().getFullYear(),
       title: "Password Reset Successful",
       message: "Your password has been successfully reset.",
       actionSection,

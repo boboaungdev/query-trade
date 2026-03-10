@@ -8,7 +8,13 @@ import {
   Smartphone,
 } from "lucide-react"
 import { FcGoogle } from "react-icons/fc"
+import { toast } from "sonner"
 
+import {
+  changePassword,
+  forgotPassword,
+  verifyChangePassword,
+} from "@/api/auth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -72,16 +78,19 @@ export function AccountSection({
   handleGoogleProviderAction,
 }: AccountSectionProps) {
   const user = useAuthStore((state) => state.user)
+  const updateUser = useAuthStore((state) => state.updateUser)
   const isEmailChangeBusy = isCheckingChangeEmail || isSavingEmailChange
   const isEmailLocked = emailChangeStep === "verify"
-  const [passwordStep, setPasswordStep] = useState<
-    "idle" | "verify" | "email-code" | "reset"
-  >("idle")
+  const [isPasswordFormOpen, setIsPasswordFormOpen] = useState(false)
+  const [isForgotPasswordMode, setIsForgotPasswordMode] = useState(false)
   const [currentPassword, setCurrentPassword] = useState("")
   const [passwordResetCode, setPasswordResetCode] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirmNewPassword, setConfirmNewPassword] = useState("")
-  const [passwordResendTimer, setPasswordResendTimer] = useState(60)
+  const [isSavingPassword, setIsSavingPassword] = useState(false)
+  const [isSendingPasswordReset, setIsSendingPasswordReset] = useState(false)
+  const [passwordResendTimer, setPasswordResendTimer] = useState(0)
+  const [currentTimeMs, setCurrentTimeMs] = useState(0)
 
   const normalizedEmailDraft = emailDraft.trim().toLowerCase()
   const isValidEmailDraft = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
@@ -95,21 +104,29 @@ export function AccountSection({
   const isCurrentPasswordValid =
     currentPassword.length >= 6 && currentPassword.length <= 50
   const isPasswordResetCodeValid = /^\d{6}$/.test(passwordResetCode)
-  const canResendPasswordCode = passwordResendTimer === 0
   const isNewPasswordValid = newPassword.length >= 6 && newPassword.length <= 50
   const isConfirmPasswordValid =
     confirmNewPassword.length > 0 && confirmNewPassword === newPassword
-  const canSavePassword = isNewPasswordValid && isConfirmPasswordValid
 
   useEffect(() => {
-    if (passwordStep !== "email-code" || passwordResendTimer === 0) return
+    if (!isForgotPasswordMode || passwordResendTimer === 0) return
 
     const timer = setTimeout(() => {
       setPasswordResendTimer((prev) => prev - 1)
     }, 1000)
 
     return () => clearTimeout(timer)
-  }, [passwordStep, passwordResendTimer])
+  }, [isForgotPasswordMode, passwordResendTimer])
+
+  useEffect(() => {
+    setCurrentTimeMs(Date.now())
+
+    const timer = setInterval(() => {
+      setCurrentTimeMs(Date.now())
+    }, 60 * 1000)
+
+    return () => clearInterval(timer)
+  }, [])
 
   if (!user) return null
 
@@ -120,9 +137,28 @@ export function AccountSection({
   const hasServerProvider = user.authProviders.some(
     (provider) => provider.provider === "server"
   )
+  const canSavePassword = hasServerProvider
+    ? isForgotPasswordMode
+      ? isPasswordResetCodeValid && isNewPasswordValid && isConfirmPasswordValid
+      : isCurrentPasswordValid && isNewPasswordValid && isConfirmPasswordValid
+    : isNewPasswordValid && isConfirmPasswordValid
   const providerLabels = user.authProviders.map((provider) =>
     provider.provider === "google" ? "Google" : "Password"
   )
+  const formatPasswordChangedHint = (passwordChangedAt?: string) => {
+    if (!passwordChangedAt) return "Not changed yet"
+
+    const changedAt = new Date(passwordChangedAt)
+    if (Number.isNaN(changedAt.getTime())) return "Last changed recently"
+
+    const diffMs = currentTimeMs - changedAt.getTime()
+    const diffDays = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)))
+
+    if (diffDays === 0) return "Last changed today"
+    if (diffDays === 1) return "Last changed 1 day ago"
+
+    return `Last changed ${diffDays} days ago`
+  }
   const passwordActionLabel = hasServerProvider
     ? "Change Password"
     : "Create Password"
@@ -133,8 +169,8 @@ export function AccountSection({
     ? "••••••••••••"
     : "No password set yet"
   const passwordStatusHint = hasServerProvider
-    ? "Last changed 18 days ago"
-    : "Use email sign-in too."
+    ? formatPasswordChangedHint(user.passwordChangedAt)
+    : "Create password to unlock full security futures."
   const providerActionLabel = hasGoogleProvider
     ? "Disconnect Google"
     : "Connect Google"
@@ -143,35 +179,18 @@ export function AccountSection({
     : "Google is not connected."
 
   const resetPasswordFlow = () => {
-    setPasswordStep("idle")
+    setIsPasswordFormOpen(false)
+    setIsForgotPasswordMode(false)
     setCurrentPassword("")
     setPasswordResetCode("")
     setNewPassword("")
     setConfirmNewPassword("")
-    setPasswordResendTimer(60)
+    setPasswordResendTimer(0)
   }
 
   const beginPasswordFlow = () => {
     resetPasswordFlow()
-    setPasswordStep(hasServerProvider ? "verify" : "reset")
-  }
-
-  const verifyCurrentPassword = () => {
-    if (!isCurrentPasswordValid) return
-
-    setPasswordStep("reset")
-  }
-
-  const beginPasswordResetCodeFlow = () => {
-    setPasswordStep("email-code")
-    setPasswordResetCode("")
-    setPasswordResendTimer(60)
-  }
-
-  const verifyPasswordResetCode = () => {
-    if (!isPasswordResetCodeValid) return
-
-    setPasswordStep("reset")
+    setIsPasswordFormOpen(true)
   }
 
   const savePasswordFlow = () => {
@@ -179,16 +198,77 @@ export function AccountSection({
 
     if (!hasServerProvider) {
       handlePasswordAction()
+      resetPasswordFlow()
+      return
     }
 
-    resetPasswordFlow()
+    setIsSavingPassword(true)
+    const promise = isForgotPasswordMode
+      ? verifyChangePassword({
+          email: user.email,
+          code: passwordResetCode,
+          newPassword,
+        })
+      : changePassword({
+          currentPassword,
+          newPassword,
+        })
+
+    toast.promise(promise, {
+      loading: isForgotPasswordMode
+        ? "Resetting password..."
+        : "Changing password...",
+      success: (data) => {
+        updateUser(data.result.user)
+
+        resetPasswordFlow()
+        return data.message || "Password changed."
+      },
+      error: (error: unknown) =>
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        typeof (error as { response?: { data?: { message?: string } } })
+          .response?.data?.message === "string"
+          ? (error as { response?: { data?: { message?: string } } }).response!
+              .data!.message!
+          : "Failed to change password.",
+    })
+
+    promise.finally(() => setIsSavingPassword(false))
+  }
+
+  const handleForgotCurrentPassword = () => {
+    setIsSendingPasswordReset(true)
+    const promise = forgotPassword({ email: user.email })
+
+    toast.promise(promise, {
+      loading: "Sending reset code...",
+      success: (data) => {
+        setIsForgotPasswordMode(true)
+        setCurrentPassword("")
+        setPasswordResetCode("")
+        setPasswordResendTimer(60)
+        return data.message || "Password reset code sent."
+      },
+      error: (error: unknown) =>
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        typeof (error as { response?: { data?: { message?: string } } })
+          .response?.data?.message === "string"
+          ? (error as { response?: { data?: { message?: string } } }).response!
+              .data!.message!
+          : "Failed to send reset code.",
+    })
+
+    promise.finally(() => setIsSendingPasswordReset(false))
   }
 
   const resendPasswordResetCode = () => {
-    if (!canResendPasswordCode) return
+    if (passwordResendTimer > 0 || isSendingPasswordReset) return
 
-    setPasswordResetCode("")
-    setPasswordResendTimer(60)
+    handleForgotCurrentPassword()
   }
 
   return (
@@ -221,11 +301,11 @@ export function AccountSection({
 
         <div className="grid gap-4 md:grid-cols-2">
           <div className="rounded-2xl border border-border/70 p-4">
-          <div className="flex items-start gap-3">
-            <span className="rounded-xl bg-primary/10 p-2 text-primary">
-              <Mail className="size-4" />
-            </span>
-            <div className="space-y-1">
+            <div className="flex items-start gap-3">
+              <span className="rounded-xl bg-primary/10 p-2 text-primary">
+                <Mail className="size-4" />
+              </span>
+              <div className="space-y-1">
                 <p className="font-medium">Email address</p>
                 <p className="text-sm text-muted-foreground">
                   Used for sign-in, receipts, and security notices.
@@ -329,7 +409,9 @@ export function AccountSection({
               <div className="mt-4 grid gap-4">
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <Label htmlFor="new-email-code">New email verification code</Label>
+                    <Label htmlFor="new-email-code">
+                      New email verification code
+                    </Label>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button
@@ -433,7 +515,7 @@ export function AccountSection({
                 </p>
               </div>
             </div>
-            {passwordStep === "idle" ? (
+            {!isPasswordFormOpen ? (
               <div className="mt-4 flex flex-col gap-3 rounded-xl border border-border/70 bg-muted/30 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="font-medium">{passwordStatusLabel}</p>
@@ -450,131 +532,84 @@ export function AccountSection({
                 </Button>
               </div>
             ) : null}
-            {passwordStep === "verify" ? (
+            {isPasswordFormOpen ? (
               <div className="mt-4 space-y-4 rounded-xl border border-border/70 bg-muted/30 px-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="current-password">Current password</Label>
-                  <Input
-                    id="current-password"
-                    type="password"
-                    value={currentPassword}
-                    onChange={(event) => setCurrentPassword(event.target.value)}
-                    placeholder="Enter current password"
-                    onKeyDown={(event) => {
-                      if (event.key !== "Enter") return
-
-                      event.preventDefault()
-
-                      if (!isCurrentPasswordValid) return
-
-                      verifyCurrentPassword()
-                    }}
-                  />
-                </div>
-                <button
-                  type="button"
-                  className="text-left text-sm font-medium text-primary hover:underline"
-                  onClick={beginPasswordResetCodeFlow}
-                >
-                  Forgot password?
-                </button>
-                <div className="grid gap-2 sm:flex sm:flex-wrap">
-                  <Button
-                    className="w-full rounded-xl sm:w-auto"
-                    onClick={verifyCurrentPassword}
-                    disabled={!isCurrentPasswordValid}
-                  >
-                    Verify
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full rounded-xl sm:w-auto"
-                    onClick={resetPasswordFlow}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            ) : null}
-            {passwordStep === "email-code" ? (
-              <div className="mt-4 space-y-4 rounded-xl border border-border/70 bg-muted/30 px-4 py-4">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor="password-reset-code">
-                      Email verification code
-                    </Label>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
+                {hasServerProvider && !isForgotPasswordMode ? (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="current-password">Current password</Label>
+                      <Input
+                        id="current-password"
+                        type="password"
+                        value={currentPassword}
+                        onChange={(event) =>
+                          setCurrentPassword(event.target.value)
+                        }
+                        placeholder="Enter current password"
+                        disabled={isSavingPassword}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className="text-left text-sm font-medium text-primary hover:underline disabled:pointer-events-none disabled:opacity-60"
+                      onClick={handleForgotCurrentPassword}
+                      disabled={isSendingPasswordReset || isSavingPassword}
+                    >
+                      Forgot current password?
+                    </button>
+                  </>
+                ) : null}
+                {hasServerProvider && isForgotPasswordMode ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="password-reset-code">
+                        Verification email code
+                      </Label>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            className="rounded-full text-muted-foreground transition-colors hover:text-foreground"
+                          >
+                            <CircleHelp className="h-3.5 w-3.5" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" sideOffset={6}>
+                          Enter the 6-digit code sent to {user.email}.
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <Input
+                      id="password-reset-code"
+                      value={passwordResetCode}
+                      onChange={(event) =>
+                        setPasswordResetCode(
+                          event.target.value.replace(/\D/g, "").slice(0, 6)
+                        )
+                      }
+                      placeholder="6-digit code"
+                      inputMode="numeric"
+                      maxLength={6}
+                      disabled={isSavingPassword}
+                    />
+                    <div className="flex justify-end">
+                      {passwordResendTimer === 0 ? (
                         <button
                           type="button"
-                          className="rounded-full text-muted-foreground transition-colors hover:text-foreground"
+                          onClick={resendPasswordResetCode}
+                          className="text-xs text-muted-foreground hover:text-primary disabled:pointer-events-none disabled:opacity-60"
+                          disabled={isSendingPasswordReset || isSavingPassword}
                         >
-                          <CircleHelp className="h-3.5 w-3.5" />
+                          Resend code
                         </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" sideOffset={6}>
-                        Verification code sent to your email. If not found,
-                        check spam folder.
-                      </TooltipContent>
-                    </Tooltip>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">
+                          Resend in {passwordResendTimer}s
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <Input
-                    id="password-reset-code"
-                    value={passwordResetCode}
-                    onChange={(event) =>
-                      setPasswordResetCode(
-                        event.target.value.replace(/\D/g, "").slice(0, 6)
-                      )
-                    }
-                    placeholder="6-digit code"
-                    inputMode="numeric"
-                    maxLength={6}
-                    onKeyDown={(event) => {
-                      if (event.key !== "Enter") return
-
-                      event.preventDefault()
-
-                      if (!isPasswordResetCodeValid) return
-
-                      verifyPasswordResetCode()
-                    }}
-                  />
-                  <div className="flex justify-end">
-                    {canResendPasswordCode ? (
-                      <button
-                        type="button"
-                        onClick={resendPasswordResetCode}
-                        className="text-xs text-muted-foreground hover:text-primary"
-                      >
-                        Resend code
-                      </button>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">
-                        Resend in {passwordResendTimer}s
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="grid gap-2 sm:flex sm:flex-wrap">
-                  <Button
-                    className="w-full rounded-xl sm:w-auto"
-                    onClick={verifyPasswordResetCode}
-                    disabled={!isPasswordResetCodeValid}
-                  >
-                    Verify
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full rounded-xl sm:w-auto"
-                    onClick={resetPasswordFlow}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            ) : null}
-            {passwordStep === "reset" ? (
-              <div className="mt-4 space-y-4 rounded-xl border border-border/70 bg-muted/30 px-4 py-4">
+                ) : null}
                 <div className="space-y-2">
                   <Label htmlFor="new-password">New password</Label>
                   <Input
@@ -583,6 +618,7 @@ export function AccountSection({
                     value={newPassword}
                     onChange={(event) => setNewPassword(event.target.value)}
                     placeholder="Enter new password"
+                    disabled={isSavingPassword}
                   />
                 </div>
                 <div className="space-y-2">
@@ -597,6 +633,7 @@ export function AccountSection({
                       setConfirmNewPassword(event.target.value)
                     }
                     placeholder="Confirm new password"
+                    disabled={isSavingPassword}
                     onKeyDown={(event) => {
                       if (event.key !== "Enter") return
 
@@ -617,7 +654,7 @@ export function AccountSection({
                   <Button
                     className="w-full rounded-xl sm:w-auto"
                     onClick={savePasswordFlow}
-                    disabled={!canSavePassword}
+                    disabled={!canSavePassword || isSavingPassword}
                   >
                     {hasServerProvider ? "Change Password" : "Create Password"}
                   </Button>
@@ -625,6 +662,7 @@ export function AccountSection({
                     variant="outline"
                     className="w-full rounded-xl sm:w-auto"
                     onClick={resetPasswordFlow}
+                    disabled={isSavingPassword}
                   >
                     Cancel
                   </Button>

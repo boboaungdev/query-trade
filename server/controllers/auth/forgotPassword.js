@@ -6,7 +6,7 @@ import { UserDB } from "../../models/user.js";
 import { resError, resJson } from "../../utils/response.js";
 import { VerifyDB } from "../../models/verify.js";
 import { sendEmail } from "../../utils/sendEmail.js";
-import { APP_NAME } from "../../constants/index.js";
+import { APP_NAME, APP_URL } from "../../constants/index.js";
 import { renderTemplate } from "../../utils/renderTemplate.js";
 import { generateEmailCode } from "../../utils/generateEmailCode.js";
 
@@ -44,12 +44,14 @@ export const forgotPassword = async (req, res, next) => {
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
     let htmlFile = fs.readFileSync(
-      path.join(__dirname, "../../assets/html/forgotPasswordVerify.html"),
+      path.join(__dirname, "../../assets/html/email.html"),
       "utf8",
     );
 
     htmlFile = renderTemplate(htmlFile, {
       appName: APP_NAME,
+      appUrl: APP_URL,
+      year: new Date().getFullYear(),
       title: "Forgot Password Verification",
       message: "Use the verification code below to reset your password.",
       actionSection,

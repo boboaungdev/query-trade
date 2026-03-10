@@ -87,14 +87,16 @@ export const UserSchema = {
     code: Joi.string().length(6).required(),
   }),
 
-  // changePassword: Joi.object({
-  //   oldPassword: Joi.string()
-  //     .pattern(new RegExp('^[a-zA-Z0-9!@#$%^&*()_+={}|:"<>?\\,-.]{8,30}$'))
-  //     .required(),
-  //   newPassword: Joi.string()
-  //     .pattern(new RegExp('^[a-zA-Z0-9!@#$%^&*()_+={}|:"<>?\\,-.]{8,30}$'))
-  //     .required(),
-  // }),
+  changePassword: Joi.object({
+    oldPassword: Joi.string().min(6).max(50).required(),
+    newPassword: Joi.string().min(6).max(50).required(),
+  }),
+
+  verifyChangePassword: Joi.object({
+    email: Joi.string().email({ minDomainSegments: 2 }).lowercase().required(),
+    code: Joi.string().length(6).required(),
+    newPassword: Joi.string().min(6).max(50).required(),
+  }),
 
   // createPassword: Joi.object({
   //   newPassword: Joi.string()

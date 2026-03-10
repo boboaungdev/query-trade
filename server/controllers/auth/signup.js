@@ -5,7 +5,7 @@ import { fileURLToPath } from "url";
 import { UserDB } from "../../models/user.js";
 import { Encoder } from "../../utils/encoder.js";
 import { VerifyDB } from "../../models/verify.js";
-import { APP_NAME, EXPIRE_MINUTE } from "../../constants/index.js";
+import { APP_NAME, APP_URL, EXPIRE_MINUTE } from "../../constants/index.js";
 import { sendEmail } from "../../utils/sendEmail.js";
 import { Token } from "../../utils/token.js";
 import { resCookie, resError, resJson } from "../../utils/response.js";
@@ -58,6 +58,8 @@ export const signup = async (req, res, next) => {
 
     htmlFile = renderTemplate(htmlFile, {
       appName: APP_NAME,
+      appUrl: APP_URL,
+      year: new Date().getFullYear(),
       title: "Verify Your Email",
       message: "Use the verification code below to complete your signup.",
       actionSection,
@@ -149,6 +151,8 @@ export const signupVerify = async (req, res, next) => {
 
     htmlFile = renderTemplate(htmlFile, {
       appName: APP_NAME,
+      appUrl: APP_URL,
+      year: new Date().getFullYear(),
       title: "Signup Successful",
       message: "Your account has been successfully created.",
       actionSection,

@@ -160,3 +160,36 @@ export async function verifyChangeEmail({
 
   return data
 }
+
+export async function changePassword({
+  currentPassword,
+  newPassword,
+}: {
+  currentPassword: string
+  newPassword: string
+}) {
+  const { data } = await api.patch("/auth/change-password", {
+    oldPassword: currentPassword,
+    newPassword,
+  })
+
+  return data
+}
+
+export async function verifyChangePassword({
+  email,
+  code,
+  newPassword,
+}: {
+  email: string
+  code: string
+  newPassword: string
+}) {
+  const { data } = await api.patch("/auth/verify-change-password", {
+    email,
+    code,
+    newPassword,
+  })
+
+  return data
+}

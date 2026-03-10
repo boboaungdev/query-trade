@@ -12,6 +12,7 @@ export type User = {
   email: string
   role: "user" | "admin"
   avatar?: string
+  passwordChangedAt?: string
   authProviders: AuthProvider[]
   createdAt: string
   updatedAt: string

@@ -19,6 +19,10 @@ import {
   checkChangeEmail,
   verifyChangeEmail,
 } from "../controllers/auth/changeEmail.js";
+import {
+  changePassword,
+  verifyChangePassword,
+} from "../controllers/auth/changePassword.js";
 
 const router = express.Router();
 
@@ -81,6 +85,20 @@ router.patch(
   validateToken(),
   validateBody(UserSchema.verifyChangeEmail),
   verifyChangeEmail,
+);
+
+router.patch(
+  "/change-password",
+  validateToken(),
+  validateBody(UserSchema.changePassword),
+  changePassword,
+);
+
+router.patch(
+  "/verify-change-password",
+  validateToken(),
+  validateBody(UserSchema.verifyChangePassword),
+  verifyChangePassword,
 );
 
 // router.get("/profile", validateToken(), profile);

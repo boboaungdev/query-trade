@@ -22,6 +22,9 @@ const userSchema = new Schema(
     password: {
       type: String,
     },
+    passwordChangedAt: {
+      type: Date,
+    },
     avatar: {
       type: String,
     },
