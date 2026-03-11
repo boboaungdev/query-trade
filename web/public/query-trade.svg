@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Query Trade">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#07141a" />
+      <stop offset="100%" stop-color="#0d2530" />
+    </linearGradient>
+    <linearGradient id="cyan" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7dd3fc" />
+      <stop offset="100%" stop-color="#22d3ee" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#bg)" />
+  <path d="M16 46h32" stroke="#163746" stroke-width="3" stroke-linecap="round" />
+  <path d="M20 42V26" stroke="#7dd3fc" stroke-width="4" stroke-linecap="round" />
+  <path d="M28 38V20" stroke="#22d3ee" stroke-width="4" stroke-linecap="round" />
+  <path d="M36 43V30" stroke="#7dd3fc" stroke-width="4" stroke-linecap="round" />
+  <path d="M44 34V18" stroke="#22d3ee" stroke-width="4" stroke-linecap="round" />
+  <path d="M17 39l11-8 8 5 11-14" fill="none" stroke="url(#cyan)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+  <circle cx="47" cy="22" r="4" fill="#cffafe" />
+</svg>
