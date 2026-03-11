@@ -1,19 +1,28 @@
 import mongoose from "mongoose";
 const { Schema } = mongoose;
 
+import { EXPIRE_MINUTE } from "../constants/index.js";
+
 const verifySchema = new Schema(
   {
     name: { type: String, trim: true },
     username: { type: String },
-    email: { type: String, require: true },
+    email: { type: String, required: true },
     password: { type: String },
-    code: { type: String, require: true },
-    expiresIn: { type: Date, require: true },
+    code: { type: String, required: true },
+    expiresIn: {
+      type: Date,
+      required: true,
+      default: () => new Date(Date.now() + EXPIRE_MINUTE * 60 * 1000),
+    },
   },
   {
     timestamps: true,
     versionKey: false,
   },
 );
+
+// Auto delete after 15 minutes
+verifySchema.index({ createdAt: 1 }, { expireAfterSeconds: 900 });
 
 export const VerifyDB = mongoose.model("verify", verifySchema);

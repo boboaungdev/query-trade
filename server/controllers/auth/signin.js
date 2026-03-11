@@ -14,9 +14,10 @@ import { renderTemplate } from "../../utils/renderTemplate.js";
 export const signin = async (req, res, next) => {
   try {
     const { email, password } = req.body;
-    const existUser = await UserDB.findOne({ email });
+    const existUser = await UserDB.exists({ email }).select("password");
+
     if (!existUser) {
-      throw resError(404, "User not found!");
+      throw resError(404, "Invalid email address, no user found!");
     }
 
     // If user registered with Google (no password in DB)
@@ -47,7 +48,7 @@ export const signin = async (req, res, next) => {
       {
         returnDocument: "after",
       },
-    ).select("-password");
+    ).lean();
 
     resCookie(req, res, "refreshToken", refreshToken);
     return resJson(res, 200, "Signin success.", { user, accessToken });
@@ -106,24 +107,23 @@ export const signinGoogle = async (req, res, next) => {
         username = `${baseUsername}${count++}`;
       }
 
-      const appName = APP_NAME.toLowerCase().replace(/\s+/g, "-");
-
-      const avatar = await uploadAvatar({
-        username,
-        photourl,
-        folder: `${appName}/users/avatars`,
-      });
-
       user = await UserDB.create({
         name,
         username,
         email,
-        avatar,
         authProviders: [{ provider: "google", providerId: googleId }],
       });
 
       // await UserPrivacyDB.create({ user: user._id });
     }
+
+    const appName = APP_NAME.toLowerCase().replace(/\s+/g, "-");
+
+    const avatar = await uploadAvatar({
+      user,
+      photourl,
+      folder: `${appName}/users/avatars`,
+    });
 
     // 4. Create tokens
     const refreshToken = Token.makeRefreshToken({ id: user._id.toString() });
@@ -132,9 +132,9 @@ export const signinGoogle = async (req, res, next) => {
     // 5. Update user with refresh token
     user = await UserDB.findByIdAndUpdate(
       user._id,
-      { refreshToken },
-      { returnDocument: "after", select: "-password" },
-    );
+      { avatar, refreshToken },
+      { returnDocument: "after" },
+    ).lean();
 
     const actionSection = `
   <p><b>Account:</b> ${user.email}</p>

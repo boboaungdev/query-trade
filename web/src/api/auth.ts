@@ -201,3 +201,17 @@ export async function createPassword({ password }: { password: string }) {
 
   return data
 }
+
+export async function connectGoogle({ googleId }: { googleId: string }) {
+  const { data } = await api.patch("/auth/connect-google", {
+    googleId,
+  })
+
+  return data
+}
+
+export async function disconnectGoogle() {
+  const { data } = await api.patch("/auth/disconnect-google")
+
+  return data
+}

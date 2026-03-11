@@ -27,7 +27,7 @@ export const validateToken = () => {
       return next(resError(401, "Invalid or expired token!"));
     }
 
-    const user = await UserDB.findById(decoded.id).select("-password");
+    const user = await UserDB.findById(decoded.id).lean();
 
     if (!user) {
       return next(resError(401, "Authenticated user not found!"));

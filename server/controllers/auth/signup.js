@@ -31,7 +31,6 @@ export const signup = async (req, res, next) => {
     // Generate new token
     const code = generateEmailCode();
     const hashedPassword = Encoder.encode(password);
-    const expiresIn = new Date(Date.now() + EXPIRE_MINUTE * 60 * 1000);
 
     // Create new verification
     await VerifyDB.create({
@@ -40,7 +39,6 @@ export const signup = async (req, res, next) => {
       email,
       password: hashedPassword,
       code,
-      expiresIn,
     });
 
     // Load the HTML file
@@ -132,7 +130,7 @@ export const signupVerify = async (req, res, next) => {
         },
       },
       { returnDocument: "after" },
-    ).select("-password");
+    ).lean();
 
     await VerifyDB.findByIdAndDelete(record._id);
     // Send verified email

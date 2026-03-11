@@ -102,6 +102,10 @@ export const UserSchema = {
     password: Joi.string().min(6).max(50).required(),
   }),
 
+  connectGoogle: Joi.object({
+    googleId: Joi.string().required(),
+  }),
+
   // deleteAccount: Joi.object({
   //   password: Joi.string()
   //     .pattern(new RegExp('^[a-zA-Z0-9!@#$%^&*()_+={}|:"<>?\\,-.]{8,30}$'))

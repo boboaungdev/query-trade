@@ -1,3 +1,4 @@
+import { APP_NAME } from "../../constants/index.js";
 import { UserDB } from "../../models/user.js";
 import { Encoder } from "../../utils/encoder.js";
 import { resError, resJson } from "../../utils/response.js";
@@ -27,11 +28,13 @@ export const update = async (req, res, next) => {
       payload.username = username;
     }
 
+    const appName = APP_NAME.toLowerCase().replace(/\s+/g, "-");
+
     if (avatar && avatar != currentUser.avatar) {
       payload.avatar = await uploadAvatar({
         user: currentUser,
         photourl: avatar,
-        folder: "query-trade/users/avatars",
+        folder: `${appName}/users/avatars`,
       });
     }
 
@@ -47,7 +50,7 @@ export const update = async (req, res, next) => {
     const user = await UserDB.findByIdAndUpdate(currentUser._id, payload, {
       returnDocument: "after",
     })
-      .select("-password")
+      .lean()
       .lean();
 
     return resJson(res, 200, "Updated user details", { user });

@@ -1,10 +1,14 @@
 import { useMemo, useState } from "react"
 import { Navigate } from "react-router-dom"
+import { useGoogleLogin } from "@react-oauth/google"
+import axios from "axios"
 import { toast } from "sonner"
 
 import {
   checkChangeEmail,
+  connectGoogle,
   createPassword,
+  disconnectGoogle,
   verifyChangeEmail,
 } from "@/api/auth"
 import { Button } from "@/components/ui/button"
@@ -40,6 +44,8 @@ export default function Settings() {
   const [newEmailCode, setNewEmailCode] = useState("")
   const [isCheckingChangeEmail, setIsCheckingChangeEmail] = useState(false)
   const [isSavingEmailChange, setIsSavingEmailChange] = useState(false)
+  const [isUpdatingGoogleProvider, setIsUpdatingGoogleProvider] =
+    useState(false)
   const [accountSecuritySettings, setAccountSecuritySettings] = useState({
     emailVisibility: "Only me",
     verificationMethod: "Authenticator app",
@@ -185,29 +191,89 @@ export default function Settings() {
     })
   }
 
+  const connectGoogleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      setIsUpdatingGoogleProvider(true)
+
+      try {
+        const userInfo = await axios.get(
+          "https://www.googleapis.com/oauth2/v3/userinfo",
+          {
+            headers: {
+              Authorization: `Bearer ${tokenResponse.access_token}`,
+            },
+          }
+        )
+
+        const { sub: googleId } = userInfo.data
+        const promise = connectGoogle({ googleId })
+
+        toast.promise(promise, {
+          loading: "Connecting Google...",
+          success: (data) => {
+            if (data?.result?.user) {
+              updateUser(data.result.user)
+            }
+
+            return data.message || "Google connected."
+          },
+          error: (error: unknown) =>
+            typeof error === "object" &&
+            error !== null &&
+            "response" in error &&
+            typeof (error as { response?: { data?: { message?: string } } })
+              .response?.data?.message === "string"
+              ? (error as { response?: { data?: { message?: string } } })
+                  .response!.data!.message!
+              : "Failed to connect Google.",
+        })
+
+        await promise
+      } finally {
+        setIsUpdatingGoogleProvider(false)
+      }
+    },
+    onError: () => {
+      setIsUpdatingGoogleProvider(false)
+      toast.error("Google connect failed!")
+    },
+  })
+
   const handleGoogleProviderAction = () => {
     const hasGoogleProvider = user.authProviders.some(
       (provider) => provider.provider === "google"
     )
 
     if (hasGoogleProvider) {
-      updateUser({
-        authProviders: user.authProviders.filter(
-          (provider) => provider.provider !== "google"
-        ),
+      setIsUpdatingGoogleProvider(true)
+
+      const promise = disconnectGoogle()
+
+      toast.promise(promise, {
+        loading: "Disconnecting Google...",
+        success: (data) => {
+          if (data?.result?.user) {
+            updateUser(data.result.user)
+          }
+
+          return data.message || "Google disconnected."
+        },
+        error: (error: unknown) =>
+          typeof error === "object" &&
+          error !== null &&
+          "response" in error &&
+          typeof (error as { response?: { data?: { message?: string } } })
+            .response?.data?.message === "string"
+            ? (error as { response?: { data?: { message?: string } } }).response!
+                .data!.message!
+            : "Failed to disconnect Google.",
       })
+
+      promise.finally(() => setIsUpdatingGoogleProvider(false))
       return
     }
 
-    updateUser({
-      authProviders: [
-        ...user.authProviders,
-        {
-          provider: "google",
-          providerId: `google-${user._id}`,
-        },
-      ],
-    })
+    connectGoogleLogin()
   }
 
   return (
@@ -325,6 +391,7 @@ export default function Settings() {
                     isCheckingChangeEmail={isCheckingChangeEmail}
                     isSavingEmailChange={isSavingEmailChange}
                     handlePasswordAction={handlePasswordAction}
+                    isUpdatingGoogleProvider={isUpdatingGoogleProvider}
                     handleGoogleProviderAction={handleGoogleProviderAction}
                   />
                 )}

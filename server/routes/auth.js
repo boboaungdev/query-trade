@@ -24,6 +24,10 @@ import {
   verifyChangePassword,
 } from "../controllers/auth/changePassword.js";
 import { createPassword } from "../controllers/auth/createPassword.js";
+import {
+  connectGoogle,
+  disconnectGoogle,
+} from "../controllers/auth/googleAccount.js";
 
 const router = express.Router();
 
@@ -108,6 +112,15 @@ router.patch(
   validateBody(UserSchema.createPassword),
   createPassword,
 );
+
+router.patch(
+  "/connect-google",
+  validateToken(),
+  validateBody(UserSchema.connectGoogle),
+  connectGoogle,
+);
+
+router.patch("/disconnect-google", validateToken(), disconnectGoogle);
 
 // router.get("/profile", validateToken(), profile);
 

@@ -55,6 +55,7 @@ type AccountSectionProps = {
   isCheckingChangeEmail: boolean
   isSavingEmailChange: boolean
   handlePasswordAction: (password: string) => Promise<void>
+  isUpdatingGoogleProvider: boolean
   handleGoogleProviderAction: () => void
 }
 
@@ -75,6 +76,7 @@ export function AccountSection({
   isCheckingChangeEmail,
   isSavingEmailChange,
   handlePasswordAction,
+  isUpdatingGoogleProvider,
   handleGoogleProviderAction,
 }: AccountSectionProps) {
   const user = useAuthStore((state) => state.user)
@@ -140,9 +142,6 @@ export function AccountSection({
       ? isPasswordResetCodeValid && isNewPasswordValid && isConfirmPasswordValid
       : isCurrentPasswordValid && isNewPasswordValid && isConfirmPasswordValid
     : isNewPasswordValid && isConfirmPasswordValid
-  const providerLabels = user.authProviders.map((provider) =>
-    provider.provider === "google" ? "Google" : "Password"
-  )
   const formatPasswordChangedHint = (passwordChangedAt?: string) => {
     if (!passwordChangedAt) return "Not changed yet"
 
@@ -169,9 +168,7 @@ export function AccountSection({
   const passwordStatusHint = hasServerProvider
     ? formatPasswordChangedHint(user.passwordChangedAt)
     : "Create password to unlock full security futures."
-  const providerActionLabel = hasGoogleProvider
-    ? "Disconnect Google"
-    : "Connect Google"
+  const providerActionLabel = hasGoogleProvider ? "Disconnect" : "Connect"
   const providerActionDescription = hasGoogleProvider
     ? "Google is connected."
     : "Google is not connected."
@@ -211,8 +208,8 @@ export function AccountSection({
           "response" in error &&
           typeof (error as { response?: { data?: { message?: string } } })
             .response?.data?.message === "string"
-            ? (error as { response?: { data?: { message?: string } } }).response!
-                .data!.message!
+            ? (error as { response?: { data?: { message?: string } } })
+                .response!.data!.message!
             : "Failed to create password.",
       })
 
@@ -707,33 +704,46 @@ export function AccountSection({
                 </p>
               </div>
             </div>
-            <div className="mt-4 flex flex-col gap-3 rounded-xl border border-primary/15 bg-primary/[0.06] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="space-y-2">
-                <div className="flex flex-wrap gap-2">
-                  {providerLabels.map((label) => (
-                    <span
-                      key={label}
-                      className="rounded-full border border-primary/20 bg-background/80 px-3 py-1 text-xs font-medium text-primary"
-                    >
-                      {label}
+            <div className="mt-4 space-y-3">
+              <div className="rounded-2xl border border-border/70 bg-linear-to-r from-background to-muted/30 p-4">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-start gap-3">
+                    <span className="rounded-xl bg-primary/10 p-2 text-primary">
+                      <FcGoogle className="size-4" />
                     </span>
-                  ))}
+                    <div className="space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium">Google</p>
+                        <span
+                          className={cn(
+                            "rounded-full px-2.5 py-0.5 text-[11px] font-medium",
+                            hasGoogleProvider
+                              ? "bg-emerald-500/12 text-emerald-700"
+                              : "bg-muted text-muted-foreground"
+                          )}
+                        >
+                          {hasGoogleProvider ? "Connected" : "Not connected"}
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {providerActionDescription}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant={hasGoogleProvider ? "outline" : "default"}
+                    className={cn(
+                      "w-full rounded-xl sm:w-auto",
+                      hasGoogleProvider && "text-destructive"
+                    )}
+                    disabled={isUpdatingGoogleProvider}
+                    onClick={handleGoogleProviderAction}
+                  >
+                    <FcGoogle className="size-4" />
+                    {providerActionLabel}
+                  </Button>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  {providerActionDescription}
-                </p>
               </div>
-              <Button
-                variant={hasGoogleProvider ? "outline" : "default"}
-                className={cn(
-                  "w-full rounded-xl sm:w-auto",
-                  hasGoogleProvider && "text-destructive"
-                )}
-                onClick={handleGoogleProviderAction}
-              >
-                <FcGoogle className="size-4" />
-                {providerActionLabel}
-              </Button>
             </div>
             <p className="mt-3 text-xs text-muted-foreground">
               Member since {new Date(user.createdAt).toLocaleDateString()}

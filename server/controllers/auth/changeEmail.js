@@ -36,12 +36,10 @@ export const checkChangeEmail = async (req, res, next) => {
     }
 
     const code = generateEmailCode();
-    const expiresIn = new Date(Date.now() + EXPIRE_MINUTE * 60 * 1000);
 
     await VerifyDB.create({
       email,
       code,
-      expiresIn,
     });
 
     const __filename = fileURLToPath(import.meta.url);
@@ -111,7 +109,7 @@ export const verifyChangeEmail = async (req, res, next) => {
         email,
       },
       { returnDocument: "after" },
-    ).select("-password");
+    ).lean();
 
     await VerifyDB.findByIdAndDelete(record._id);
 

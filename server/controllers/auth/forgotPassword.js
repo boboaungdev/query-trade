@@ -26,13 +26,11 @@ export const forgotPassword = async (req, res, next) => {
 
     // Generate new token
     const code = generateEmailCode();
-    const expiresIn = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
 
     // Create new verification
     await VerifyDB.create({
       email,
       code,
-      expiresIn,
     });
 
     const actionSection = `
