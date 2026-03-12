@@ -85,6 +85,9 @@ export const BacktestSchema = {
   run: Joi.object({
     symbol: Joi.string().required(),
     exchange: Joi.string().default("binance"),
+
+    marketType: Joi.string().valid("spot", "future").default("future"),
+
     timeframe: Joi.string().default("15m"),
     startTime: Joi.date().iso().required(),
     endTime: Joi.date()
@@ -94,8 +97,6 @@ export const BacktestSchema = {
 
     initialBalance: Joi.number().positive().default(10000),
     amountPerTrade: Joi.number().positive().default(100),
-
-    marketType: Joi.string().valid("spot", "future").default("future"),
 
     entryOrderType: Joi.string().valid("market", "limit").default("limit"),
     exitOrderType: Joi.string().valid("market", "limit").default("limit"),
@@ -113,5 +114,10 @@ export const BacktestSchema = {
         sell: logicBlockSchema.required(),
       }).required(),
     }).required(),
+  }),
+
+  exchangeSupportedData: Joi.object({
+    exchange: Joi.string().default("binance"),
+    marketType: Joi.string().valid("spot", "future").default("future"),
   }),
 };

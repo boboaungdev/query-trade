@@ -13,7 +13,7 @@ export default function Home() {
 
       <div className="mt-6 flex gap-4">
         <Link to="/auth">
-          <Button size="lg">Get start</Button>
+          <Button size="lg">Get started</Button>
         </Link>
 
         <Button variant="outline" size="lg">

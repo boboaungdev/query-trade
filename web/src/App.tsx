@@ -9,6 +9,7 @@ import Navbar from "./components/Navbar"
 import Home from "./pages/Home"
 import Auth from "./pages/Auth"
 import Dashboard from "./pages/dashboard"
+import Backtest from "./pages/backtest"
 import Profile from "./pages/profile"
 
 import { useAuthStore } from "@/store/auth"
@@ -30,6 +31,7 @@ export default function App() {
             <Route path="/" element={<Home />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/backtest" element={<Backtest />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>
