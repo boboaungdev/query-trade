@@ -1498,7 +1498,6 @@ export default function BacktestPage() {
                                       ? "default"
                                       : "outline"
                                   }
-                                  size="sm"
                                   className="h-7 rounded-md px-2.5 text-[11px]"
                                   onClick={(event) => {
                                     event.preventDefault()
@@ -1517,7 +1516,6 @@ export default function BacktestPage() {
                                       ? "default"
                                       : "outline"
                                   }
-                                  size="sm"
                                   className="h-7 rounded-md px-2.5 text-[11px]"
                                   onClick={(event) => {
                                     event.preventDefault()
@@ -1536,7 +1534,6 @@ export default function BacktestPage() {
                                       ? "default"
                                       : "outline"
                                   }
-                                  size="sm"
                                   className="h-7 rounded-md px-2.5 text-[11px]"
                                   onClick={(event) => {
                                     event.preventDefault()
@@ -1932,7 +1929,6 @@ export default function BacktestPage() {
 
                     <Button
                       type="submit"
-                      size="sm"
                       className="w-full gap-2 rounded-lg"
                       disabled={
                         isRunning ||

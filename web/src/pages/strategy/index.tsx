@@ -696,7 +696,6 @@ export default function StrategyPage() {
                     <div className="mt-4">
                       <Button
                         type="button"
-                        size="sm"
                         variant="outline"
                         className="w-full sm:w-auto"
                         asChild

@@ -423,7 +423,6 @@ export default function LeaderboardPage() {
                     key={option.value}
                     type="button"
                     variant={duration === option.value ? "secondary" : "ghost"}
-                    size="sm"
                     className="h-7 min-w-10 justify-center px-2 text-center text-[11px] uppercase"
                     onClick={() => {
                       setDuration(option.value)
@@ -506,7 +505,6 @@ export default function LeaderboardPage() {
                 key={option.value}
                 type="button"
                 variant={duration === option.value ? "secondary" : "outline"}
-                size="sm"
                 className="h-8 min-w-0 flex-1 justify-center px-1 text-center text-[10px] uppercase"
                 onClick={() => {
                   setDuration(option.value)

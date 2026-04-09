@@ -739,7 +739,6 @@ export default function StrategyDetailPage() {
             <Button
               type="button"
               variant="outline"
-              size="sm"
               className=""
               onClick={() => {
                 if (fromProfileUrl) {
@@ -1002,7 +1001,6 @@ export default function StrategyDetailPage() {
                     <Button
                       type="button"
                       variant={isFollowingCreator ? "outline" : "default"}
-                      size="sm"
                       className="min-w-0 flex-1 rounded-r-none"
                       disabled={
                         !isAuthenticated ||
@@ -1210,7 +1208,6 @@ export default function StrategyDetailPage() {
               <div className="ml-auto flex w-full flex-wrap gap-2 sm:w-auto">
                 <Button
                   type="button"
-                  size="sm"
                   asChild
                   className="w-full min-w-[132px] sm:w-auto"
                 >

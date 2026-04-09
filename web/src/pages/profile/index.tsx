@@ -818,7 +818,6 @@ export default function Profile() {
           <div className="mx-auto w-full max-w-4xl">
           <Button
             variant="outline"
-            size="sm"
             className="theme-glass-button mb-3 w-fit"
             onClick={onBack}
           >
@@ -850,7 +849,6 @@ export default function Profile() {
           <div className="mx-auto w-full max-w-4xl">
           <Button
             variant="outline"
-            size="sm"
             className="theme-glass-button mb-3 w-fit"
             onClick={onBack}
           >
@@ -1241,7 +1239,6 @@ export default function Profile() {
         <div className="mx-auto w-full max-w-4xl">
         <Button
           variant="outline"
-          size="sm"
           className="theme-glass-button mb-3 w-fit"
           onClick={onBack}
         >
@@ -1344,7 +1341,6 @@ export default function Profile() {
                 >
                   <Button
                     type="button"
-                    size="sm"
                     className="min-w-0 flex-1 rounded-r-none"
                     variant={isFollowing ? "outline" : "default"}
                     disabled={
@@ -1763,7 +1759,6 @@ export default function Profile() {
                                       >
                                         <Button
                                           type="button"
-                                          size="sm"
                                           variant={
                                             followListStatusById[item._id]
                                               ? "outline"
@@ -1923,7 +1918,6 @@ export default function Profile() {
                                     >
                                       <Button
                                         type="button"
-                                        size="sm"
                                         variant={
                                           bookmarkedStrategyIds.has(item._id)
                                             ? "outline"
@@ -2073,7 +2067,6 @@ export default function Profile() {
                                       >
                                         <Button
                                           type="button"
-                                          size="sm"
                                           variant={
                                             bookmarkedBacktestIds.has(item._id)
                                               ? "outline"

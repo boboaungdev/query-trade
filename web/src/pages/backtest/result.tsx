@@ -569,7 +569,6 @@ export default function BacktestResultPage() {
             <Button
               type="button"
               variant="outline"
-              size="sm"
               className="w-fit"
               onClick={() => {
                 if (window.history.length > 1) {

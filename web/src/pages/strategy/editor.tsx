@@ -1345,7 +1345,6 @@ function ConditionEditor({
           <Button
             type="button"
             variant="ghost"
-            size="sm"
             className="text-destructive hover:text-destructive/80"
             onClick={onRemove}
           >
@@ -1403,7 +1402,6 @@ function ConditionEditor({
           <Button
             type="button"
             variant="outline"
-            size="sm"
             onClick={() =>
               onChange({
                 ...node,
@@ -1417,7 +1415,6 @@ function ConditionEditor({
           <Button
             type="button"
             variant="outline"
-            size="sm"
             onClick={() =>
               onChange({
                 ...node,
@@ -1445,7 +1442,6 @@ function ConditionEditor({
         <Button
           type="button"
           variant="ghost"
-          size="sm"
           className="h-8 w-8 p-0 text-destructive hover:text-destructive/80"
           onClick={onRemove}
           aria-label="Remove rule"
@@ -2751,7 +2747,6 @@ export default function StrategyEditorPage() {
           <Button
             type="button"
             variant="outline"
-            size="sm"
             className="w-fit"
             onClick={() => {
               if (window.history.length > 1) {
@@ -2990,7 +2985,6 @@ export default function StrategyEditorPage() {
                                 ? "default"
                                 : "outline"
                             }
-                            size="sm"
                             className="h-7 rounded-full px-2.5 text-[11px]"
                             onClick={(event) => {
                               event.preventDefault()
@@ -3146,7 +3140,6 @@ export default function StrategyEditorPage() {
                             <Button
                               type="button"
                               variant="outline"
-                              size="sm"
                               className="w-full sm:w-auto"
                               aria-label={`Edit indicator ${index + 1}`}
                               title="Edit indicator"

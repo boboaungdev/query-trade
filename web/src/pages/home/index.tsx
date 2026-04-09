@@ -156,14 +156,14 @@ export default function Home() {
 
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Link to={primaryHref}>
-              <Button size="sm" className="cursor-pointer">
+              <Button className="cursor-pointer">
                 {primaryLabel}
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
 
             <Link to={heroSecondaryHref}>
-              <Button size="sm" variant="outline" className="cursor-pointer">
+              <Button variant="outline" className="cursor-pointer">
                 {heroSecondaryLabel}
               </Button>
             </Link>
@@ -322,7 +322,7 @@ export default function Home() {
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
             <Link to={primaryHref}>
-              <Button size="sm" className="cursor-pointer">
+              <Button className="cursor-pointer">
                 {primaryLabel}
               </Button>
             </Link>
@@ -330,7 +330,6 @@ export default function Home() {
               <Link to="/backtest">
                 <Button
                   variant="outline"
-                  size="sm"
                   className="cursor-pointer"
                 >
                   Open Backtesting
@@ -341,7 +340,6 @@ export default function Home() {
               <Link to="/auth">
                 <Button
                   variant="outline"
-                  size="sm"
                   className="cursor-pointer"
                 >
                   Sign In

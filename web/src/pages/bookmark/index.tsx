@@ -373,7 +373,6 @@ export default function BookmarkPage() {
                 <Button
                   type="button"
                   variant={filter === "all" ? "secondary" : "ghost"}
-                  size="sm"
                   className="h-7 min-w-10 justify-center px-2 text-center text-[11px] tracking-[0.14em] uppercase"
                   onClick={() => {
                     setFilter("all")
@@ -385,7 +384,6 @@ export default function BookmarkPage() {
                 <Button
                   type="button"
                   variant={filter === "backtest" ? "secondary" : "ghost"}
-                  size="sm"
                   className="h-7 min-w-10 justify-center px-2 text-center text-[11px] tracking-[0.14em] uppercase"
                   onClick={() => {
                     setFilter("backtest")
@@ -397,7 +395,6 @@ export default function BookmarkPage() {
                 <Button
                   type="button"
                   variant={filter === "strategy" ? "secondary" : "ghost"}
-                  size="sm"
                   className="h-7 min-w-10 justify-center px-2 text-center text-[11px] tracking-[0.14em] uppercase"
                   onClick={() => {
                     setFilter("strategy")
@@ -460,7 +457,6 @@ export default function BookmarkPage() {
             <Button
               type="button"
               variant={filter === "all" ? "secondary" : "outline"}
-              size="sm"
               className="h-8 min-w-0 flex-1 justify-center px-1 text-center text-[10px] tracking-[0.12em] uppercase"
               onClick={() => {
                 setFilter("all")
@@ -472,7 +468,6 @@ export default function BookmarkPage() {
             <Button
               type="button"
               variant={filter === "backtest" ? "secondary" : "outline"}
-              size="sm"
               className="h-8 min-w-0 flex-1 justify-center px-1 text-center text-[10px] tracking-[0.12em] uppercase"
               onClick={() => {
                 setFilter("backtest")
@@ -484,7 +479,6 @@ export default function BookmarkPage() {
             <Button
               type="button"
               variant={filter === "strategy" ? "secondary" : "outline"}
-              size="sm"
               className="h-8 min-w-0 flex-1 justify-center px-1 text-center text-[10px] tracking-[0.12em] uppercase"
               onClick={() => {
                 setFilter("strategy")
@@ -729,7 +723,6 @@ export default function BookmarkPage() {
                       {(isStrategy || isBacktest) && targetId ? (
                         <Button
                           type="button"
-                          size="sm"
                           variant="outline"
                           className="w-full sm:w-auto"
                           asChild
@@ -749,7 +742,6 @@ export default function BookmarkPage() {
                       ) : (
                         <Button
                           type="button"
-                          size="sm"
                           variant="outline"
                           className="w-full sm:w-auto"
                           disabled

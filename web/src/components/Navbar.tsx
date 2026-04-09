@@ -58,11 +58,11 @@ export default function Navbar() {
         {/* Sidebar toggle only when logged in */}
         {user && <SidebarTrigger />}
 
-        <Link to="/" className="flex items-center gap-2 text-lg font-bold">
+        <Link to="/" className="flex items-center gap-2.5 text-xl font-bold tracking-tight">
           <img
             src="/query-trade.svg"
             alt={`${APP_NAME} logo`}
-            className="h-6 w-6 shrink-0"
+            className="h-8 w-8 shrink-0"
           />
           {APP_NAME}
         </Link>

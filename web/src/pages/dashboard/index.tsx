@@ -659,7 +659,7 @@ export default function Dashboard() {
                   </div>
 
                   <div className="mt-4 flex gap-2">
-                    <Button asChild size="sm" variant="outline">
+                    <Button asChild variant="outline">
                       <Link
                         to={`/strategy/${item._id}`}
                         className="inline-flex items-center gap-1.5"
@@ -668,7 +668,7 @@ export default function Dashboard() {
                         Open
                       </Link>
                     </Button>
-                    <Button asChild size="sm">
+                    <Button asChild>
                       <Link
                         to="/backtest"
                         className="inline-flex items-center gap-1.5"
