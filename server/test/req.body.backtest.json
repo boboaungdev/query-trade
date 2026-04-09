@@ -1,0 +1,13 @@
+{
+  "exchange": "binance",
+  "symbol": "BTC/USDT",
+  "timeframe": "5m",
+  "startDate": "2026-02-01T00:00:00Z",
+  "endDate": "2026-03-01T00:00:00Z",
+  "initialBalance": 10000,
+  "amountPerTrade": 1000,
+  "entryFeeRate": 0.001,
+  "exitFeeRate": 0.001,
+  "strategyId": "69ba6e9e76c6b11b9e0b6f9a",
+  "hedgeMode": true
+}

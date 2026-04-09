@@ -1,0 +1,94 @@
+{
+  "name": "EMA RSI Trend Strategy",
+  "description": "Buy on bullish EMA crossover with RSI confirmation, sell on bearish crossover.",
+  "indicators": [
+    {
+      "indicator": "69abd2f599a30061124f06df",
+      "key": "ema_9",
+      "source": "close",
+      "params": {
+        "period": 9
+      }
+    },
+    {
+      "indicator": "69abd2f599a30061124f06df",
+      "key": "ema_21",
+      "source": "close",
+      "params": {
+        "period": 21
+      }
+    },
+    {
+      "indicator": "69b27f8fd918d9bdb9e0b299",
+      "key": "rsi_14",
+      "source": "close",
+      "params": {
+        "period": 14
+      }
+    }
+  ],
+  "entry": {
+    "buy": {
+      "logic": "and",
+      "conditions": [
+        {
+          "left": "ema_9",
+          "operator": "crossAbove",
+          "right": "ema_21"
+        },
+        {
+          "logic": "or",
+          "conditions": [
+            {
+              "left": "rsi_14",
+              "operator": ">",
+              "right": 55
+            },
+            {
+              "left": "close",
+              "operator": ">",
+              "right": "ema_9"
+            }
+          ]
+        }
+      ],
+      "riskManagement": {
+        "stopLoss": {
+          "type": "candle",
+          "reference": "previous",
+          "price": "low"
+        },
+        "takeProfit": {
+          "type": "riskReward",
+          "ratio": 2
+        }
+      }
+    },
+    "sell": {
+      "logic": "and",
+      "conditions": [
+        {
+          "left": "ema_9",
+          "operator": "crossBelow",
+          "right": "ema_21"
+        },
+        {
+          "left": "rsi_14",
+          "operator": "<",
+          "right": 45
+        }
+      ],
+      "riskManagement": {
+        "stopLoss": {
+          "type": "candle",
+          "reference": "previous",
+          "price": "high"
+        },
+        "takeProfit": {
+          "type": "riskReward",
+          "ratio": 2
+        }
+      }
+    }
+  }
+}

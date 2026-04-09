@@ -1,0 +1,87 @@
+import { create } from "zustand"
+
+export type AuthProvider = {
+  provider: "google" | "server"
+  providerId: string
+}
+
+export type User = {
+  _id: string
+  name: string
+  username: string
+  email: string
+  role: "user" | "admin"
+  avatar?: string
+  passwordChangedAt?: string
+  authProviders: AuthProvider[]
+  stats?: {
+    followerCount?: number
+    followingCount?: number
+    strategyCount?: number
+    backtestCount?: number
+  }
+  createdAt: string
+  updatedAt: string
+}
+
+type AuthState = {
+  user: User | null
+  accessToken: string | null
+  isAuthenticated: boolean
+
+  setAuth: (user: User, accessToken: string) => void
+  setAccessToken: (accessToken: string) => void
+  updateUser: (data: Partial<User>) => void
+  logout: () => void
+}
+
+export const useAuthStore = create<AuthState>((set) => ({
+  user: JSON.parse(localStorage.getItem("user") || "null"),
+  accessToken: localStorage.getItem("accessToken"),
+  isAuthenticated: !!localStorage.getItem("accessToken"),
+
+  setAuth: (user, accessToken) => {
+    localStorage.setItem("user", JSON.stringify(user))
+    localStorage.setItem("accessToken", accessToken)
+
+    set({
+      user,
+      accessToken,
+      isAuthenticated: true,
+    })
+  },
+
+  setAccessToken: (accessToken) => {
+    localStorage.setItem("accessToken", accessToken)
+
+    set((state) => ({
+      user: state.user,
+      accessToken,
+      isAuthenticated: true,
+    }))
+  },
+
+  updateUser: (data) =>
+    set((state) => {
+      if (!state.user) return state
+
+      const updatedUser = { ...state.user, ...data }
+
+      localStorage.setItem("user", JSON.stringify(updatedUser))
+
+      return {
+        user: updatedUser,
+      }
+    }),
+
+  logout: () => {
+    localStorage.removeItem("user")
+    localStorage.removeItem("accessToken")
+
+    set({
+      user: null,
+      accessToken: null,
+      isAuthenticated: false,
+    })
+  },
+}))
