@@ -320,11 +320,9 @@ export default function StrategyPage() {
 
   return (
     <div className="mx-auto w-full max-w-6xl min-w-0 space-y-4 overflow-x-hidden sm:space-y-6">
-      <section className="theme-hero-panel relative overflow-hidden rounded-2xl border p-4 sm:p-6">
-        <div className="theme-hero-overlay absolute inset-0" />
-
-        <div className="relative flex flex-col gap-3">
-          <p className="inline-flex w-fit items-center gap-1.5 rounded-full border bg-background/80 px-2.5 py-1 text-xs font-medium tracking-[0.18em] text-muted-foreground uppercase backdrop-blur">
+      <Card>
+        <CardContent className="flex flex-col gap-3 p-4 sm:p-6">
+          <p className="inline-flex w-fit items-center gap-1.5 rounded-full border bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground uppercase">
             <Sparkles className="h-3.5 w-3.5 text-primary" />
             Strategy Studio
           </p>
@@ -340,17 +338,17 @@ export default function StrategyPage() {
           </p>
 
           <div className="flex flex-wrap gap-2 pt-1">
-            <span className="inline-flex items-center gap-1 rounded-md border bg-background/70 px-2 py-1 text-[11px] text-muted-foreground">
+            <span className="inline-flex items-center gap-1 rounded-md border bg-muted px-2 py-1 text-[11px] text-muted-foreground">
               <Layers3 className="h-3.5 w-3.5 text-primary" />
               Strategy inventory
             </span>
-            <span className="inline-flex items-center gap-1 rounded-md border bg-background/70 px-2 py-1 text-[11px] text-muted-foreground">
+            <span className="inline-flex items-center gap-1 rounded-md border bg-muted px-2 py-1 text-[11px] text-muted-foreground">
               <TrendingUp className="h-3.5 w-3.5 text-primary" />
               Backtest ready flow
             </span>
           </div>
-        </div>
-      </section>
+        </CardContent>
+      </Card>
 
       <Card className="min-w-0 border-border/70">
         <CardHeader className="space-y-3">

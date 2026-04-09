@@ -232,12 +232,10 @@ export default function Dashboard() {
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-4 sm:space-y-6">
-      <section className="theme-hero-panel relative overflow-hidden rounded-2xl border p-4 sm:p-6">
-        <div className="theme-hero-overlay absolute inset-0" />
-
-        <div className="relative grid gap-4 lg:grid-cols-[1.2fr_0.9fr] lg:items-end">
+      <Card>
+        <CardContent className="grid gap-4 p-4 sm:p-6 lg:grid-cols-[1.2fr_0.9fr] lg:items-end">
           <div className="space-y-4">
-            <p className="inline-flex w-fit items-center gap-1.5 rounded-full border bg-background/80 px-2.5 py-1 text-xs font-medium tracking-[0.18em] text-muted-foreground uppercase backdrop-blur">
+            <p className="inline-flex w-fit items-center gap-1.5 rounded-full border bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground uppercase">
               <Sparkles className="h-3.5 w-3.5 text-primary" />
               Control Center
             </p>
@@ -255,18 +253,18 @@ export default function Dashboard() {
             </div>
 
             <div className="flex flex-wrap gap-2 pt-1">
-              <span className="theme-glass-chip inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5 rounded-full border bg-muted px-3 py-1.5 text-xs text-muted-foreground">
                 <Target className="h-3.5 w-3.5 text-primary" />
                 {isLoading ? "..." : myStrategiesTotal} strategies
               </span>
-              <span className="theme-glass-chip inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5 rounded-full border bg-muted px-3 py-1.5 text-xs text-muted-foreground">
                 <Bookmark className="h-3.5 w-3.5 text-primary" />
                 {isLoading
                   ? "..."
                   : bookmarkedStrategiesTotal + bookmarkedBacktestsTotal}{" "}
                 saved items
               </span>
-              <span className="theme-glass-chip inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5 rounded-full border bg-muted px-3 py-1.5 text-xs text-muted-foreground">
                 <CandlestickChart className="h-3.5 w-3.5 text-primary" />
                 {isLoading
                   ? "..."
@@ -275,12 +273,12 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="theme-glass-panel rounded-2xl border p-4 sm:p-5">
-            <p className="text-[11px] tracking-[0.18em] text-muted-foreground uppercase">
+          <div className="rounded-xl border bg-muted/30 p-4 sm:p-5">
+            <p className="text-xs text-muted-foreground uppercase">
               Workspace Pulse
             </p>
             <div className="mt-3 space-y-3">
-              <div className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-background/70 px-3 py-2.5">
+              <div className="flex items-center justify-between gap-3 rounded-xl border bg-card px-3 py-2.5">
                 <div>
                   <p className="text-sm font-medium">Recently updated</p>
                   <p className="text-xs text-muted-foreground">
@@ -292,7 +290,7 @@ export default function Dashboard() {
                 </span>
               </div>
 
-              <div className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-background/70 px-3 py-2.5">
+              <div className="flex items-center justify-between gap-3 rounded-xl border bg-card px-3 py-2.5">
                 <div>
                   <p className="text-sm font-medium">Popular ideas</p>
                   <p className="text-xs text-muted-foreground">
@@ -304,7 +302,7 @@ export default function Dashboard() {
                 </span>
               </div>
 
-              <div className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-background/70 px-3 py-2.5">
+              <div className="flex items-center justify-between gap-3 rounded-xl border bg-card px-3 py-2.5">
                 <div>
                   <p className="text-sm font-medium">Backtest-ready universe</p>
                   <p className="text-xs text-muted-foreground">
@@ -317,11 +315,11 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Card className="border-border/70 bg-background/95 dark:bg-background/80">
+        <Card>
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-2">
               <Target className="h-4 w-4 text-primary" />
@@ -336,7 +334,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/70 bg-background/95 dark:bg-background/80">
+        <Card>
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-2">
               <Bookmark className="h-4 w-4 text-primary" />
@@ -351,7 +349,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/70 bg-background/95 dark:bg-background/80">
+        <Card>
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-2">
               <CandlestickChart className="h-4 w-4 text-primary" />
@@ -366,7 +364,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/70 bg-background/95 dark:bg-background/80">
+        <Card>
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-primary" />

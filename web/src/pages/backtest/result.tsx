@@ -563,16 +563,14 @@ export default function BacktestResultPage() {
 
   return (
     <div className="mx-auto w-full max-w-6xl min-w-0 space-y-4 overflow-x-hidden sm:space-y-6">
-      <section className="theme-hero-panel relative overflow-hidden rounded-xl border p-4 sm:p-6">
-        <div className="theme-hero-overlay absolute inset-0" />
-
-        <div className="relative flex flex-col gap-3">
+      <Card>
+        <CardContent className="flex flex-col gap-3 p-4 sm:p-6">
           <div className="flex items-center justify-between gap-3">
             <Button
               type="button"
               variant="outline"
               size="sm"
-              className="theme-glass-button w-fit"
+              className="w-fit"
               onClick={() => {
                 if (window.history.length > 1) {
                   navigate(-1)
@@ -593,7 +591,7 @@ export default function BacktestResultPage() {
                 type="button"
                 variant={isBacktestBookmarked ? "outline" : "default"}
                 size="icon-sm"
-                className="theme-glass-button rounded-r-none"
+                className="rounded-r-none"
                 aria-label={isBacktestBookmarked ? "Bookmarked" : "Bookmark"}
                 title={isBacktestBookmarked ? "Bookmarked" : "Bookmark"}
                 disabled={isBacktestBookmarkUpdating}
@@ -615,7 +613,7 @@ export default function BacktestResultPage() {
                     type="button"
                     variant={isBacktestBookmarked ? "outline" : "default"}
                     size="icon-sm"
-                    className="theme-glass-button -ml-px rounded-l-none"
+                    className="-ml-px rounded-l-none"
                     aria-label="More actions"
                     title="More actions"
                   >
@@ -674,7 +672,7 @@ export default function BacktestResultPage() {
           </div>
 
           <div>
-            <p className="inline-flex w-fit items-center gap-1.5 rounded-md border bg-background/80 px-2.5 py-1 text-xs font-medium tracking-[0.18em] text-muted-foreground uppercase backdrop-blur">
+            <p className="inline-flex w-fit items-center gap-1.5 rounded-md border bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground uppercase">
               <Sparkles className="h-3.5 w-3.5 text-primary" />
               Backtest Result
             </p>
@@ -688,19 +686,19 @@ export default function BacktestResultPage() {
               equity movement, and detailed trade history.
             </p>
             <div className="mt-3 flex flex-wrap gap-2 pt-1">
-              <span className="inline-flex items-center gap-1 rounded-md border bg-background/70 px-2 py-1 text-[11px] text-muted-foreground">
+              <span className="inline-flex items-center gap-1 rounded-md border bg-muted px-2 py-1 text-[11px] text-muted-foreground">
                 <CalendarClock className="h-3.5 w-3.5 text-primary" />
                 {backtest.timeframe}
               </span>
-              <span className="inline-flex items-center gap-1 rounded-md border bg-background/70 px-2 py-1 text-[11px] text-muted-foreground">
+              <span className="inline-flex items-center gap-1 rounded-md border bg-muted px-2 py-1 text-[11px] text-muted-foreground">
                 <Clock3 className="h-3.5 w-3.5 text-primary" />
                 {formatDuration(result.duration)}
               </span>
-              <span className="inline-flex items-center gap-1 rounded-md border bg-background/70 px-2 py-1 text-[11px] text-muted-foreground">
+              <span className="inline-flex items-center gap-1 rounded-md border bg-muted px-2 py-1 text-[11px] text-muted-foreground">
                 <UserRound className="h-3.5 w-3.5 text-primary" />@
                 {backtest.user?.username || "unknown"}
               </span>
-              <span className="inline-flex items-center gap-1 rounded-md border bg-background/70 px-2 py-1 text-[11px] text-muted-foreground">
+              <span className="inline-flex items-center gap-1 rounded-md border bg-muted px-2 py-1 text-[11px] text-muted-foreground">
                 <Target className="h-3.5 w-3.5 text-primary" />
                 <span className="max-w-[170px] truncate">
                   {backtest.strategy?.name || "Strategy"}
@@ -708,8 +706,8 @@ export default function BacktestResultPage() {
               </span>
             </div>
           </div>
-        </div>
-      </section>
+        </CardContent>
+      </Card>
 
       <AlertDialog
         open={isDeleteConfirmOpen}

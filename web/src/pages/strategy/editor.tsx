@@ -56,7 +56,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { HelpTooltip } from "@/components/ui/help-tooltip"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -408,34 +407,30 @@ function getParamHelpText(paramKey: string) {
 }
 
 function ParamHelpTooltip({
-  label,
-  content,
+  label: _label,
+  content: _content,
 }: {
   label: string
   content: string
 }) {
-  return (
-    <HelpTooltip label={label} content={content} contentClassName="max-w-56" />
-  )
+  void _label
+  void _content
+  return null
 }
 
 function AdaptiveTooltipIcon({
-  label,
-  content,
-  className,
+  label: _label,
+  content: _content,
+  className: _className,
 }: {
   label: string
   content: ReactNode
   className?: string
 }) {
-  return (
-    <HelpTooltip
-      label={label}
-      content={content}
-      buttonClassName={className}
-      contentClassName="max-w-72"
-    />
-  )
+  void _label
+  void _content
+  void _className
+  return null
 }
 
 function createOperandDraft(
@@ -2751,14 +2746,13 @@ export default function StrategyEditorPage() {
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-4 sm:space-y-6">
-      <section className="theme-hero-panel relative overflow-hidden rounded-2xl border p-4 sm:p-6">
-        <div className="theme-hero-overlay absolute inset-0" />
-        <div className="relative flex flex-col gap-3">
+      <Card>
+        <CardContent className="flex flex-col gap-3 p-4 sm:p-6">
           <Button
             type="button"
             variant="outline"
             size="sm"
-            className="theme-glass-button w-fit"
+            className="w-fit"
             onClick={() => {
               if (window.history.length > 1) {
                 navigate(-1)
@@ -2775,7 +2769,7 @@ export default function StrategyEditorPage() {
           </Button>
 
           <div>
-            <p className="inline-flex items-center gap-1.5 rounded-full border bg-background/80 px-2.5 py-1 text-xs font-medium tracking-[0.18em] text-muted-foreground uppercase backdrop-blur">
+            <p className="inline-flex items-center gap-1.5 rounded-full border bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground uppercase">
               <Settings2 className="h-3.5 w-3.5" />
               Strategy Builder
             </p>
@@ -2794,8 +2788,8 @@ export default function StrategyEditorPage() {
                   : "Build a strategy with friendly form controls for indicators, nested conditions, stop loss, and take profit. No JSON needed."}
             </p>
           </div>
-        </div>
-      </section>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
         <div className="space-y-4">

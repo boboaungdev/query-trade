@@ -30,8 +30,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { HelpTooltip } from "@/components/ui/help-tooltip"
-import { TooltipProvider } from "@/components/ui/tooltip"
 import { useAuthStore } from "@/store/auth"
 import { cn } from "@/lib/utils"
 
@@ -404,19 +402,18 @@ export function AccountSection({
     setIsDeleteConfirmOpen(true)
   }
 
-  return (
-    <TooltipProvider>
+    return (
       <div className="space-y-6">
-        <div className="overflow-hidden rounded-[28px] border border-primary/15 bg-linear-to-br from-primary/[0.16] via-primary/[0.05] to-background shadow-sm">
+        <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
           <div className="p-5 lg:p-6">
             <div className="min-w-0 space-y-4">
-              <div className="inline-flex w-fit items-center gap-2 rounded-full border border-primary/20 bg-background/80 px-3 py-1 text-xs font-medium text-primary shadow-sm">
+              <div className="inline-flex w-fit items-center gap-2 rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-foreground">
                 <CheckCircle2 className="size-3.5" />
                 Account verified
               </div>
               <div className="space-y-2">
                 <div className="flex items-start gap-3">
-                  <span className="rounded-2xl bg-primary/12 p-3 text-primary">
+                  <span className="rounded-xl bg-muted p-3 text-foreground">
                     <ShieldCheck className="size-5" />
                   </span>
                   <div className="min-w-0 space-y-1">
@@ -434,7 +431,7 @@ export function AccountSection({
                 {securityOverviewItems.map((item) => (
                   <div
                     key={item.label}
-                    className="rounded-2xl border border-border/60 bg-background/85 px-4 py-3 shadow-sm"
+                    className="rounded-xl border border-border bg-card px-4 py-3 shadow-sm"
                   >
                     <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
                       {item.label}
@@ -458,9 +455,9 @@ export function AccountSection({
         </div>
 
         <div className="space-y-4">
-          <section className="rounded-[24px] border border-border/70 bg-background/80 p-4 shadow-sm sm:p-5">
+          <section className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-5">
             <div className="flex items-start gap-3">
-              <span className="rounded-2xl bg-primary/10 p-2.5 text-primary">
+              <span className="rounded-xl bg-muted p-2.5 text-foreground">
                 <Mail className="size-4" />
               </span>
               <div className="min-w-0 space-y-1">
@@ -471,7 +468,7 @@ export function AccountSection({
               </div>
             </div>
             {emailChangeStep === "idle" ? (
-              <div className="mt-5 flex flex-col gap-3 rounded-2xl border border-border/70 bg-muted/[0.35] px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="mt-5 flex flex-col gap-3 rounded-xl border border-border bg-muted/40 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <p className="font-medium break-all">{maskedEmail}</p>
                   <p className="mt-1 text-sm text-muted-foreground">
@@ -493,7 +490,7 @@ export function AccountSection({
                 </Button>
               </div>
             ) : (
-              <div className="mt-5 rounded-2xl border border-primary/15 bg-primary/[0.06] px-4 py-3.5">
+              <div className="mt-5 rounded-xl border border-border bg-muted/40 px-4 py-3.5">
                 <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
                   Current email
                 </p>
@@ -570,21 +567,11 @@ export function AccountSection({
             {emailChangeStep === "verify" && (
               <div className="mt-4 grid gap-4">
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor="new-email-code">
-                      New email verification code
-                    </Label>
-                    <HelpTooltip
-                      label="New email verification"
-                      content={
-                        <>
-                          Verification code sent to your new email. If not found,
-                          check spam folder.
-                        </>
-                      }
-                      buttonClassName="rounded-full transition-colors"
-                    />
-                  </div>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="new-email-code">
+                        New email verification code
+                      </Label>
+                    </div>
                   <Input
                     id="new-email-code"
                     value={newEmailCode}
@@ -659,9 +646,9 @@ export function AccountSection({
             </div>
           </section>
 
-          <section className="rounded-[24px] border border-border/70 bg-background/80 p-4 shadow-sm sm:p-5">
+          <section className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-5">
             <div className="flex items-start gap-3">
-              <span className="rounded-2xl bg-primary/10 p-2.5 text-primary">
+              <span className="rounded-xl bg-muted p-2.5 text-foreground">
                 <LockKeyhole className="size-4" />
               </span>
               <div className="min-w-0 space-y-1">
@@ -674,7 +661,7 @@ export function AccountSection({
               </div>
             </div>
             {!isPasswordFormOpen ? (
-              <div className="mt-5 flex flex-col gap-3 rounded-2xl border border-border/70 bg-muted/[0.35] px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="mt-5 flex flex-col gap-3 rounded-xl border border-border bg-muted/40 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <p className="font-medium">{passwordStatusLabel}</p>
                   <p className="mt-1 text-sm text-muted-foreground">
@@ -691,7 +678,7 @@ export function AccountSection({
               </div>
             ) : null}
             {isPasswordFormOpen ? (
-              <div className="mt-5 space-y-3 rounded-2xl border border-border/70 bg-muted/[0.35] px-4 py-4">
+              <div className="mt-5 space-y-3 rounded-xl border border-border bg-muted/40 px-4 py-4">
                 {hasServerProvider && !isForgotPasswordMode ? (
                   <>
                     <div className="space-y-2">
@@ -721,16 +708,11 @@ export function AccountSection({
                 ) : null}
                 {hasServerProvider && isForgotPasswordMode ? (
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Label htmlFor="password-reset-code">
-                        Verification email code
-                      </Label>
-                      <HelpTooltip
-                        label="Verification email code"
-                        content={<>Enter the 6-digit code sent to {user.email}.</>}
-                        buttonClassName="rounded-full transition-colors"
-                      />
-                    </div>
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor="password-reset-code">
+                          Verification email code
+                        </Label>
+                      </div>
                     <Input
                       id="password-reset-code"
                       value={passwordResetCode}
@@ -827,9 +809,9 @@ export function AccountSection({
         <Separator />
 
         <div className="space-y-4">
-          <section className="rounded-[24px] border border-border/70 bg-background/80 p-4 shadow-sm sm:p-5">
+          <section className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-5">
             <div className="flex items-start gap-3">
-              <span className="rounded-2xl bg-primary/10 p-2.5 text-primary">
+              <span className="rounded-xl bg-muted p-2.5 text-foreground">
                 <Smartphone className="size-4" />
               </span>
               <div className="min-w-0">
@@ -840,7 +822,7 @@ export function AccountSection({
               </div>
             </div>
             <div className="mt-5 space-y-3">
-              <div className="rounded-[20px] border border-border/70 bg-linear-to-r from-background to-muted/30 p-4">
+              <div className="rounded-xl border border-border bg-card p-4">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                   <div className="flex items-start gap-3">
                     <span className="rounded-2xl bg-primary/10 p-2.5 text-primary">
@@ -851,9 +833,9 @@ export function AccountSection({
                         <p className="font-medium">Google</p>
                         <span
                           className={cn(
-                            "rounded-full px-2.5 py-0.5 text-[11px] font-medium",
+                            "rounded-full border border-border px-2.5 py-0.5 text-[11px] font-medium",
                             hasGoogleProvider
-                              ? "bg-success/12 text-success"
+                              ? "bg-muted text-foreground"
                               : "bg-muted text-muted-foreground"
                           )}
                         >
@@ -885,9 +867,9 @@ export function AccountSection({
             </div>
           </section>
 
-          <section className="rounded-[24px] border border-destructive/20 bg-linear-to-br from-destructive/[0.07] via-background to-background p-4 shadow-sm sm:p-5">
+          <section className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-5">
             <div className="flex items-start gap-3">
-              <span className="rounded-2xl bg-destructive/10 p-2.5 text-destructive">
+              <span className="rounded-xl bg-muted p-2.5 text-destructive">
                 <TriangleAlert className="size-4" />
               </span>
               <div className="min-w-0">
@@ -897,7 +879,7 @@ export function AccountSection({
                 </p>
               </div>
             </div>
-            <div className="mt-5 rounded-[20px] border border-destructive/25 bg-destructive/6 px-4 py-4">
+            <div className="mt-5 rounded-xl border border-border bg-muted/40 px-4 py-4">
               <div className="space-y-3">
                 <div>
                   <p className="font-medium text-destructive">
@@ -934,21 +916,11 @@ export function AccountSection({
                       with account deletion.
                     </p>
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <Label htmlFor="delete-account-code">
-                          Email verification code
-                        </Label>
-                        <HelpTooltip
-                          label="Email verification code"
-                          content={
-                            <>
-                              Enter the 6-digit code sent to your email. If not
-                              found, check spam folder.
-                            </>
-                          }
-                          buttonClassName="rounded-full transition-colors"
-                        />
-                      </div>
+                        <div className="flex items-center gap-2">
+                          <Label htmlFor="delete-account-code">
+                            Email verification code
+                          </Label>
+                        </div>
                       {hasSentDeleteCode && deleteCodeResendTimer === 0 ? (
                         <button
                           type="button"
@@ -1100,6 +1072,5 @@ export function AccountSection({
           </AlertDialogContent>
         </AlertDialog>
       </div>
-    </TooltipProvider>
-  )
-}
+    )
+  }

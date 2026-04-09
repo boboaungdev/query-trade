@@ -10,9 +10,8 @@ export default function NotFoundPage() {
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-5">
-      <section className="theme-hero-panel relative overflow-hidden rounded-2xl border p-4 sm:p-6">
-        <div className="theme-hero-overlay absolute inset-0" />
-        <div className="relative">
+      <Card>
+        <CardContent className="p-4 sm:p-6">
           <p className="inline-flex items-center gap-1 rounded-full border bg-background/70 px-2.5 py-1 text-xs font-medium text-muted-foreground">
             <Compass className="h-3.5 w-3.5 text-primary" />
             Page Not Found
@@ -23,8 +22,8 @@ export default function NotFoundPage() {
           <p className="mt-2 text-sm text-muted-foreground sm:text-base">
             The page you are looking for does not exist or may have been moved.
           </p>
-        </div>
-      </section>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardContent className="flex flex-wrap items-center gap-2 p-4 sm:p-5">

@@ -70,7 +70,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { HelpTooltip } from "@/components/ui/help-tooltip"
 import { Label } from "@/components/ui/label"
 import {
   Popover,
@@ -79,7 +78,6 @@ import {
 } from "@/components/ui/popover"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Toggle } from "@/components/ui/toggle"
-import { TooltipProvider } from "@/components/ui/tooltip"
 import { useAuthStore } from "@/store/auth"
 import { useBookmarkStore } from "@/store/bookmark"
 import { cn } from "@/lib/utils"
@@ -916,11 +914,9 @@ export default function BacktestPage() {
 
   return (
     <div className="mx-auto w-full max-w-6xl min-w-0 space-y-4 overflow-x-hidden sm:space-y-6">
-      <section className="theme-hero-panel relative overflow-hidden rounded-xl border p-4 sm:p-6">
-        <div className="theme-hero-overlay absolute inset-0" />
-
-        <div className="relative flex flex-col gap-3">
-          <p className="inline-flex w-fit items-center gap-1.5 rounded-md border bg-background/80 px-2.5 py-1 text-xs font-medium tracking-[0.18em] text-muted-foreground uppercase backdrop-blur">
+      <Card>
+        <CardContent className="flex flex-col gap-3 p-4 sm:p-6">
+          <p className="inline-flex w-fit items-center gap-1.5 rounded-md border bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground uppercase">
             <Sparkles className="h-3.5 w-3.5 text-primary" />
             {isEditing ? "Backtest Editor" : "Strategy Lab"}
           </p>
@@ -934,25 +930,22 @@ export default function BacktestPage() {
               : "Test your trading strategy on historical candles, review performance metrics, and inspect each trade outcome before going live."}
           </p>
           <div className="flex flex-wrap gap-2 pt-1">
-            <span className="inline-flex items-center gap-1 rounded-md border bg-background/70 px-2 py-1 text-[11px] text-muted-foreground">
+            <span className="inline-flex items-center gap-1 rounded-md border bg-muted px-2 py-1 text-[11px] text-muted-foreground">
               <AreaChart className="h-3.5 w-3.5 text-primary" />
               Equity analytics
             </span>
-            <span className="inline-flex items-center gap-1 rounded-md border bg-background/70 px-2 py-1 text-[11px] text-muted-foreground">
+            <span className="inline-flex items-center gap-1 rounded-md border bg-muted px-2 py-1 text-[11px] text-muted-foreground">
               <CandlestickChart className="h-3.5 w-3.5 text-primary" />
               Strategy simulation
             </span>
           </div>
-        </div>
-      </section>
+        </CardContent>
+      </Card>
       <div className="min-w-0">
-        <Card className="relative min-w-0 overflow-hidden rounded-xl border bg-background/90 py-0 text-sm shadow-sm ring-1 ring-foreground/10 dark:bg-background/70">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,hsl(var(--muted))_0%,transparent_32%)] opacity-80" />
-          <div className="pointer-events-none absolute top-0 right-0 h-32 w-32 rounded-full bg-muted/60 blur-3xl" />
-
-          <CardHeader className="relative gap-4 px-5 pt-5 pb-0 sm:px-6 sm:pt-6">
+        <Card className="min-w-0 py-0 text-sm">
+          <CardHeader className="gap-4 px-5 pt-5 pb-0 sm:px-6 sm:pt-6">
             <div className="space-y-3">
-              <span className="inline-flex w-fit items-center gap-2 rounded-md border bg-muted px-3 py-1 text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+              <span className="inline-flex w-fit items-center gap-2 rounded-md border bg-muted px-3 py-1 text-[11px] font-semibold text-muted-foreground uppercase">
                 <Sparkles className="h-3.5 w-3.5 text-primary" />
                 Backtest Setup
               </span>
@@ -997,7 +990,7 @@ export default function BacktestPage() {
                 disabled={isRunning || isLoadingBacktest}
                 className="min-w-0 space-y-4 border-0 p-0"
               >
-                <div className="rounded-xl border border-border/70 bg-background/95 p-4 shadow-sm xl:p-5 dark:bg-background/80">
+                <div className="rounded-xl border bg-card p-4 xl:p-5">
                   <div className="mb-4">
                     <div>
                       <p className="text-base font-semibold text-foreground">
@@ -1125,8 +1118,8 @@ export default function BacktestPage() {
                                     className={cn(
                                       "flex w-full overflow-hidden rounded-lg border px-3.5 py-2 text-left text-sm transition-colors",
                                       item === symbol
-                                        ? "border-primary/40 bg-primary/10"
-                                        : "border-border/70 bg-muted/20 hover:bg-accent/40"
+                                        ? "border-primary/40 bg-muted"
+                                        : "border-border/70 bg-muted/40 hover:bg-accent"
                                     )}
                                     onClick={() => {
                                       setSymbol(item)
@@ -1598,8 +1591,8 @@ export default function BacktestPage() {
                                         className={cn(
                                           "flex w-full overflow-hidden rounded-lg border px-3.5 py-2 text-left transition-colors",
                                           isSelected
-                                            ? "border-primary/40 bg-primary/10"
-                                            : "border-border/70 bg-muted/20 hover:bg-accent/40"
+                                            ? "border-primary/40 bg-muted"
+                                            : "border-border/70 bg-muted/40 hover:bg-accent"
                                         )}
                                         onClick={() => {
                                           setStrategyId(item._id)
@@ -1765,7 +1758,7 @@ export default function BacktestPage() {
                   </div>
                 </div>
 
-                <div className="min-w-0 overflow-hidden rounded-xl border border-border/70 bg-background/95 p-4 shadow-sm xl:p-5 dark:bg-background/80">
+                <div className="min-w-0 overflow-hidden rounded-xl border bg-card p-4 xl:p-5">
                   <div className="mb-4">
                     <p className="text-base font-semibold text-foreground">
                       Capital plan
@@ -1829,10 +1822,6 @@ export default function BacktestPage() {
                       >
                         <Percent className="h-3.5 w-3.5 text-primary" />
                         Entry Fee (%)
-                        <HelpTooltip
-                          label="Entry fee"
-                          content="Charged when a trade opens. Set this to your exchange fee rate."
-                        />
                       </Label>
                       <Input
                         id="entryFeeRate"
@@ -1855,10 +1844,6 @@ export default function BacktestPage() {
                       >
                         <Percent className="h-3.5 w-3.5 text-primary" />
                         Exit Fee (%)
-                        <HelpTooltip
-                          label="Exit fee"
-                          content="Charged when a trade closes. Set this to your exchange fee rate."
-                        />
                       </Label>
                       <Input
                         id="exitFeeRate"
@@ -1876,7 +1861,7 @@ export default function BacktestPage() {
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-border/70 bg-background/95 p-4 shadow-sm xl:p-5 dark:bg-background/80">
+                <div className="rounded-xl border bg-card p-4 xl:p-5">
                   <div className="space-y-3">
                     <div className="flex items-start justify-between gap-4">
                       <div>
@@ -1890,46 +1875,34 @@ export default function BacktestPage() {
                       </div>
                     </div>
 
-                    <TooltipProvider>
-                      <div className="rounded-xl border border-border/70 bg-background/95 p-3 dark:bg-background/80">
-                        <div className="flex flex-wrap items-center justify-between gap-3">
-                          <div className="flex items-center gap-1.5">
-                            <Label className="text-sm font-medium">
-                              Position Mode
-                            </Label>
-                            <HelpTooltip
-                              label="Position mode"
-                              content={
-                                <p>
-                                  One-way: one net position only. Hedge: long
-                                  and short positions can exist at the same
-                                  time.
-                                </p>
-                              }
-                            />
-                          </div>
-                          <Toggle
-                            pressed={hedgeMode}
-                            disabled={isRunning}
-                            onPressedChange={setHedgeMode}
-                            variant="outline"
-                            size="sm"
-                            className="inline-flex px-2.5 data-[state=on]:border-primary/40 data-[state=on]:bg-primary/10 data-[state=on]:text-foreground"
-                          >
-                            {hedgeMode ? (
-                              <ArrowLeftRight className="h-4 w-4 text-primary" />
-                            ) : (
-                              <ArrowRight className="h-4 w-4 text-primary" />
-                            )}
-                            <span className="text-sm">
-                              {hedgeMode ? "Hedge" : "One-way"}
-                            </span>
-                          </Toggle>
+                    <div className="rounded-xl border bg-muted/30 p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex items-center gap-1.5">
+                          <Label className="text-sm font-medium">
+                            Position Mode
+                          </Label>
                         </div>
+                        <Toggle
+                          pressed={hedgeMode}
+                          disabled={isRunning}
+                          onPressedChange={setHedgeMode}
+                          variant="outline"
+                          size="sm"
+                          className="inline-flex px-2.5 data-[state=on]:border-primary/40 data-[state=on]:bg-muted data-[state=on]:text-foreground"
+                        >
+                          {hedgeMode ? (
+                            <ArrowLeftRight className="h-4 w-4 text-primary" />
+                          ) : (
+                            <ArrowRight className="h-4 w-4 text-primary" />
+                          )}
+                          <span className="text-sm">
+                            {hedgeMode ? "Hedge" : "One-way"}
+                          </span>
+                        </Toggle>
                       </div>
-                    </TooltipProvider>
+                    </div>
 
-                    <div className="rounded-xl border border-border/70 bg-background/95 p-3 dark:bg-background/80">
+                    <div className="rounded-xl border bg-muted/30 p-3">
                       <div className="flex flex-wrap gap-2">
                         <span className="inline-flex items-center gap-1.5 rounded-md bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
                           <CircleDollarSign className="h-3 w-3" />
@@ -1947,7 +1920,7 @@ export default function BacktestPage() {
                         </span>
                       </div>
 
-                      <div className="mt-3 flex items-start gap-2 rounded-xl border border-dashed border-border/70 bg-background/80 px-3 py-2.5 text-xs text-muted-foreground dark:bg-background/70">
+                      <div className="mt-3 flex items-start gap-2 rounded-xl border border-dashed bg-muted/30 px-3 py-2.5 text-xs text-muted-foreground">
                         <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                         <p>
                           Double-check the symbol, timeframe, and strategy logic

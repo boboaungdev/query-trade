@@ -733,16 +733,14 @@ export default function StrategyDetailPage() {
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-5">
-      <section className="theme-hero-panel relative overflow-hidden rounded-[26px] border text-foreground shadow-sm">
-        <div className="theme-hero-overlay absolute inset-0" />
-        <div className="theme-hero-sheen absolute inset-y-0 right-0 hidden w-1/2 lg:block" />
-        <div className="relative space-y-5 p-4 sm:p-5 lg:p-6">
+      <Card className="text-foreground">
+        <CardContent className="space-y-5 p-4 sm:p-5 lg:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <Button
               type="button"
               variant="outline"
               size="sm"
-              className="theme-glass-button"
+              className=""
               onClick={() => {
                 if (fromProfileUrl) {
                   navigate(fromProfileUrl, { replace: true })
@@ -774,7 +772,7 @@ export default function StrategyDetailPage() {
                   type="button"
                   variant={isBookmarked ? "outline" : "default"}
                   size="icon-sm"
-                  className="theme-glass-button rounded-r-none"
+                      className="rounded-r-none"
                   aria-label={isBookmarked ? "Bookmarked" : "Bookmark"}
                   title={isBookmarked ? "Bookmarked" : "Bookmark"}
                   disabled={isStrategyBookmarkUpdating}
@@ -796,7 +794,7 @@ export default function StrategyDetailPage() {
                       type="button"
                       variant={isBookmarked ? "outline" : "default"}
                       size="icon-sm"
-                      className="theme-glass-button -ml-px rounded-l-none"
+                      className="-ml-px rounded-l-none"
                       aria-label="More actions"
                       title="More actions"
                     >
@@ -881,16 +879,16 @@ export default function StrategyDetailPage() {
           </div>
 
           {loadError || !strategy ? (
-            <div className="theme-glass-panel rounded-2xl border px-4 py-8 text-sm text-muted-foreground">
+            <div className="rounded-xl border bg-muted/30 px-4 py-8 text-sm text-muted-foreground">
               {loadError || "Strategy not found."}
             </div>
           ) : (
             <div className="space-y-3.5">
               <div className="flex flex-wrap gap-2">
-                <span className="theme-glass-chip inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium tracking-[0.16em] text-muted-foreground uppercase">
+                <span className="inline-flex items-center gap-1.5 rounded-full border bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground uppercase">
                   Strategy Detail
                 </span>
-                <span className="theme-glass-chip inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium tracking-[0.16em] text-muted-foreground uppercase">
+                <span className="inline-flex items-center gap-1.5 rounded-full border bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground uppercase">
                   {strategy.isPublic ? (
                     <Globe className="h-3 w-3" />
                   ) : (
@@ -898,7 +896,7 @@ export default function StrategyDetailPage() {
                   )}
                   {isMine ? "Mine" : strategy.isPublic ? "Public" : "Private"}
                 </span>
-                <span className="theme-glass-chip inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+                <span className="inline-flex items-center gap-1.5 rounded-full border bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
                   <UserRound className="h-3 w-3" />@
                   {strategy.user?.username || "unknown"}
                 </span>
@@ -923,8 +921,8 @@ export default function StrategyDetailPage() {
               </div>
             </div>
           )}
-        </div>
-      </section>
+        </CardContent>
+      </Card>
 
       {!isLoading && strategy ? (
         <div className="space-y-5">

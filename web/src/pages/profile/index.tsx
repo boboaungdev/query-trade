@@ -73,11 +73,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { HelpTooltip } from "@/components/ui/help-tooltip"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { TooltipProvider } from "@/components/ui/tooltip"
 import { editProfile } from "@/api/auth"
 import { fetchUserByUsername } from "@/api/user"
 import { cn } from "@/lib/utils"
@@ -816,9 +814,8 @@ export default function Profile() {
     !viewedUser &&
     Boolean(profileLoadError)
   ) {
-    return (
-      <TooltipProvider>
-        <div className="mx-auto w-full max-w-4xl">
+      return (
+          <div className="mx-auto w-full max-w-4xl">
           <Button
             variant="outline"
             size="sm"
@@ -844,15 +841,13 @@ export default function Profile() {
               </p>
             </CardContent>
           </Card>
-        </div>
-      </TooltipProvider>
-    )
+          </div>
+      )
   }
 
   if (!canEditProfile && isProfileLoading) {
-    return (
-      <TooltipProvider>
-        <div className="mx-auto w-full max-w-4xl">
+      return (
+          <div className="mx-auto w-full max-w-4xl">
           <Button
             variant="outline"
             size="sm"
@@ -871,9 +866,8 @@ export default function Profile() {
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             Searching profile...
           </div>
-        </div>
-      </TooltipProvider>
-    )
+          </div>
+      )
   }
 
   const onCancel = () => {
@@ -1242,9 +1236,9 @@ export default function Profile() {
             { value: "winRate", label: "Win Rate" },
           ]
 
-  return (
-    <TooltipProvider>
-      <div className="mx-auto w-full max-w-4xl">
+    return (
+      <>
+        <div className="mx-auto w-full max-w-4xl">
         <Button
           variant="outline"
           size="sm"
@@ -1494,13 +1488,9 @@ export default function Profile() {
                 </div>
 
                 <div className="space-y-2">
-                  <div className="flex items-center gap-1.5">
-                    <Label htmlFor="name">Name</Label>
-                    <HelpTooltip
-                      label="Name requirements"
-                      content="Letters, numbers, and spaces only (1-20 characters)."
-                    />
-                  </div>
+                    <div className="flex items-center gap-1.5">
+                      <Label htmlFor="name">Name</Label>
+                    </div>
                   <Input
                     id="name"
                     value={form.name}
@@ -1515,13 +1505,9 @@ export default function Profile() {
                 </div>
 
                 <div className="space-y-2">
-                  <div className="flex items-center gap-1.5">
-                    <Label htmlFor="username">Username</Label>
-                    <HelpTooltip
-                      label="Username requirements"
-                      content="Lowercase letters and numbers only (6-20 characters)."
-                    />
-                  </div>
+                    <div className="flex items-center gap-1.5">
+                      <Label htmlFor="username">Username</Label>
+                    </div>
                   <Input
                     id="username"
                     value={form.username}
@@ -2308,7 +2294,7 @@ export default function Profile() {
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
-      </AlertDialog>
-    </TooltipProvider>
-  )
-}
+        </AlertDialog>
+      </>
+    )
+  }

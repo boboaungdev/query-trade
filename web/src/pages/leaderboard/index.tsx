@@ -355,11 +355,9 @@ export default function LeaderboardPage() {
 
   return (
     <div className="mx-auto w-full max-w-6xl min-w-0 space-y-4 overflow-x-hidden sm:space-y-6">
-      <section className="theme-hero-panel relative overflow-hidden rounded-2xl border p-4 sm:p-6">
-        <div className="theme-hero-overlay absolute inset-0" />
-
-        <div className="relative flex flex-col gap-3">
-          <p className="inline-flex w-fit items-center gap-1.5 rounded-full border bg-background/80 px-2.5 py-1 text-xs font-medium tracking-[0.18em] text-muted-foreground uppercase backdrop-blur">
+      <Card>
+        <CardContent className="flex flex-col gap-3 p-4 sm:p-6">
+          <p className="inline-flex w-fit items-center gap-1.5 rounded-full border bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground uppercase">
             <Sparkles className="h-3.5 w-3.5 text-primary" />
             Performance Arena
           </p>
@@ -376,17 +374,17 @@ export default function LeaderboardPage() {
           </p>
 
           <div className="flex flex-wrap gap-2 pt-1">
-            <span className="inline-flex items-center gap-1 rounded-md border bg-background/70 px-2 py-1 text-[11px] text-muted-foreground">
+            <span className="inline-flex items-center gap-1 rounded-md border bg-muted px-2 py-1 text-[11px] text-muted-foreground">
               <TrendingUp className="h-3.5 w-3.5 text-primary" />
               Ranked by performance
             </span>
-            <span className="inline-flex items-center gap-1 rounded-md border bg-background/70 px-2 py-1 text-[11px] text-muted-foreground">
+            <span className="inline-flex items-center gap-1 rounded-md border bg-muted px-2 py-1 text-[11px] text-muted-foreground">
               <CandlestickChart className="h-3.5 w-3.5 text-primary" />
               Result-first browsing
             </span>
           </div>
-        </div>
-      </section>
+        </CardContent>
+      </Card>
 
       <Card className="min-w-0 border-border/70">
         <CardHeader className="space-y-3">
@@ -426,7 +424,7 @@ export default function LeaderboardPage() {
                     type="button"
                     variant={duration === option.value ? "secondary" : "ghost"}
                     size="sm"
-                    className="h-7 min-w-10 justify-center px-2 text-center text-[11px] tracking-[0.14em] uppercase"
+                    className="h-7 min-w-10 justify-center px-2 text-center text-[11px] uppercase"
                     onClick={() => {
                       setDuration(option.value)
                       setPage(1)
@@ -509,7 +507,7 @@ export default function LeaderboardPage() {
                 type="button"
                 variant={duration === option.value ? "secondary" : "outline"}
                 size="sm"
-                className="h-8 min-w-0 flex-1 justify-center px-1 text-center text-[10px] tracking-[0.12em] uppercase"
+                className="h-8 min-w-0 flex-1 justify-center px-1 text-center text-[10px] uppercase"
                 onClick={() => {
                   setDuration(option.value)
                   setPage(1)
@@ -574,9 +572,8 @@ export default function LeaderboardPage() {
               <Card
                 key={backtest._id}
                 className={cn(
-                  "overflow-hidden border-border/70 bg-background/95 shadow-sm transition-colors hover:border-primary/30 dark:bg-background/80",
-                  index === 0 &&
-                    "shadow-[0_12px_40px_-24px_hsl(var(--primary)/0.55)] ring-1 ring-primary/25"
+                  "overflow-hidden transition-colors hover:border-primary/30",
+                  index === 0 && "border-primary/30"
                 )}
               >
                 <CardHeader className="space-y-3 border-b border-border/60 pb-4">
@@ -740,8 +737,8 @@ export default function LeaderboardPage() {
 
                 <CardContent className="space-y-4 p-4">
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="rounded-xl border bg-muted/20 p-3">
-                      <p className="text-[11px] tracking-[0.16em] text-muted-foreground uppercase">
+                    <div className="rounded-xl border bg-muted/40 p-3">
+                      <p className="text-[11px] text-muted-foreground uppercase">
                         Duration
                       </p>
                       <p className="mt-1 text-sm font-semibold text-foreground">
@@ -749,8 +746,8 @@ export default function LeaderboardPage() {
                       </p>
                     </div>
 
-                    <div className="rounded-xl border bg-muted/20 p-3">
-                      <p className="text-[11px] tracking-[0.16em] text-muted-foreground uppercase">
+                    <div className="rounded-xl border bg-muted/40 p-3">
+                      <p className="text-[11px] text-muted-foreground uppercase">
                         Win Rate
                       </p>
                       <p className="mt-1 text-sm font-semibold text-foreground">
@@ -758,8 +755,8 @@ export default function LeaderboardPage() {
                       </p>
                     </div>
 
-                    <div className="rounded-xl border bg-muted/20 p-3">
-                      <p className="text-[11px] tracking-[0.16em] text-muted-foreground uppercase">
+                    <div className="rounded-xl border bg-muted/40 p-3">
+                      <p className="text-[11px] text-muted-foreground uppercase">
                         Profit Factor
                       </p>
                       <p className="mt-1 text-sm font-semibold text-foreground">
@@ -767,8 +764,8 @@ export default function LeaderboardPage() {
                       </p>
                     </div>
 
-                    <div className="rounded-xl border bg-muted/20 p-3">
-                      <p className="text-[11px] tracking-[0.16em] text-muted-foreground uppercase">
+                    <div className="rounded-xl border bg-muted/40 p-3">
+                      <p className="text-[11px] text-muted-foreground uppercase">
                         Drawdown
                       </p>
                       <p className="mt-1 text-sm font-semibold text-foreground">

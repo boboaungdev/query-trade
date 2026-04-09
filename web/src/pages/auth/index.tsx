@@ -5,7 +5,6 @@ import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { HelpTooltip } from "@/components/ui/help-tooltip";
 import { Label } from "@/components/ui/label";
 import {
   Card,
@@ -31,7 +30,6 @@ import {
 import { getApiErrorMessage } from "@/api/axios";
 import { ChevronLeft, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
 
 const NAME_REGEX = /^[A-Za-z0-9 ]{1,20}$/;
 const USERNAME_REGEX = /^[a-z0-9]{6,20}$/;
@@ -522,8 +520,7 @@ export default function Auth() {
 
   return (
     <div className="flex min-h-[80vh] items-center justify-center p-6">
-      <TooltipProvider>
-        <Card className="w-full max-w-sm">
+      <Card className="w-full max-w-sm">
           <CardHeader>
             <div className="mb-2 flex items-center justify-between">
               <Button
@@ -615,10 +612,6 @@ export default function Auth() {
               <div className="space-y-2">
                 <div className="flex items-center gap-1.5">
                   <Label>Password</Label>
-                  <HelpTooltip
-                    label="Password requirements"
-                    content="Password must be 6-50 characters."
-                  />
                 </div>
 
                 <Input
@@ -647,15 +640,6 @@ export default function Auth() {
               <div className="space-y-2">
                 <div className="flex items-center gap-1.5">
                   <Label>Email verification code</Label>
-                  <HelpTooltip
-                    label="Email verification"
-                    content={
-                      <>
-                        Email code was sent to your inbox. If you cannot find
-                        it, check your spam or junk folder.
-                      </>
-                    }
-                  />
                 </div>
 
                 <Input
@@ -718,10 +702,6 @@ export default function Auth() {
                 <div className="space-y-2">
                   <div className="flex items-center gap-1.5">
                     <Label>Name</Label>
-                    <HelpTooltip
-                      label="Name requirements"
-                      content="Letters, numbers, and spaces only (1-20 characters)."
-                    />
                   </div>
                   <Input
                     value={name}
@@ -734,10 +714,6 @@ export default function Auth() {
                 <div className="space-y-2">
                   <div className="flex items-center gap-1.5">
                     <Label>Username</Label>
-                    <HelpTooltip
-                      label="Username requirements"
-                      content="Lowercase letters and numbers only (6-20 characters)."
-                    />
                   </div>
                   <Input
                     value={username}
@@ -754,10 +730,6 @@ export default function Auth() {
                 <div className="space-y-2">
                   <div className="flex items-center gap-1.5">
                     <Label>Password</Label>
-                    <HelpTooltip
-                      label="Password requirements"
-                      content="Password must be 6-50 characters."
-                    />
                   </div>
                   <Input
                     type="password"
@@ -774,15 +746,6 @@ export default function Auth() {
               <div className="space-y-2">
                 <div className="flex items-center gap-1.5">
                   <Label>Email verification code</Label>
-                  <HelpTooltip
-                    label="Email verification"
-                    content={
-                      <>
-                        Email code was sent to your inbox. If you cannot find
-                        it, check your spam or junk folder.
-                      </>
-                    }
-                  />
                 </div>
 
                 <Input
@@ -837,8 +800,7 @@ export default function Auth() {
               )}
             </Button>
           </CardContent>
-        </Card>
-      </TooltipProvider>
+      </Card>
     </div>
   );
 }

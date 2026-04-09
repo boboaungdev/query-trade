@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { Link, useLocation, useNavigate } from "react-router-dom"
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import {
   Sidebar,
@@ -9,7 +8,7 @@ import {
   SidebarMenuAction,
   SidebarMenuItem,
   SidebarMenuButton,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
 
 import {
   DropdownMenu,
@@ -17,9 +16,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu"
-import { useSidebar } from "@/components/ui/sidebar"
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+} from "@/components/ui/dropdown-menu";
+import { useSidebar } from "@/components/ui/sidebar";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 import {
   Home,
@@ -33,58 +32,58 @@ import {
   CircleHelp,
   LogOut,
   MoreVertical,
-} from "lucide-react"
+} from "lucide-react";
 
-import { useAuthStore } from "@/store/auth"
-import { useState } from "react"
-import { getApiErrorMessage } from "@/api/axios"
-import { signout } from "@/api/auth"
-import { toast } from "sonner"
+import { useAuthStore } from "@/store/auth";
+import { useState } from "react";
+import { getApiErrorMessage } from "@/api/axios";
+import { signout } from "@/api/auth";
+import { toast } from "sonner";
 
 export function AppSidebar() {
-  const { isMobile, setOpen, setOpenMobile } = useSidebar()
-  const user = useAuthStore((state) => state.user)
-  const logout = useAuthStore((state) => state.logout)
+  const { isMobile, setOpen, setOpenMobile } = useSidebar();
+  const user = useAuthStore((state) => state.user);
+  const logout = useAuthStore((state) => state.logout);
 
-  const location = useLocation()
-  const navigate = useNavigate()
-  const [menuOpen, setMenuOpen] = useState(false)
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const handleSignout = () => {
     toast.promise(signout(), {
       loading: "Signing out...",
       success: (data) => {
-        logout()
-        navigate("/")
-        return data.message
+        logout();
+        navigate("/");
+        return data.message;
       },
       error: (error: unknown) =>
         getApiErrorMessage(error, "Sign out failed on server."),
-    })
-  }
+    });
+  };
 
   const initials =
     user?.name
       ?.split(" ")
       .map((n) => n[0])
       .join("")
-      .toUpperCase() || "U"
+      .toUpperCase() || "U";
 
   const handleMenuNavigation = () => {
     if (isMobile) {
-      setOpenMobile(false)
-      return
+      setOpenMobile(false);
+      return;
     }
 
-    setOpen(false)
-  }
+    setOpen(false);
+  };
 
   const isRouteActive = (href: string) => {
-    if (href === "/") return location.pathname === "/"
+    if (href === "/") return location.pathname === "/";
     return (
       location.pathname === href || location.pathname.startsWith(`${href}/`)
-    )
-  }
+    );
+  };
 
   return (
     <Sidebar
@@ -93,79 +92,73 @@ export function AppSidebar() {
       collapsible="icon"
       onMouseEnter={() => setOpen(true)}
       onMouseLeave={() => {
-        if (!menuOpen) setOpen(false)
+        if (!menuOpen) setOpen(false);
       }}
     >
       {/* TOP MENU */}
       <SidebarContent className="pt-10 pl-2">
         <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={isRouteActive("/")}>
-                <Link to="/" onClick={handleMenuNavigation}>
-                  <Home />
-                  <span>Home</span>
-                </Link>
-              </SidebarMenuButton>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={isRouteActive("/")}>
+              <Link to="/" onClick={handleMenuNavigation}>
+                <Home />
+                <span>Home</span>
+              </Link>
+            </SidebarMenuButton>
           </SidebarMenuItem>
 
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                isActive={isRouteActive("/dashboard")}
-              >
-                <Link to="/dashboard" onClick={handleMenuNavigation}>
-                  <LayoutDashboard />
-                  <span>Dashboard</span>
-                </Link>
-              </SidebarMenuButton>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={isRouteActive("/dashboard")}>
+              <Link to="/dashboard" onClick={handleMenuNavigation}>
+                <LayoutDashboard />
+                <span>Dashboard</span>
+              </Link>
+            </SidebarMenuButton>
           </SidebarMenuItem>
 
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                isActive={isRouteActive("/leaderboard")}
-              >
-                <Link to="/leaderboard" onClick={handleMenuNavigation}>
-                  <Trophy />
-                  <span>Leaderboard</span>
-                </Link>
-              </SidebarMenuButton>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={isRouteActive("/leaderboard")}>
+              <Link to="/leaderboard" onClick={handleMenuNavigation}>
+                <Trophy />
+                <span>Leaderboard</span>
+              </Link>
+            </SidebarMenuButton>
           </SidebarMenuItem>
 
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={isRouteActive("/strategy")}>
-                <Link to="/strategy" onClick={handleMenuNavigation}>
-                  <Target />
-                  <span>Strategy</span>
-                </Link>
-              </SidebarMenuButton>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={isRouteActive("/strategy")}>
+              <Link to="/strategy" onClick={handleMenuNavigation}>
+                <Target />
+                <span>Strategy</span>
+              </Link>
+            </SidebarMenuButton>
           </SidebarMenuItem>
 
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={isRouteActive("/bookmark")}>
-                <Link to="/bookmark" onClick={handleMenuNavigation}>
-                  <Bookmark />
-                  <span>Bookmark</span>
-                </Link>
-              </SidebarMenuButton>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={isRouteActive("/bookmark")}>
+              <Link to="/bookmark" onClick={handleMenuNavigation}>
+                <Bookmark />
+                <span>Bookmark</span>
+              </Link>
+            </SidebarMenuButton>
           </SidebarMenuItem>
 
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={isRouteActive("/backtest")}>
-                <Link to="/backtest" onClick={handleMenuNavigation}>
-                  <CandlestickChart />
-                  <span>Backtest</span>
-                </Link>
-              </SidebarMenuButton>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={isRouteActive("/backtest")}>
+              <Link to="/backtest" onClick={handleMenuNavigation}>
+                <CandlestickChart />
+                <span>Backtest</span>
+              </Link>
+            </SidebarMenuButton>
           </SidebarMenuItem>
 
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={isRouteActive("/settings")}>
-                <Link to="/settings" onClick={handleMenuNavigation}>
-                  <Settings />
-                  <span>Settings</span>
-                </Link>
-              </SidebarMenuButton>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={isRouteActive("/settings")}>
+              <Link to="/settings" onClick={handleMenuNavigation}>
+                <Settings />
+                <span>Settings</span>
+              </Link>
+            </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarContent>
@@ -246,5 +239,5 @@ export function AppSidebar() {
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
-  )
+  );
 }
