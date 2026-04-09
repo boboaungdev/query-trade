@@ -55,8 +55,6 @@ import {
 } from "@/components/ui/card"
 import {
   ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart"
 import {
@@ -338,39 +336,6 @@ function EquityCurve({
               tickMargin={10}
               tick={{ fontSize: 12, fill: "var(--color-muted-foreground)" }}
               tickFormatter={(value) => format(new Date(value), "MMM d")}
-            />
-            <ChartTooltip
-              cursor={{
-                stroke:
-                  "color-mix(in oklab, var(--color-equity) 35%, transparent)",
-                strokeWidth: 1,
-                strokeDasharray: "4 4",
-              }}
-              content={
-                <ChartTooltipContent
-                  labelFormatter={(value) =>
-                    format(new Date(Number(value)), "PPp")
-                  }
-                  valueFormatter={(item) => {
-                    const value =
-                      typeof item.value === "number"
-                        ? item.value
-                        : Number(item.value)
-
-                    if (!Number.isFinite(value)) return item.value
-
-                    const pointReturn =
-                      startEquity > 0
-                        ? ((value - startEquity) / startEquity) * 100
-                        : 0
-                    const pointPrefix = pointReturn >= 0 ? "+" : ""
-
-                    return `${money.format(value)} (${pointPrefix}${ratio.format(
-                      pointReturn
-                    )}%)`
-                  }}
-                />
-              }
             />
             <Area
               dataKey="equity"

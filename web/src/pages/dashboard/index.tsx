@@ -5,7 +5,6 @@ import {
   AreaChart,
   CartesianGrid,
   ResponsiveContainer,
-  Tooltip,
   XAxis,
 } from "recharts"
 import {
@@ -433,10 +432,6 @@ export default function Dashboard() {
                       axisLine={false}
                       tick={{ fontSize: 12 }}
                       minTickGap={18}
-                    />
-                    <Tooltip
-                      formatter={(value) => [value, "Strategies"]}
-                      labelFormatter={(label) => `Date: ${label}`}
                     />
                     <Area
                       type="monotone"
