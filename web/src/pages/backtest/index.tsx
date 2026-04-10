@@ -31,6 +31,7 @@ import {
 import { toast } from "sonner"
 
 import { getApiErrorMessage } from "@/api/axios"
+import { createBookmark, deleteBookmark } from "@/api/bookmark"
 import {
   fetchBacktestById,
   fetchExchangeData,
@@ -79,7 +80,6 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Toggle } from "@/components/ui/toggle"
 import { useAuthStore } from "@/store/auth"
-import { useBookmarkStore } from "@/store/bookmark"
 import { cn } from "@/lib/utils"
 
 type TimeframeMap = Record<string, string>
@@ -170,6 +170,7 @@ type BacktestDraftSnapshot = {
 type StrategyItem = {
   _id: string
   name: string
+  isBookmarked?: boolean
   isPublic?: boolean
   stats?: {
     viewCount?: number
@@ -316,17 +317,8 @@ export default function BacktestPage() {
   const [hasHydratedFromBacktest, setHasHydratedFromBacktest] = useState(false)
   const [initialSnapshot, setInitialSnapshot] =
     useState<BacktestDraftSnapshot | null>(null)
-  const bookmarkedStrategyIds = useBookmarkStore(
-    (state) => state.bookmarkedStrategyIds
-  )
-  const updatingStrategyIds = useBookmarkStore(
-    (state) => state.updatingStrategyIds
-  )
-  const loadStrategyBookmarks = useBookmarkStore(
-    (state) => state.loadStrategyBookmarks
-  )
-  const toggleStrategyBookmark = useBookmarkStore(
-    (state) => state.toggleStrategyBookmark
+  const [updatingStrategyIds, setUpdatingStrategyIds] = useState<Set<string>>(
+    new Set()
   )
   const preselectedStrategyId =
     typeof location.state === "object" &&
@@ -481,9 +473,6 @@ export default function BacktestPage() {
         }
         setHasExchangeData(true)
 
-        void loadStrategyBookmarks().catch((error) => {
-          toast.error(getApiErrorMessage(error, "Failed to load bookmarks"))
-        })
       } catch (error) {
         setStrategies([])
         setStrategyHasNextPage(false)
@@ -505,7 +494,6 @@ export default function BacktestPage() {
     exchangeRefreshTick,
     hasHydratedFromBacktest,
     isEditing,
-    loadStrategyBookmarks,
   ])
 
   useEffect(() => {
@@ -700,7 +688,21 @@ export default function BacktestPage() {
     : true
 
   const onToggleStrategyBookmark = async (strategyIdToToggle: string) => {
-    const isBookmarked = bookmarkedStrategyIds.has(strategyIdToToggle)
+    if (!user?._id) {
+      toast.error("Please sign in to bookmark strategies.")
+      return
+    }
+
+    const currentStrategy = strategies.find(
+      (item) => item._id === strategyIdToToggle
+    )
+    if (!currentStrategy) return
+
+    if (updatingStrategyIds.has(strategyIdToToggle)) {
+      return
+    }
+
+    const isBookmarked = Boolean(currentStrategy.isBookmarked)
     const updateStrategyBookmarkCount = (delta: 1 | -1) => {
       setStrategies((prev) =>
         prev.map((item) => {
@@ -723,31 +725,81 @@ export default function BacktestPage() {
       )
     }
 
-    const result = await toggleStrategyBookmark(strategyIdToToggle)
-    if (!result) {
-      return
-    }
+    setUpdatingStrategyIds((prev) => new Set(prev).add(strategyIdToToggle))
 
-    if (result.status === "success") {
+    try {
       if (isBookmarked) {
+        const response = await deleteBookmark({
+          targetType: "strategy",
+          targetId: strategyIdToToggle,
+        })
+
+        setStrategies((prev) =>
+          prev.map((item) =>
+            item._id === strategyIdToToggle
+              ? { ...item, isBookmarked: false }
+              : item
+          )
+        )
         updateStrategyBookmarkCount(-1)
         if (strategySource === "bookmarked") {
           setStrategies((prev) =>
             prev.filter((item) => item._id !== strategyIdToToggle)
           )
         }
+        toast.success(response?.message || "Bookmark removed successfully.")
       } else {
+        const response = await createBookmark({
+          targetType: "strategy",
+          target: strategyIdToToggle,
+        })
+
+        setStrategies((prev) =>
+          prev.map((item) =>
+            item._id === strategyIdToToggle
+              ? { ...item, isBookmarked: true }
+              : item
+          )
+        )
         updateStrategyBookmarkCount(1)
         if (strategySource === "bookmarked") {
           setStrategyPage(1)
           setStrategyRefreshTick((prev) => prev + 1)
         }
+        toast.success(response?.message || "Bookmarked successfully.")
       }
-      toast.success(result.message)
-      return
-    }
+    } catch (error) {
+      const status =
+        typeof error === "object" && error !== null
+          ? (error as { response?: { status?: number } }).response?.status
+          : undefined
 
-    toast.error(result.message)
+      if (isBookmarked && status === 404) {
+        setStrategies((prev) =>
+          prev.map((item) =>
+            item._id === strategyIdToToggle
+              ? { ...item, isBookmarked: false }
+              : item
+          )
+        )
+        updateStrategyBookmarkCount(-1)
+        if (strategySource === "bookmarked") {
+          setStrategies((prev) =>
+            prev.filter((item) => item._id !== strategyIdToToggle)
+          )
+        }
+        toast.success("Bookmark removed successfully.")
+        return
+      }
+
+      toast.error(getApiErrorMessage(error, "Failed to update bookmark"))
+    } finally {
+      setUpdatingStrategyIds((prev) => {
+        const next = new Set(prev)
+        next.delete(strategyIdToToggle)
+        return next
+      })
+    }
   }
 
   const onOpenStrategyEditor = async () => {
@@ -1630,23 +1682,17 @@ export default function BacktestPage() {
                                                 type="button"
                                                 className={cn(
                                                   "inline-flex h-4 w-4 items-center justify-center rounded-sm",
-                                                  bookmarkedStrategyIds.has(
-                                                    item._id
-                                                  )
+                                                  item.isBookmarked
                                                     ? "text-primary"
                                                     : "text-muted-foreground"
                                                 )}
                                                 aria-label={
-                                                  bookmarkedStrategyIds.has(
-                                                    item._id
-                                                  )
+                                                  item.isBookmarked
                                                     ? "Remove bookmark"
                                                     : "Add bookmark"
                                                 }
                                                 title={
-                                                  bookmarkedStrategyIds.has(
-                                                    item._id
-                                                  )
+                                                  item.isBookmarked
                                                     ? "Remove bookmark"
                                                     : "Add bookmark"
                                                 }
@@ -1665,9 +1711,7 @@ export default function BacktestPage() {
                                                   item._id
                                                 ) ? (
                                                   <Loader2 className="h-3 w-3 animate-spin" />
-                                                ) : bookmarkedStrategyIds.has(
-                                                    item._id
-                                                  ) ? (
+                                                ) : item.isBookmarked ? (
                                                   <BookmarkCheck className="h-3 w-3" />
                                                 ) : (
                                                   <Bookmark className="h-3 w-3" />

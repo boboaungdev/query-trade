@@ -25,6 +25,7 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 
+import { createBookmark, deleteBookmark } from "@/api/bookmark"
 import {
   deleteStrategy,
   fetchStrategies,
@@ -62,7 +63,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { useAuthStore } from "@/store/auth"
-import { useBookmarkStore } from "@/store/bookmark"
 
 type StrategySortBy = "name" | "createdAt" | "updatedAt" | "popular"
 
@@ -70,6 +70,7 @@ type StrategyItem = {
   _id: string
   name: string
   description?: string
+  isBookmarked?: boolean
   isPublic?: boolean
   stats?: {
     viewCount?: number
@@ -128,22 +129,13 @@ export default function StrategyPage() {
   const [isAppending, setIsAppending] = useState(false)
   const [strategyIdPendingDelete, setStrategyIdPendingDelete] = useState("")
   const [isDeletingStrategy, setIsDeletingStrategy] = useState(false)
+  const [updatingStrategyIds, setUpdatingStrategyIds] = useState<Set<string>>(
+    new Set()
+  )
   const [source, setSource] = useState<StrategySource>("all")
   const [sortBy, setSortBy] = useState<StrategySortBy>("name")
   const [order, setOrder] = useState<"asc" | "desc">("asc")
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
-  const bookmarkedStrategyIds = useBookmarkStore(
-    (state) => state.bookmarkedStrategyIds
-  )
-  const updatingStrategyIds = useBookmarkStore(
-    (state) => state.updatingStrategyIds
-  )
-  const loadStrategyBookmarks = useBookmarkStore(
-    (state) => state.loadStrategyBookmarks
-  )
-  const toggleStrategyBookmark = useBookmarkStore(
-    (state) => state.toggleStrategyBookmark
-  )
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -217,14 +209,16 @@ export default function StrategyPage() {
     return () => observer.disconnect()
   }, [hasNextPage, isAppending, isLoading])
 
-  useEffect(() => {
-    void loadStrategyBookmarks().catch((error) => {
-      toast.error(getApiErrorMessage(error, "Failed to load bookmarks"))
-    })
-  }, [loadStrategyBookmarks])
-
   const onToggleBookmark = async (strategyId: string) => {
-    const isBookmarked = bookmarkedStrategyIds.has(strategyId)
+    if (!user?._id) {
+      toast.error("Please sign in to bookmark strategies.")
+      return
+    }
+
+    const currentStrategy = strategies.find((item) => item._id === strategyId)
+    if (!currentStrategy) return
+
+    const isBookmarked = Boolean(currentStrategy.isBookmarked)
     const updateStrategyBookmarkCount = (delta: 1 | -1) => {
       setStrategies((prev) =>
         prev.map((item) => {
@@ -247,22 +241,66 @@ export default function StrategyPage() {
       )
     }
 
-    const result = await toggleStrategyBookmark(strategyId)
-    if (!result) {
-      return
-    }
+    setUpdatingStrategyIds((prev) => new Set(prev).add(strategyId))
 
-    if (result.status === "success") {
+    try {
       if (isBookmarked) {
-        updateStrategyBookmarkCount(-1)
-      } else {
-        updateStrategyBookmarkCount(1)
-      }
-      toast.success(result.message)
-      return
-    }
+        const response = await deleteBookmark({
+          targetType: "strategy",
+          targetId: strategyId,
+        })
 
-    toast.error(result.message)
+        setStrategies((prev) =>
+          prev.map((item) =>
+            item._id === strategyId ? { ...item, isBookmarked: false } : item
+          )
+        )
+        updateStrategyBookmarkCount(-1)
+        toast.success(response?.message || "Bookmark removed successfully.")
+        return
+      }
+
+      const response = await createBookmark({
+        targetType: "strategy",
+        target: strategyId,
+      })
+
+      setStrategies((prev) =>
+        prev.map((item) =>
+          item._id === strategyId ? { ...item, isBookmarked: true } : item
+        )
+      )
+      updateStrategyBookmarkCount(1)
+      toast.success(response?.message || "Bookmarked successfully.")
+    } catch (error) {
+      const status =
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        typeof (error as { response?: { status?: number } }).response?.status ===
+          "number"
+          ? (error as { response?: { status?: number } }).response!.status
+          : undefined
+
+      if (isBookmarked && status === 404) {
+        setStrategies((prev) =>
+          prev.map((item) =>
+            item._id === strategyId ? { ...item, isBookmarked: false } : item
+          )
+        )
+        updateStrategyBookmarkCount(-1)
+        toast.success("Bookmark removed successfully.")
+        return
+      }
+
+      toast.error(getApiErrorMessage(error, "Failed to update bookmark"))
+    } finally {
+      setUpdatingStrategyIds((prev) => {
+        const next = new Set(prev)
+        next.delete(strategyId)
+        return next
+      })
+    }
   }
 
   const onDeleteStrategy = async () => {
@@ -508,6 +546,7 @@ export default function StrategyPage() {
               {strategies.map((item) => {
                 const isMine =
                   Boolean(user?._id) && item.user?._id === user?._id
+                const isBookmarked = Boolean(item.isBookmarked)
 
                 return (
                   <article
@@ -529,22 +568,10 @@ export default function StrategyPage() {
                           <Button
                             type="button"
                             size="icon-sm"
-                            variant={
-                              bookmarkedStrategyIds.has(item._id)
-                                ? "outline"
-                                : "ghost"
-                            }
+                            variant={isBookmarked ? "outline" : "ghost"}
                             className="rounded-r-none border border-border text-muted-foreground"
-                            aria-label={
-                              bookmarkedStrategyIds.has(item._id)
-                                ? "Bookmarked"
-                                : "Bookmark"
-                            }
-                            title={
-                              bookmarkedStrategyIds.has(item._id)
-                                ? "Bookmarked"
-                                : "Bookmark"
-                            }
+                            aria-label={isBookmarked ? "Bookmarked" : "Bookmark"}
+                            title={isBookmarked ? "Bookmarked" : "Bookmark"}
                             disabled={updatingStrategyIds.has(item._id)}
                             onClick={() => {
                               void onToggleBookmark(item._id)
@@ -552,22 +579,18 @@ export default function StrategyPage() {
                           >
                             {updatingStrategyIds.has(item._id) ? (
                               <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : bookmarkedStrategyIds.has(item._id) ? (
+                            ) : isBookmarked ? (
                               <BookmarkCheck className="h-3.5 w-3.5 text-primary" />
-                            ) : (
-                              <Bookmark className="h-3.5 w-3.5" />
-                            )}
+                              ) : (
+                                <Bookmark className="h-3.5 w-3.5" />
+                              )}
                           </Button>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button
                                 type="button"
                                 size="icon-sm"
-                                variant={
-                                  bookmarkedStrategyIds.has(item._id)
-                                    ? "outline"
-                                    : "ghost"
-                                }
+                                variant={isBookmarked ? "outline" : "ghost"}
                                 className="-ml-px rounded-l-none border border-border text-muted-foreground"
                                 aria-label="More actions"
                                 title="More actions"
@@ -612,14 +635,12 @@ export default function StrategyPage() {
                                 }}
                                 disabled={updatingStrategyIds.has(item._id)}
                               >
-                                {bookmarkedStrategyIds.has(item._id) ? (
+                                {isBookmarked ? (
                                   <BookmarkCheck className="h-4 w-4" />
                                 ) : (
                                   <Bookmark className="h-4 w-4" />
                                 )}
-                                {bookmarkedStrategyIds.has(item._id)
-                                  ? "Bookmarked"
-                                  : "Bookmark"}
+                                {isBookmarked ? "Bookmarked" : "Bookmark"}
                               </DropdownMenuItem>
                               {isMine ? (
                                 <>

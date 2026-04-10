@@ -1,10 +1,12 @@
 import { UserDB } from "../../models/user.js";
 import { BacktestDB } from "../../models/backtest.js";
 import { StrategyDB } from "../../models/strategy.js";
+import { BookmarkDB } from "../../models/bookmark.js";
 import { resError, resJson } from "../../utils/response.js";
 
 export const getBacktestById = async (req, res, next) => {
   try {
+    const user = req.user;
     const { backtestId } = req.params;
 
     const backtest = await BacktestDB.findById(backtestId)
@@ -21,6 +23,18 @@ export const getBacktestById = async (req, res, next) => {
 
     if (!backtest) {
       throw resError(404, "Backtest not found!");
+    }
+
+    if (user?._id) {
+      const bookmark = await BookmarkDB.findOne({
+        user: user._id,
+        targetType: "backtest",
+        target: backtest._id,
+      })
+        .select("_id")
+        .lean();
+
+      backtest.isBookmarked = Boolean(bookmark);
     }
 
     return resJson(res, 200, "Backtest fetched successfully.", {
@@ -207,6 +221,27 @@ export const getBacktests = async (req, res, next) => {
     const [leaderboardResult] = await BacktestDB.aggregate(pipeline);
     const total = leaderboardResult?.metadata?.[0]?.total ?? 0;
     const totalPage = Math.ceil(total / limit);
+    const backtests = leaderboardResult?.backtests ?? [];
+
+    let bookmarkedBacktestIds = [];
+    if (user?._id && backtests.length > 0) {
+      const bookmarks = await BookmarkDB.find({
+        user: user._id,
+        targetType: "backtest",
+        target: { $in: backtests.map((backtest) => backtest._id) },
+      })
+        .select("target")
+        .lean();
+
+      bookmarkedBacktestIds = bookmarks.map((bookmark) =>
+        String(bookmark.target),
+      );
+    }
+
+    const backtestsWithBookmarkState = backtests.map((backtest) => ({
+      ...backtest,
+      isBookmarked: bookmarkedBacktestIds.includes(String(backtest._id)),
+    }));
 
     return resJson(res, 200, "Backtest leaderboard fetched successfully.", {
       total,
@@ -215,7 +250,7 @@ export const getBacktests = async (req, res, next) => {
       limitPerPage: limit,
       hasNextPage: page < totalPage,
       hasPrevPage: page > 1,
-      backtests: leaderboardResult?.backtests ?? [],
+      backtests: backtestsWithBookmarkState,
     });
   } catch (error) {
     next(error);

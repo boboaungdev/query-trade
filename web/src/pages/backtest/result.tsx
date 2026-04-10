@@ -74,10 +74,10 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
+import { useBookmarkIds } from "@/hooks/use-bookmark-ids"
 import { cn } from "@/lib/utils"
 import { deleteBacktest, fetchBacktestById } from "@/api/backtest"
 import { useAuthStore } from "@/store/auth"
-import { useBookmarkStore } from "@/store/bookmark"
 import { toast } from "sonner"
 
 type EquityPoint = {
@@ -362,30 +362,18 @@ export default function BacktestResultPage() {
   const navigate = useNavigate()
   const { backtestId = "" } = useParams()
   const user = useAuthStore((state) => state.user)
-  const bookmarkedBacktestIds = useBookmarkStore(
-    (state) => state.bookmarkedBacktestIds
-  )
-  const bookmarkedStrategyIds = useBookmarkStore(
-    (state) => state.bookmarkedStrategyIds
-  )
-  const updatingBacktestIds = useBookmarkStore(
-    (state) => state.updatingBacktestIds
-  )
-  const updatingStrategyIds = useBookmarkStore(
-    (state) => state.updatingStrategyIds
-  )
-  const loadStrategyBookmarks = useBookmarkStore(
-    (state) => state.loadStrategyBookmarks
-  )
-  const loadBacktestBookmarks = useBookmarkStore(
-    (state) => state.loadBacktestBookmarks
-  )
-  const toggleStrategyBookmark = useBookmarkStore(
-    (state) => state.toggleStrategyBookmark
-  )
-  const toggleBacktestBookmark = useBookmarkStore(
-    (state) => state.toggleBacktestBookmark
-  )
+  const {
+    bookmarkedIds: bookmarkedBacktestIds,
+    updatingIds: updatingBacktestIds,
+    loadBookmarks: loadBacktestBookmarks,
+    toggleBookmark: toggleBacktestBookmark,
+  } = useBookmarkIds("backtest")
+  const {
+    bookmarkedIds: bookmarkedStrategyIds,
+    updatingIds: updatingStrategyIds,
+    loadBookmarks: loadStrategyBookmarks,
+    toggleBookmark: toggleStrategyBookmark,
+  } = useBookmarkIds("strategy")
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const [tradesPage, setTradesPage] = useState(1)
   const [backtest, setBacktest] = useState<BacktestDetail | null>(null)

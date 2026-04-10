@@ -36,8 +36,8 @@ import {
   fetchUserFollowsByUsername,
   fetchUserStrategiesByUsername,
 } from "@/api/user"
+import { useBookmarkIds } from "@/hooks/use-bookmark-ids"
 import { useAuthStore } from "@/store/auth"
-import { useBookmarkStore } from "@/store/bookmark"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   AlertDialog,
@@ -268,30 +268,18 @@ export default function Profile() {
   const user = useAuthStore((state) => state.user)
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const updateUser = useAuthStore((state) => state.updateUser)
-  const bookmarkedStrategyIds = useBookmarkStore(
-    (state) => state.bookmarkedStrategyIds
-  )
-  const bookmarkedBacktestIds = useBookmarkStore(
-    (state) => state.bookmarkedBacktestIds
-  )
-  const updatingStrategyIds = useBookmarkStore(
-    (state) => state.updatingStrategyIds
-  )
-  const updatingBacktestIds = useBookmarkStore(
-    (state) => state.updatingBacktestIds
-  )
-  const loadStrategyBookmarks = useBookmarkStore(
-    (state) => state.loadStrategyBookmarks
-  )
-  const loadBacktestBookmarks = useBookmarkStore(
-    (state) => state.loadBacktestBookmarks
-  )
-  const toggleStrategyBookmark = useBookmarkStore(
-    (state) => state.toggleStrategyBookmark
-  )
-  const toggleBacktestBookmark = useBookmarkStore(
-    (state) => state.toggleBacktestBookmark
-  )
+  const {
+    bookmarkedIds: bookmarkedStrategyIds,
+    updatingIds: updatingStrategyIds,
+    loadBookmarks: loadStrategyBookmarks,
+    toggleBookmark: toggleStrategyBookmark,
+  } = useBookmarkIds("strategy")
+  const {
+    bookmarkedIds: bookmarkedBacktestIds,
+    updatingIds: updatingBacktestIds,
+    loadBookmarks: loadBacktestBookmarks,
+    toggleBookmark: toggleBacktestBookmark,
+  } = useBookmarkIds("backtest")
 
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)

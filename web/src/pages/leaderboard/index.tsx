@@ -58,7 +58,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { useAuthStore } from "@/store/auth"
-import { useBookmarkStore } from "@/store/bookmark"
+import { useBookmarkIds } from "@/hooks/use-bookmark-ids"
 
 type BacktestSortBy =
   | "createdAt"
@@ -194,18 +194,12 @@ export default function LeaderboardPage() {
   const [isDeletingBacktest, setIsDeletingBacktest] = useState(false)
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
   const requestIdRef = useRef(0)
-  const bookmarkedBacktestIds = useBookmarkStore(
-    (state) => state.bookmarkedBacktestIds
-  )
-  const updatingBacktestIds = useBookmarkStore(
-    (state) => state.updatingBacktestIds
-  )
-  const loadBacktestBookmarks = useBookmarkStore(
-    (state) => state.loadBacktestBookmarks
-  )
-  const toggleBacktestBookmark = useBookmarkStore(
-    (state) => state.toggleBacktestBookmark
-  )
+  const {
+    bookmarkedIds: bookmarkedBacktestIds,
+    updatingIds: updatingBacktestIds,
+    loadBookmarks: loadBacktestBookmarks,
+    toggleBookmark: toggleBacktestBookmark,
+  } = useBookmarkIds("backtest")
 
   useEffect(() => {
     const timer = setTimeout(() => {

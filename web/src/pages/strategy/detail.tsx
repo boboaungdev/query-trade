@@ -30,6 +30,7 @@ import {
 import { toast } from "sonner"
 
 import { getApiErrorMessage } from "@/api/axios"
+import { createBookmark, deleteBookmark } from "@/api/bookmark"
 import { createFollow, deleteFollow, fetchFollowStatus } from "@/api/follow"
 import { deleteStrategy, fetchStrategyById } from "@/api/strategy"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -62,7 +63,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 import { useAuthStore } from "@/store/auth"
-import { useBookmarkStore } from "@/store/bookmark"
 
 type ConditionNode =
   | { logic: "and" | "or"; conditions: ConditionNode[] }
@@ -86,6 +86,7 @@ type StrategyDetailItem = {
   _id: string
   name: string
   description?: string
+  isBookmarked?: boolean
   isPublic?: boolean
   createdAt?: string
   updatedAt?: string
@@ -116,7 +117,6 @@ const strategyDetailRequestCache = new Map<
   string,
   Promise<StrategyDetailItem | null>
 >()
-let strategyBookmarkLoadPromise: Promise<void> | null = null
 
 async function loadStrategyDetailOnce(strategyId: string) {
   const existingRequest = strategyDetailRequestCache.get(strategyId)
@@ -133,18 +133,6 @@ async function loadStrategyDetailOnce(strategyId: string) {
 
   strategyDetailRequestCache.set(strategyId, request)
   return request
-}
-
-async function loadStrategyBookmarksOnce(
-  loadStrategyBookmarks: () => Promise<void>
-) {
-  if (strategyBookmarkLoadPromise) return strategyBookmarkLoadPromise
-
-  strategyBookmarkLoadPromise = loadStrategyBookmarks().finally(() => {
-    strategyBookmarkLoadPromise = null
-  })
-
-  return strategyBookmarkLoadPromise
 }
 
 function isConditionGroup(node: ConditionNode): node is ConditionGroupNode {
@@ -456,18 +444,6 @@ export default function StrategyDetailPage() {
   const navigate = useNavigate()
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const user = useAuthStore((state) => state.user)
-  const bookmarkedStrategyIds = useBookmarkStore(
-    (state) => state.bookmarkedStrategyIds
-  )
-  const updatingStrategyIds = useBookmarkStore(
-    (state) => state.updatingStrategyIds
-  )
-  const loadStrategyBookmarks = useBookmarkStore(
-    (state) => state.loadStrategyBookmarks
-  )
-  const toggleStrategyBookmark = useBookmarkStore(
-    (state) => state.toggleStrategyBookmark
-  )
 
   const [strategy, setStrategy] = useState<StrategyDetailItem | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -478,6 +454,8 @@ export default function StrategyDetailPage() {
   const [isFollowingCreator, setIsFollowingCreator] = useState(false)
   const [isFollowStatusLoading, setIsFollowStatusLoading] = useState(false)
   const [isFollowUpdating, setIsFollowUpdating] = useState(false)
+  const [isStrategyBookmarkUpdating, setIsStrategyBookmarkUpdating] =
+    useState(false)
   const creatorUserId = strategy?.user?._id ?? ""
   const isMine = Boolean(user?._id) && creatorUserId === user?._id
 
@@ -499,11 +477,9 @@ export default function StrategyDetailPage() {
       setStrategy(null)
       setIsFollowingCreator(false)
       setIsFollowStatusLoading(false)
+      setIsStrategyBookmarkUpdating(false)
 
       try {
-        const bookmarkPromise = isAuthenticated
-          ? loadStrategyBookmarksOnce(loadStrategyBookmarks)
-          : Promise.resolve()
         const nextStrategy = await loadStrategyDetailOnce(strategyId)
 
         if (!nextStrategy) throw new Error("Strategy not found")
@@ -520,10 +496,7 @@ export default function StrategyDetailPage() {
           setIsFollowStatusLoading(true)
         }
 
-        const [, followStatusResponse] = await Promise.all([
-          bookmarkPromise,
-          followStatusPromise,
-        ])
+        const followStatusResponse = await followStatusPromise
 
         if (!isActive) return
 
@@ -557,7 +530,7 @@ export default function StrategyDetailPage() {
     return () => {
       isActive = false
     }
-  }, [isAuthenticated, loadStrategyBookmarks, strategyId, user?._id])
+  }, [isAuthenticated, strategyId, user?._id])
 
   if (!isAuthenticated) return <Navigate to="/auth" replace />
 
@@ -574,23 +547,34 @@ export default function StrategyDetailPage() {
 
   const creatorUsername = strategy?.user?.username?.trim().replace(/^@/, "")
   const canOpenCreatorProfile = Boolean(creatorUsername)
-  const isBookmarked = strategy
-    ? bookmarkedStrategyIds.has(strategy._id)
-    : false
-  const isStrategyBookmarkUpdating = Boolean(
-    strategy?._id && updatingStrategyIds.has(strategy._id)
-  )
+  const isBookmarked = Boolean(strategy?.isBookmarked)
   const onToggleBookmark = async () => {
     if (!strategy) return
+    if (!isAuthenticated) {
+      toast.error("Please sign in to bookmark strategies.")
+      return
+    }
 
-    const result = await toggleStrategyBookmark(strategy._id)
-    if (!result) return
+    if (isStrategyBookmarkUpdating) return
 
-    if (result.status === "success") {
+    setIsStrategyBookmarkUpdating(true)
+
+    try {
+      const response = isBookmarked
+        ? await deleteBookmark({
+            targetType: "strategy",
+            targetId: strategy._id,
+          })
+        : await createBookmark({
+            targetType: "strategy",
+            target: strategy._id,
+          })
+
       setStrategy((prev) =>
         prev
           ? {
               ...prev,
+              isBookmarked: !isBookmarked,
               stats: {
                 ...prev.stats,
                 bookmarkCount: Math.max(
@@ -601,11 +585,39 @@ export default function StrategyDetailPage() {
             }
           : prev
       )
-      toast.success(result.message)
-      return
-    }
+      toast.success(
+        response?.message ||
+          (isBookmarked
+            ? "Bookmark removed successfully."
+            : "Bookmarked successfully.")
+      )
+    } catch (error) {
+      const status =
+        typeof error === "object" && error !== null
+          ? (error as { response?: { status?: number } }).response?.status
+          : undefined
 
-    toast.error(result.message)
+      if (isBookmarked && status === 404) {
+        setStrategy((prev) =>
+          prev
+            ? {
+                ...prev,
+                isBookmarked: false,
+                stats: {
+                  ...prev.stats,
+                  bookmarkCount: Math.max(0, (prev.stats?.bookmarkCount ?? 0) - 1),
+                },
+              }
+            : prev
+        )
+        toast.success("Bookmark removed successfully.")
+        return
+      }
+
+      toast.error(getApiErrorMessage(error, "Failed to update bookmark"))
+    } finally {
+      setIsStrategyBookmarkUpdating(false)
+    }
   }
 
   const onCopyStrategyLink = async () => {
@@ -827,7 +839,7 @@ export default function StrategyDetailPage() {
                       onSelect={() => {
                         void onToggleBookmark()
                       }}
-                      disabled={updatingStrategyIds.has(strategy._id)}
+                      disabled={isStrategyBookmarkUpdating}
                     >
                       {isBookmarked ? (
                         <BookmarkCheck className="h-4 w-4" />

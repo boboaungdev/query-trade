@@ -59,7 +59,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { useAuthStore } from "@/store/auth"
-import { useBookmarkStore } from "@/store/bookmark"
 
 type BookmarkFilter = "all" | BookmarkTargetType
 
@@ -150,12 +149,6 @@ function hasBookmarkTarget(item: BookmarkItem) {
 
 export default function BookmarkPage() {
   const user = useAuthStore((state) => state.user)
-  const setBookmarkedStrategyId = useBookmarkStore(
-    (state) => state.setBookmarkedStrategyId
-  )
-  const setBookmarkedBacktestId = useBookmarkStore(
-    (state) => state.setBookmarkedBacktestId
-  )
 
   const [bookmarks, setBookmarks] = useState<BookmarkItem[]>([])
   const [filter, setFilter] = useState<BookmarkFilter>("all")
@@ -283,13 +276,6 @@ export default function BookmarkPage() {
         targetType: bookmark.targetType,
         targetId,
       })
-
-      if (bookmark.targetType === "strategy") {
-        setBookmarkedStrategyId(targetId, false)
-      }
-      if (bookmark.targetType === "backtest") {
-        setBookmarkedBacktestId(targetId, false)
-      }
 
       setBookmarks((prev) => prev.filter((item) => item._id !== bookmark._id))
       setTotalCount((prev) => Math.max(0, prev - 1))
