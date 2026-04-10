@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react";
 import {
   CalendarClock,
   Bookmark,
@@ -19,15 +19,16 @@ import {
   TrendingDown,
   TrendingUp,
   UserRound,
-} from "lucide-react"
-import { toast } from "sonner"
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
-import { getApiErrorMessage } from "@/api/axios"
+import { getApiErrorMessage } from "@/api/axios";
 import {
   deleteBookmark,
   fetchBookmarks,
   type BookmarkTargetType,
-} from "@/api/bookmark"
+} from "@/api/bookmark";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -37,16 +38,16 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { Button } from "@/components/ui/button"
-import { ButtonGroup } from "@/components/ui/button-group"
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -56,124 +57,144 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import { useAuthStore } from "@/store/auth"
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { useAuthStore } from "@/store/auth";
 
-type BookmarkFilter = "all" | BookmarkTargetType
+type BookmarkFilter = "all" | BookmarkTargetType;
 
 type BookmarkTarget = {
-  _id?: string
-  name?: string
-  description?: string
-  isPublic?: boolean
-  user?: string | { _id?: string; username?: string }
-  symbol?: string
-  timeframe?: string
-  startDate?: string
-  endDate?: string
+  _id?: string;
+  name?: string;
+  description?: string;
+  isPublic?: boolean;
+  user?: string | { _id?: string; username?: string };
+  symbol?: string;
+  timeframe?: string;
+  startDate?: string;
+  endDate?: string;
   result?: {
-    roi?: number
-    winRate?: number
-    duration?: number
-  }
+    roi?: number;
+    winRate?: number;
+    duration?: number;
+  };
   stats?: {
-    viewCount?: number
-    bookmarkCount?: number
-  }
-}
+    viewCount?: number;
+    bookmarkCount?: number;
+  };
+};
 
 type BookmarkItem = {
-  _id: string
-  targetType: BookmarkTargetType
-  target?: BookmarkTarget
-  createdAt?: string
-  updatedAt?: string
-}
+  _id: string;
+  targetType: BookmarkTargetType;
+  target?: BookmarkTarget;
+  createdAt?: string;
+  updatedAt?: string;
+};
 
 type BookmarkListResponse = {
-  status: boolean
-  message: string
+  status: boolean;
+  message: string;
   result?: {
-    total?: number
-    hasNextPage?: boolean
-    bookmarks?: BookmarkItem[]
-  }
-}
+    total?: number;
+    hasNextPage?: boolean;
+    bookmarks?: BookmarkItem[];
+  };
+};
 
 function toPrettyDate(value?: string) {
-  if (!value) return "-"
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return "-"
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
   return date.toLocaleDateString("en-US", {
     year: "numeric",
     month: "short",
     day: "2-digit",
-  })
+  });
 }
 
 function formatDuration(durationMs?: number) {
   if (!Number.isFinite(durationMs) || !durationMs || durationMs <= 0) {
-    return "-"
+    return "-";
   }
 
-  const totalMinutes = Math.floor(durationMs / 60000)
-  const totalHours = Math.floor(durationMs / 3600000)
-  const totalDays = Math.floor(durationMs / 86400000)
+  const totalMinutes = Math.floor(durationMs / 60000);
+  const totalHours = Math.floor(durationMs / 3600000);
+  const totalDays = Math.floor(durationMs / 86400000);
 
   if (totalDays >= 1) {
-    return `${totalDays}d`
+    return `${totalDays}d`;
   }
 
   if (totalHours >= 1) {
-    const minutes = totalMinutes % 60
-    return minutes > 0 ? `${totalHours}h ${minutes}m` : `${totalHours}h`
+    const minutes = totalMinutes % 60;
+    return minutes > 0 ? `${totalHours}h ${minutes}m` : `${totalHours}h`;
   }
 
-  return `${Math.max(1, totalMinutes)}m`
+  return `${Math.max(1, totalMinutes)}m`;
 }
 
 const ratio = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
-})
+});
 
 function mergeBookmarks(prev: BookmarkItem[], next: BookmarkItem[]) {
   return Array.from(
-    new Map([...prev, ...next].map((item) => [item._id, item])).values()
-  )
+    new Map([...prev, ...next].map((item) => [item._id, item])).values(),
+  );
 }
 
 function hasBookmarkTarget(item: BookmarkItem) {
-  return Boolean(item.target?._id)
+  return Boolean(item.target?._id);
 }
 
 export default function BookmarkPage() {
-  const user = useAuthStore((state) => state.user)
+  const user = useAuthStore((state) => state.user);
+  const navigate = useNavigate();
 
-  const [bookmarks, setBookmarks] = useState<BookmarkItem[]>([])
-  const [filter, setFilter] = useState<BookmarkFilter>("all")
-  const [search, setSearch] = useState("")
-  const [sortBy, setSortBy] = useState<"createdAt" | "updatedAt">("updatedAt")
-  const [order, setOrder] = useState<"asc" | "desc">("desc")
-  const [page, setPage] = useState(1)
-  const [hasNextPage, setHasNextPage] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isAppending, setIsAppending] = useState(false)
-  const [totalCount, setTotalCount] = useState(0)
-  const loadMoreRef = useRef<HTMLDivElement | null>(null)
+  const [bookmarks, setBookmarks] = useState<BookmarkItem[]>([]);
+  const [filter, setFilter] = useState<BookmarkFilter>("all");
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<"createdAt" | "updatedAt">("updatedAt");
+  const [order, setOrder] = useState<"asc" | "desc">("desc");
+  const [page, setPage] = useState(1);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAppending, setIsAppending] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const hasNextPageRef = useRef(false);
+  const isLoadingRef = useRef(true);
+  const isAppendingRef = useRef(false);
+  const totalCountRef = useRef(0);
+  const loadedCountRef = useRef(0);
   const [removingBookmarkIds, setRemovingBookmarkIds] = useState<Set<string>>(
-    new Set()
-  )
+    new Set(),
+  );
   const [bookmarkPendingRemove, setBookmarkPendingRemove] =
-    useState<BookmarkItem | null>(null)
+    useState<BookmarkItem | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       const loadBookmarks = async () => {
+        if (
+          page > 1 &&
+          totalCountRef.current > 0 &&
+          loadedCountRef.current >= totalCountRef.current
+        ) {
+          hasNextPageRef.current = false;
+          isAppendingRef.current = false;
+          setHasNextPage(false);
+          setIsAppending(false);
+          return;
+        }
+
         if (page === 1) {
-          setIsLoading(true)
+          isLoadingRef.current = true;
+          setIsLoading(true);
         } else {
-          setIsAppending(true)
+          isAppendingRef.current = true;
+          setIsAppending(true);
         }
 
         try {
@@ -183,114 +204,182 @@ export default function BookmarkPage() {
             search: search.trim(),
             sortBy,
             order,
-          })) as BookmarkListResponse
+          })) as BookmarkListResponse;
 
           const nextItems = (response?.result?.bookmarks ?? []).filter(
-            hasBookmarkTarget
-          )
+            hasBookmarkTarget,
+          );
 
           setBookmarks((prev) => {
             if (page === 1) {
-              return nextItems
+              return nextItems;
             }
-            return mergeBookmarks(prev, nextItems)
-          })
+            return mergeBookmarks(prev, nextItems);
+          });
 
-          setTotalCount(response?.result?.total ?? 0)
-          setHasNextPage(Boolean(response?.result?.hasNextPage))
+          const nextTotalCount = response?.result?.total ?? 0;
+          const nextLoadedCount =
+            page === 1
+              ? nextItems.length
+              : Math.min(
+                  totalCountRef.current || nextTotalCount,
+                  loadedCountRef.current + nextItems.length,
+                );
+          const nextHasNextPage =
+            Boolean(response?.result?.hasNextPage) &&
+            nextLoadedCount < nextTotalCount &&
+            nextItems.length > 0;
+
+          loadedCountRef.current = nextLoadedCount;
+          totalCountRef.current = nextTotalCount;
+          setTotalCount(nextTotalCount);
+          hasNextPageRef.current = nextHasNextPage;
+          setHasNextPage(nextHasNextPage);
         } catch (error) {
-          toast.error(getApiErrorMessage(error, "Failed to load bookmarks"))
+          toast.error(getApiErrorMessage(error, "Failed to load bookmarks"));
         } finally {
-          setIsLoading(false)
-          setIsAppending(false)
+          isLoadingRef.current = false;
+          isAppendingRef.current = false;
+          setIsLoading(false);
+          setIsAppending(false);
         }
-      }
+      };
 
-      void loadBookmarks()
-    }, 180)
+      void loadBookmarks();
+    }, 180);
 
-    return () => clearTimeout(timer)
-  }, [filter, order, page, search, sortBy])
+    return () => clearTimeout(timer);
+  }, [filter, order, page, search, sortBy]);
 
   useEffect(() => {
-    const node = loadMoreRef.current
-    if (!node || !hasNextPage || isLoading || isAppending) return
+    hasNextPageRef.current = hasNextPage;
+  }, [hasNextPage]);
+
+  useEffect(() => {
+    totalCountRef.current = totalCount;
+  }, [totalCount]);
+
+  useEffect(() => {
+    loadedCountRef.current = bookmarks.length;
+  }, [bookmarks]);
+
+  useEffect(() => {
+    isLoadingRef.current = isLoading;
+  }, [isLoading]);
+
+  useEffect(() => {
+    isAppendingRef.current = isAppending;
+  }, [isAppending]);
+
+  useEffect(() => {
+    const node = loadMoreRef.current;
+    if (!node || !hasNextPage || isLoading || isAppending) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
-        const firstEntry = entries[0]
-        if (firstEntry?.isIntersecting && !isAppending && !isLoading) {
-          setPage((prev) => prev + 1)
+        const firstEntry = entries[0];
+        if (
+          firstEntry?.isIntersecting &&
+          hasNextPageRef.current &&
+          !isAppendingRef.current &&
+          !isLoadingRef.current
+        ) {
+          isAppendingRef.current = true;
+          setPage((prev) => prev + 1);
         }
       },
       {
         root: null,
         rootMargin: "220px 0px",
         threshold: 0,
-      }
-    )
+      },
+    );
 
-    observer.observe(node)
-    return () => observer.disconnect()
-  }, [hasNextPage, isAppending, isLoading])
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasNextPage, isAppending, isLoading]);
 
   const onCopyBookmarkLink = async (bookmark: BookmarkItem) => {
-    const targetId = bookmark.target?._id
+    const targetId = bookmark.target?._id;
     const targetPath =
       bookmark.targetType === "backtest"
         ? `/backtest/${targetId}`
         : bookmark.targetType === "strategy"
           ? `/strategy/${targetId}`
-          : ""
+          : "";
 
     if (!targetId || !targetPath) {
-      toast.error("Missing target link")
-      return
+      toast.error("Missing target link");
+      return;
     }
 
     try {
       await navigator.clipboard.writeText(
-        `${window.location.origin}${targetPath}`
-      )
-      toast.success("Link copied")
+        `${window.location.origin}${targetPath}`,
+      );
+      toast.success("Link copied");
     } catch (error) {
-      toast.error(getApiErrorMessage(error, "Failed to copy link"))
+      toast.error(getApiErrorMessage(error, "Failed to copy link"));
     }
-  }
+  };
+
+  const getBookmarkTargetPath = (bookmark: BookmarkItem) => {
+    const targetId = bookmark.target?._id;
+
+    if (!targetId) return null;
+
+    if (bookmark.targetType === "backtest") {
+      return `/backtest/${targetId}`;
+    }
+
+    if (bookmark.targetType === "strategy") {
+      return `/strategy/${targetId}`;
+    }
+
+    return null;
+  };
+
+  const onOpenBookmark = (bookmark: BookmarkItem) => {
+    const targetPath = getBookmarkTargetPath(bookmark);
+
+    if (!targetPath) return;
+
+    navigate(targetPath);
+  };
 
   const onRemoveBookmark = async (bookmark: BookmarkItem) => {
-    const targetId = bookmark.target?._id
+    const targetId = bookmark.target?._id;
     if (!targetId) {
-      toast.error("Missing target id")
-      return
+      toast.error("Missing target id");
+      return;
     }
 
     setRemovingBookmarkIds((prev) => {
-      const next = new Set(prev)
-      next.add(bookmark._id)
-      return next
-    })
+      const next = new Set(prev);
+      next.add(bookmark._id);
+      return next;
+    });
 
     try {
       await deleteBookmark({
         targetType: bookmark.targetType,
         targetId,
-      })
+      });
 
-      setBookmarks((prev) => prev.filter((item) => item._id !== bookmark._id))
-      setTotalCount((prev) => Math.max(0, prev - 1))
+      setBookmarks((prev) => prev.filter((item) => item._id !== bookmark._id));
+      setTotalCount((prev) => Math.max(0, prev - 1));
 
-      toast.success("Bookmark removed")
+      toast.success("Bookmark removed");
     } catch (error) {
-      toast.error(getApiErrorMessage(error, "Failed to remove bookmark"))
+      toast.error(getApiErrorMessage(error, "Failed to remove bookmark"));
     } finally {
       setRemovingBookmarkIds((prev) => {
-        const next = new Set(prev)
-        next.delete(bookmark._id)
-        return next
-      })
+        const next = new Set(prev);
+        next.delete(bookmark._id);
+        return next;
+      });
     }
-  }
+  };
 
   return (
     <div className="mx-auto w-full max-w-6xl min-w-0 space-y-4 overflow-x-hidden sm:space-y-6">
@@ -343,60 +432,97 @@ export default function BookmarkPage() {
             </div>
           </div>
 
+          <div className="flex w-full gap-1 pb-1 sm:hidden">
+            <Button
+              type="button"
+              variant={filter === "all" ? "default" : "outline"}
+              className="h-8 min-w-0 flex-1 justify-center px-1 text-center text-[10px] tracking-[0.12em] uppercase"
+              onClick={() => {
+                setFilter("all");
+                setPage(1);
+              }}
+            >
+              All
+            </Button>
+            <Button
+              type="button"
+              variant={filter === "backtest" ? "default" : "outline"}
+              className="h-8 min-w-0 flex-1 justify-center px-1 text-center text-[10px] tracking-[0.12em] uppercase"
+              onClick={() => {
+                setFilter("backtest");
+                setPage(1);
+              }}
+            >
+              Backtests
+            </Button>
+            <Button
+              type="button"
+              variant={filter === "strategy" ? "default" : "outline"}
+              className="h-8 min-w-0 flex-1 justify-center px-1 text-center text-[10px] tracking-[0.12em] uppercase"
+              onClick={() => {
+                setFilter("strategy");
+                setPage(1);
+              }}
+            >
+              Strategies
+            </Button>
+          </div>
+
+          <div className="hidden w-full items-center gap-1 sm:flex">
+            <Button
+              type="button"
+              variant={filter === "all" ? "default" : "ghost"}
+              className="h-7 min-w-0 flex-1 justify-center px-2 text-center text-[11px] tracking-[0.14em] uppercase"
+              onClick={() => {
+                setFilter("all");
+                setPage(1);
+              }}
+            >
+              All
+            </Button>
+            <Button
+              type="button"
+              variant={filter === "backtest" ? "default" : "ghost"}
+              className="h-7 min-w-0 flex-1 justify-center px-2 text-center text-[11px] tracking-[0.14em] uppercase"
+              onClick={() => {
+                setFilter("backtest");
+                setPage(1);
+              }}
+            >
+              Backtests
+            </Button>
+            <Button
+              type="button"
+              variant={filter === "strategy" ? "default" : "ghost"}
+              className="h-7 min-w-0 flex-1 justify-center px-2 text-center text-[11px] tracking-[0.14em] uppercase"
+              onClick={() => {
+                setFilter("strategy");
+                setPage(1);
+              }}
+            >
+              Strategies
+            </Button>
+          </div>
+
           <div className="relative">
             <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={search}
               onChange={(event) => {
-                setSearch(event.target.value)
-                setPage(1)
+                setSearch(event.target.value);
+                setPage(1);
               }}
-              placeholder="Search bookmarks"
-              className="pr-10 pl-9 sm:pr-[15rem]"
+              placeholder="Search"
+              className="pr-10 pl-9"
             />
-            <div className="absolute top-1/2 right-1.5 flex -translate-y-1/2 items-center gap-1">
-              <div className="hidden items-center gap-1 sm:flex">
-                <Button
-                  type="button"
-                  variant={filter === "all" ? "secondary" : "ghost"}
-                  className="h-7 min-w-10 justify-center px-2 text-center text-[11px] tracking-[0.14em] uppercase"
-                  onClick={() => {
-                    setFilter("all")
-                    setPage(1)
-                  }}
-                >
-                  All
-                </Button>
-                <Button
-                  type="button"
-                  variant={filter === "backtest" ? "secondary" : "ghost"}
-                  className="h-7 min-w-10 justify-center px-2 text-center text-[11px] tracking-[0.14em] uppercase"
-                  onClick={() => {
-                    setFilter("backtest")
-                    setPage(1)
-                  }}
-                >
-                  Backtests
-                </Button>
-                <Button
-                  type="button"
-                  variant={filter === "strategy" ? "secondary" : "ghost"}
-                  className="h-7 min-w-10 justify-center px-2 text-center text-[11px] tracking-[0.14em] uppercase"
-                  onClick={() => {
-                    setFilter("strategy")
-                    setPage(1)
-                  }}
-                >
-                  Strategies
-                </Button>
-              </div>
+            <div className="absolute top-1/2 right-1.5 flex -translate-y-1/2 items-center">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon-sm"
-                    className="h-7 w-7"
+                    className="h-7 w-7 shrink-0"
                   >
                     <ListFilter className="h-4 w-4" />
                   </Button>
@@ -406,8 +532,8 @@ export default function BookmarkPage() {
                   <DropdownMenuRadioGroup
                     value={sortBy}
                     onValueChange={(value) => {
-                      setSortBy(value as "createdAt" | "updatedAt")
-                      setPage(1)
+                      setSortBy(value as "createdAt" | "updatedAt");
+                      setPage(1);
                     }}
                   >
                     <DropdownMenuRadioItem value="updatedAt">
@@ -423,8 +549,8 @@ export default function BookmarkPage() {
                   <DropdownMenuRadioGroup
                     value={order}
                     onValueChange={(value) => {
-                      setOrder(value as "asc" | "desc")
-                      setPage(1)
+                      setOrder(value as "asc" | "desc");
+                      setPage(1);
                     }}
                   >
                     <DropdownMenuRadioItem value="desc">
@@ -437,42 +563,6 @@ export default function BookmarkPage() {
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-          </div>
-
-          <div className="flex gap-1 sm:hidden">
-            <Button
-              type="button"
-              variant={filter === "all" ? "secondary" : "outline"}
-              className="h-8 min-w-0 flex-1 justify-center px-1 text-center text-[10px] tracking-[0.12em] uppercase"
-              onClick={() => {
-                setFilter("all")
-                setPage(1)
-              }}
-            >
-              All
-            </Button>
-            <Button
-              type="button"
-              variant={filter === "backtest" ? "secondary" : "outline"}
-              className="h-8 min-w-0 flex-1 justify-center px-1 text-center text-[10px] tracking-[0.12em] uppercase"
-              onClick={() => {
-                setFilter("backtest")
-                setPage(1)
-              }}
-            >
-              Backtests
-            </Button>
-            <Button
-              type="button"
-              variant={filter === "strategy" ? "secondary" : "outline"}
-              className="h-8 min-w-0 flex-1 justify-center px-1 text-center text-[10px] tracking-[0.12em] uppercase"
-              onClick={() => {
-                setFilter("strategy")
-                setPage(1)
-              }}
-            >
-              Strategies
-            </Button>
           </div>
         </CardHeader>
 
@@ -488,64 +578,173 @@ export default function BookmarkPage() {
                 : "No bookmarks yet. Save strategies or backtests to build your collection."}
             </div>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="divide-y divide-border/60">
               {bookmarks.map((item) => {
-                const target = item.target
-                const targetId = target?._id
-                const isStrategy = item.targetType === "strategy"
-                const isBacktest = item.targetType === "backtest"
+                const target = item.target;
+                const targetId = target?._id;
+                const targetPath = getBookmarkTargetPath(item);
+                const isStrategy = item.targetType === "strategy";
+                const isBacktest = item.targetType === "backtest";
                 const targetUserId =
                   typeof target?.user === "string"
                     ? target.user
-                    : target?.user?._id
+                    : target?.user?._id;
                 const targetUsername =
                   typeof target?.user === "object"
                     ? target.user?.username?.trim().replace(/^@/, "")
-                    : ""
-                const isMine = Boolean(user?._id) && targetUserId === user?._id
+                    : "";
+                const isMine = Boolean(user?._id) && targetUserId === user?._id;
                 const title = isBacktest
                   ? `${target?.symbol || "Backtest"}${target?.timeframe ? ` • ${target.timeframe}` : ""}`
-                  : target?.name || "Untitled target"
+                  : target?.name || "Untitled target";
                 const description = isBacktest
                   ? `Backtest period: ${toPrettyDate(target?.startDate)} - ${toPrettyDate(target?.endDate)}`
-                  : target?.description?.trim() || "No description"
+                  : target?.description?.trim() || "No description";
 
                 return (
                   <article
                     key={item._id}
-                    className="min-w-0 rounded-xl border p-4 transition-colors hover:border-primary/30"
+                    className={`relative min-w-0 px-4 py-4 pr-20 transition-colors hover:bg-muted/30 ${
+                      targetPath ? "cursor-pointer" : ""
+                    }`}
+                    role={targetPath ? "link" : undefined}
+                    tabIndex={targetPath ? 0 : undefined}
+                    onClick={(event) => {
+                      if (!targetPath) return;
+
+                      const clickTarget = event.target as HTMLElement;
+                      if (
+                        clickTarget.closest(
+                          "button, a, input, textarea, select, [role='menuitem']",
+                        )
+                      ) {
+                        return;
+                      }
+
+                      onOpenBookmark(item);
+                    }}
+                    onKeyDown={(event) => {
+                      if (!targetPath) return;
+
+                      if (event.key !== "Enter" && event.key !== " ") return;
+
+                      event.preventDefault();
+                      onOpenBookmark(item);
+                    }}
                   >
-                    <div className="mb-3 flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                       <div className="min-w-0 flex-1">
-                        <h3 className="line-clamp-1 font-semibold">{title}</h3>
-                        <p className="text-xs text-muted-foreground">
+                        <div className="flex min-w-0 flex-wrap items-center gap-2">
+                          <h3 className="min-w-0 flex-1 truncate font-semibold">
+                            {title}
+                          </h3>
+                          <span
+                            className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] ${
+                              isStrategy
+                                ? "border-primary/30 bg-primary/10 text-primary"
+                                : isBacktest
+                                  ? "border-info/30 bg-info/10 text-info"
+                                  : "border-border bg-muted/50 text-muted-foreground"
+                            }`}
+                          >
+                            {isStrategy ? (
+                              <Layers3 className="h-3.5 w-3.5" />
+                            ) : isBacktest ? (
+                              <CandlestickChart className="h-3.5 w-3.5" />
+                            ) : (
+                              <Bookmark className="h-3.5 w-3.5" />
+                            )}
+                            {isStrategy
+                              ? "Strategy"
+                              : isBacktest
+                                ? "Backtest"
+                                : ""}
+                          </span>
+                        </div>
+
+                        <p className="mt-1 text-xs text-muted-foreground">
                           Bookmarked on {toPrettyDate(item.createdAt)}
                         </p>
+
+                        <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
+                          {description}
+                        </p>
+
+                        {isStrategy && (
+                          <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                            <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5">
+                              <TrendingUp className="h-3.5 w-3.5" />
+                              {target?.stats?.viewCount ?? 0}
+                            </span>
+                            <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5">
+                              <Bookmark className="h-3.5 w-3.5" />
+                              {target?.stats?.bookmarkCount ?? 0}
+                            </span>
+                            <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5">
+                              {target?.isPublic ? (
+                                <Globe className="h-3.5 w-3.5" />
+                              ) : (
+                                <Lock className="h-3.5 w-3.5" />
+                              )}
+                              {isMine
+                                ? "Mine"
+                                : target?.isPublic
+                                  ? "Public"
+                                  : "Private"}
+                            </span>
+                          </div>
+                        )}
+
+                        {isBacktest && (
+                          <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                            <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5">
+                              {typeof target?.result?.roi === "number" &&
+                              target.result.roi < 0 ? (
+                                <TrendingDown className="h-3.5 w-3.5 text-destructive" />
+                              ) : (
+                                <TrendingUp
+                                  className={`h-3.5 w-3.5 ${
+                                    typeof target?.result?.roi === "number" &&
+                                    target.result.roi >= 0
+                                      ? "text-success"
+                                      : ""
+                                  }`}
+                                />
+                              )}
+                              <span
+                                className={
+                                  typeof target?.result?.roi === "number"
+                                    ? target.result.roi >= 0
+                                      ? "text-success"
+                                      : "text-destructive"
+                                    : ""
+                                }
+                              >
+                                {target?.result?.roi !== undefined
+                                  ? `${target.result.roi >= 0 ? "+" : ""}${ratio.format(target.result.roi)}%`
+                                  : "-"}
+                              </span>
+                            </span>
+                            <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5">
+                              <Percent className="h-3.5 w-3.5" />
+                              {target?.result?.winRate !== undefined
+                                ? `${ratio.format(target.result.winRate)}%`
+                                : "-"}
+                            </span>
+                            <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5">
+                              <CalendarClock className="h-3.5 w-3.5" />
+                              {formatDuration(target?.result?.duration)}
+                            </span>
+                            <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5">
+                              <UserRound className="h-3.5 w-3.5" />@
+                              {targetUsername || "unknown"}
+                            </span>
+                          </div>
+                        )}
                       </div>
 
-                      <div className="flex shrink-0 items-center gap-1.5">
-                        <span
-                          className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] ${
-                            isStrategy
-                              ? "border-primary/30 bg-primary/10 text-primary"
-                              : isBacktest
-                                ? "border-info/30 bg-info/10 text-info"
-                                : "border-border bg-muted/50 text-muted-foreground"
-                          }`}
-                        >
-                          {isStrategy ? (
-                            <Layers3 className="h-3.5 w-3.5" />
-                          ) : isBacktest ? (
-                            <CandlestickChart className="h-3.5 w-3.5" />
-                          ) : (
-                            <Bookmark className="h-3.5 w-3.5" />
-                          )}
-                          {isStrategy
-                            ? "Strategy"
-                            : isBacktest
-                              ? "Backtest"
-                              : ""}
-                        </span>
+                      <div className="absolute top-4 right-4 flex shrink-0 flex-col items-end gap-2">
+                        <span className="sr-only">Actions</span>
 
                         <ButtonGroup className="shrink-0">
                           <Button
@@ -557,7 +756,7 @@ export default function BookmarkPage() {
                             title="Bookmarked"
                             disabled={removingBookmarkIds.has(item._id)}
                             onClick={() => {
-                              setBookmarkPendingRemove(item)
+                              setBookmarkPendingRemove(item);
                             }}
                           >
                             {removingBookmarkIds.has(item._id) ? (
@@ -583,167 +782,60 @@ export default function BookmarkPage() {
                               align="end"
                               className="w-40 min-w-40"
                             >
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            {(isStrategy || isBacktest) && targetId ? (
-                              <DropdownMenuItem asChild>
-                                <a
-                                  href={
-                                    isBacktest
-                                      ? `/backtest/${targetId}`
-                                      : `/strategy/${targetId}`
-                                  }
-                                  className="flex items-center gap-2"
+                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                              {(isStrategy || isBacktest) && targetId ? (
+                                <DropdownMenuItem asChild>
+                                  <a
+                                    href={
+                                      isBacktest
+                                        ? `/backtest/${targetId}`
+                                        : `/strategy/${targetId}`
+                                    }
+                                    className="flex items-center gap-2"
+                                  >
+                                    <SquareArrowOutUpRight className="h-4 w-4" />
+                                    Open
+                                  </a>
+                                </DropdownMenuItem>
+                              ) : null}
+                              {(isStrategy || isBacktest) && targetId ? (
+                                <DropdownMenuItem
+                                  onSelect={() => {
+                                    void onCopyBookmarkLink(item);
+                                  }}
                                 >
-                                  <SquareArrowOutUpRight className="h-4 w-4" />
-                                  Open
-                                </a>
-                              </DropdownMenuItem>
-                            ) : null}
-                            {(isStrategy || isBacktest) && targetId ? (
+                                  <Copy className="h-4 w-4" />
+                                  Copy link
+                                </DropdownMenuItem>
+                              ) : null}
                               <DropdownMenuItem
+                                variant="destructive"
+                                disabled={removingBookmarkIds.has(item._id)}
                                 onSelect={() => {
-                                  void onCopyBookmarkLink(item)
+                                  setBookmarkPendingRemove(item);
                                 }}
                               >
-                                <Copy className="h-4 w-4" />
-                                Copy link
+                                {removingBookmarkIds.has(item._id) ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4" />
+                                )}
+                                Remove
                               </DropdownMenuItem>
-                            ) : null}
-                            <DropdownMenuItem
-                              variant="destructive"
-                              disabled={removingBookmarkIds.has(item._id)}
-                              onSelect={() => {
-                                setBookmarkPendingRemove(item)
-                              }}
-                            >
-                              {removingBookmarkIds.has(item._id) ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <Trash2 className="h-4 w-4" />
-                              )}
-                              Remove
-                            </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </ButtonGroup>
                       </div>
                     </div>
-
-                    <p className="line-clamp-2 text-sm text-muted-foreground">
-                      {description}
-                    </p>
-
-                    {isStrategy && (
-                      <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-                        <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5">
-                          <TrendingUp className="h-3.5 w-3.5" />
-                          {target?.stats?.viewCount ?? 0}
-                        </span>
-                        <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5">
-                          <Bookmark className="h-3.5 w-3.5" />
-                          {target?.stats?.bookmarkCount ?? 0}
-                        </span>
-                        <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5">
-                          {target?.isPublic ? (
-                            <Globe className="h-3.5 w-3.5" />
-                          ) : (
-                            <Lock className="h-3.5 w-3.5" />
-                          )}
-                          {isMine
-                            ? "Mine"
-                            : target?.isPublic
-                              ? "Public"
-                              : "Private"}
-                        </span>
-                      </div>
-                    )}
-
-                    {isBacktest && (
-                      <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-                        <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5">
-                          {typeof target?.result?.roi === "number" &&
-                          target.result.roi < 0 ? (
-                            <TrendingDown className="h-3.5 w-3.5 text-destructive" />
-                          ) : (
-                            <TrendingUp
-                              className={`h-3.5 w-3.5 ${
-                                typeof target?.result?.roi === "number" &&
-                                target.result.roi >= 0
-                                  ? "text-success"
-                                  : ""
-                              }`}
-                            />
-                          )}
-                          <span
-                            className={
-                              typeof target?.result?.roi === "number"
-                                ? target.result.roi >= 0
-                                  ? "text-success"
-                                  : "text-destructive"
-                                : ""
-                            }
-                          >
-                            {target?.result?.roi !== undefined
-                              ? `${target.result.roi >= 0 ? "+" : ""}${ratio.format(target.result.roi)}%`
-                              : "-"}
-                          </span>
-                        </span>
-                        <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5">
-                          <Percent className="h-3.5 w-3.5" />
-                          {target?.result?.winRate !== undefined
-                            ? `${ratio.format(target.result.winRate)}%`
-                            : "-"}
-                        </span>
-                        <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5">
-                          <CalendarClock className="h-3.5 w-3.5" />
-                          {formatDuration(target?.result?.duration)}
-                        </span>
-                        <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5">
-                          <UserRound className="h-3.5 w-3.5" />@
-                          {targetUsername || "unknown"}
-                        </span>
-                      </div>
-                    )}
-
-                    <div className="mt-4">
-                      {(isStrategy || isBacktest) && targetId ? (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="w-full sm:w-auto"
-                          asChild
-                        >
-                          <a
-                            href={
-                              isBacktest
-                                ? `/backtest/${targetId}`
-                                : `/strategy/${targetId}`
-                            }
-                            className="inline-flex items-center gap-1.5"
-                          >
-                            <SquareArrowOutUpRight className="h-3.5 w-3.5" />
-                            Open
-                          </a>
-                        </Button>
-                      ) : (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="w-full sm:w-auto"
-                          disabled
-                        >
-                          <SquareArrowOutUpRight className="h-3.5 w-3.5" />
-                          Open
-                        </Button>
-                      )}
-                    </div>
                   </article>
-                )
+                );
               })}
             </div>
           )}
 
-          {hasNextPage ? <div ref={loadMoreRef} className="h-1 w-full" /> : null}
+          {hasNextPage ? (
+            <div ref={loadMoreRef} className="h-1 w-full" />
+          ) : null}
         </CardContent>
       </Card>
 
@@ -760,7 +852,7 @@ export default function BookmarkPage() {
         open={Boolean(bookmarkPendingRemove)}
         onOpenChange={(open) => {
           if (!open) {
-            setBookmarkPendingRemove(null)
+            setBookmarkPendingRemove(null);
           }
         }}
       >
@@ -783,9 +875,9 @@ export default function BookmarkPage() {
             <AlertDialogAction
               className="text-destructive-foreground bg-destructive hover:bg-destructive/90"
               onClick={() => {
-                if (!bookmarkPendingRemove) return
-                void onRemoveBookmark(bookmarkPendingRemove)
-                setBookmarkPendingRemove(null)
+                if (!bookmarkPendingRemove) return;
+                void onRemoveBookmark(bookmarkPendingRemove);
+                setBookmarkPendingRemove(null);
               }}
             >
               Remove
@@ -794,5 +886,5 @@ export default function BookmarkPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  )
+  );
 }

@@ -1629,7 +1629,7 @@ export default function Profile() {
                       ref={
                         tab === activeProfileTab ? profileListScrollRef : null
                       }
-                      className="max-h-[520px] min-w-0 overflow-x-hidden overflow-y-auto px-4 py-4"
+                      className="max-h-[520px] min-w-0 overflow-x-hidden overflow-y-auto px-4 pb-4"
                     >
                       {tabState.isLoading ? (
                         <div className="flex min-h-16 items-center justify-center py-2 text-sm text-muted-foreground">
@@ -1645,7 +1645,7 @@ export default function Profile() {
                           No {dialogTabLabels[tab].toLowerCase()} found.
                         </div>
                       ) : (
-                        <div className="space-y-3">
+                        <div>
                           {tab === "followers" || tab === "following"
                             ? (tabState.items as ProfileFollowListItem[]).map(
                                 (item) => (

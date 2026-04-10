@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Bookmark,
   BookmarkCheck,
@@ -22,16 +22,16 @@ import {
   Trash2,
   TrendingUp,
   UserRound,
-} from "lucide-react"
-import { toast } from "sonner"
+} from "lucide-react";
+import { toast } from "sonner";
 
-import { createBookmark, deleteBookmark } from "@/api/bookmark"
+import { createBookmark, deleteBookmark } from "@/api/bookmark";
 import {
   deleteStrategy,
   fetchStrategies,
   type StrategySource,
-} from "@/api/strategy"
-import { getApiErrorMessage } from "@/api/axios"
+} from "@/api/strategy";
+import { getApiErrorMessage } from "@/api/axios";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,16 +41,16 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { Button } from "@/components/ui/button"
-import { ButtonGroup } from "@/components/ui/button-group"
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -60,97 +60,97 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import { useAuthStore } from "@/store/auth"
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { useAuthStore } from "@/store/auth";
 
-type StrategySortBy = "name" | "createdAt" | "updatedAt" | "popular"
+type StrategySortBy = "name" | "createdAt" | "updatedAt" | "popular";
 
 type StrategyItem = {
-  _id: string
-  name: string
-  description?: string
-  isBookmarked?: boolean
-  isPublic?: boolean
+  _id: string;
+  name: string;
+  description?: string;
+  isBookmarked?: boolean;
+  isPublic?: boolean;
   stats?: {
-    viewCount?: number
-    bookmarkCount?: number
-  }
+    viewCount?: number;
+    bookmarkCount?: number;
+  };
   user?: {
-    _id?: string
-    username?: string
-  }
-  createdAt?: string
-  updatedAt?: string
-  indicators?: unknown[]
-}
+    _id?: string;
+    username?: string;
+  };
+  createdAt?: string;
+  updatedAt?: string;
+  indicators?: unknown[];
+};
 
 type StrategyListResult = {
-  total?: number
-  hasNextPage?: boolean
-  strategies?: StrategyItem[]
-}
+  total?: number;
+  hasNextPage?: boolean;
+  strategies?: StrategyItem[];
+};
 
 type StrategyListResponse = {
-  status: boolean
-  message: string
-  result: StrategyListResult
-}
+  status: boolean;
+  message: string;
+  result: StrategyListResult;
+};
 
 function mergeStrategyPages(prev: StrategyItem[], nextItems: StrategyItem[]) {
   return Array.from(
-    new Map([...prev, ...nextItems].map((item) => [item._id, item])).values()
-  )
+    new Map([...prev, ...nextItems].map((item) => [item._id, item])).values(),
+  );
 }
 
 function toPrettyDate(date?: string) {
-  if (!date) return "-"
+  if (!date) return "-";
 
-  const value = new Date(date)
-  if (Number.isNaN(value.getTime())) return "-"
+  const value = new Date(date);
+  if (Number.isNaN(value.getTime())) return "-";
 
   return value.toLocaleDateString("en-US", {
     year: "numeric",
     month: "short",
     day: "2-digit",
-  })
+  });
 }
 
 export default function StrategyPage() {
-  const navigate = useNavigate()
-  const user = useAuthStore((state) => state.user)
-  const [strategies, setStrategies] = useState<StrategyItem[]>([])
-  const [search, setSearch] = useState("")
-  const [debouncedSearch, setDebouncedSearch] = useState("")
-  const [page, setPage] = useState(1)
-  const [totalCount, setTotalCount] = useState(0)
-  const [hasNextPage, setHasNextPage] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isAppending, setIsAppending] = useState(false)
-  const [strategyIdPendingDelete, setStrategyIdPendingDelete] = useState("")
-  const [isDeletingStrategy, setIsDeletingStrategy] = useState(false)
+  const navigate = useNavigate();
+  const user = useAuthStore((state) => state.user);
+  const [strategies, setStrategies] = useState<StrategyItem[]>([]);
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAppending, setIsAppending] = useState(false);
+  const [strategyIdPendingDelete, setStrategyIdPendingDelete] = useState("");
+  const [isDeletingStrategy, setIsDeletingStrategy] = useState(false);
   const [updatingStrategyIds, setUpdatingStrategyIds] = useState<Set<string>>(
-    new Set()
-  )
-  const [source, setSource] = useState<StrategySource>("all")
-  const [sortBy, setSortBy] = useState<StrategySortBy>("name")
-  const [order, setOrder] = useState<"asc" | "desc">("asc")
-  const loadMoreRef = useRef<HTMLDivElement | null>(null)
+    new Set(),
+  );
+  const [source, setSource] = useState<StrategySource>("all");
+  const [sortBy, setSortBy] = useState<StrategySortBy>("name");
+  const [order, setOrder] = useState<"asc" | "desc">("asc");
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedSearch(search.trim())
-    }, 500)
+      setDebouncedSearch(search.trim());
+    }, 500);
 
-    return () => clearTimeout(timer)
-  }, [search])
+    return () => clearTimeout(timer);
+  }, [search]);
 
   useEffect(() => {
     const loadStrategies = async () => {
       if (page === 1) {
-        setIsLoading(true)
+        setIsLoading(true);
       } else {
-        setIsAppending(true)
+        setIsAppending(true);
       }
 
       try {
@@ -161,74 +161,74 @@ export default function StrategyPage() {
           order,
           source,
           isPublic: source === "all" ? true : undefined,
-        })) as StrategyListResponse
+        })) as StrategyListResponse;
 
-        const result = response?.result
-        const pageItems = result?.strategies ?? []
+        const result = response?.result;
+        const pageItems = result?.strategies ?? [];
 
         setStrategies((prev) => {
           if (page === 1) {
-            return pageItems
+            return pageItems;
           }
 
-          return mergeStrategyPages(prev, pageItems)
-        })
+          return mergeStrategyPages(prev, pageItems);
+        });
 
-        setTotalCount(result?.total ?? 0)
-        setHasNextPage(Boolean(result?.hasNextPage))
+        setTotalCount(result?.total ?? 0);
+        setHasNextPage(Boolean(result?.hasNextPage));
       } catch (error) {
-        toast.error(getApiErrorMessage(error, "Failed to load strategies"))
+        toast.error(getApiErrorMessage(error, "Failed to load strategies"));
       } finally {
-        setIsLoading(false)
-        setIsAppending(false)
+        setIsLoading(false);
+        setIsAppending(false);
       }
-    }
+    };
 
-    void loadStrategies()
-  }, [page, debouncedSearch, sortBy, order, source])
+    void loadStrategies();
+  }, [page, debouncedSearch, sortBy, order, source]);
 
   useEffect(() => {
-    const node = loadMoreRef.current
-    if (!node || !hasNextPage || isLoading || isAppending) return
+    const node = loadMoreRef.current;
+    if (!node || !hasNextPage || isLoading || isAppending) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
-        const firstEntry = entries[0]
+        const firstEntry = entries[0];
         if (firstEntry?.isIntersecting && !isAppending && !isLoading) {
-          setPage((prev) => prev + 1)
+          setPage((prev) => prev + 1);
         }
       },
       {
         root: null,
         rootMargin: "220px 0px",
         threshold: 0,
-      }
-    )
+      },
+    );
 
-    observer.observe(node)
-    return () => observer.disconnect()
-  }, [hasNextPage, isAppending, isLoading])
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasNextPage, isAppending, isLoading]);
 
   const onToggleBookmark = async (strategyId: string) => {
     if (!user?._id) {
-      toast.error("Please sign in to bookmark strategies.")
-      return
+      toast.error("Please sign in to bookmark strategies.");
+      return;
     }
 
-    const currentStrategy = strategies.find((item) => item._id === strategyId)
-    if (!currentStrategy) return
+    const currentStrategy = strategies.find((item) => item._id === strategyId);
+    if (!currentStrategy) return;
 
-    const isBookmarked = Boolean(currentStrategy.isBookmarked)
+    const isBookmarked = Boolean(currentStrategy.isBookmarked);
     const updateStrategyBookmarkCount = (delta: 1 | -1) => {
       setStrategies((prev) =>
         prev.map((item) => {
-          if (item._id !== strategyId) return item
+          if (item._id !== strategyId) return item;
 
           const current =
             typeof item.stats?.bookmarkCount === "number"
               ? item.stats.bookmarkCount
-              : 0
-          const next = Math.max(0, current + delta)
+              : 0;
+          const next = Math.max(0, current + delta);
 
           return {
             ...item,
@@ -236,86 +236,86 @@ export default function StrategyPage() {
               ...item.stats,
               bookmarkCount: next,
             },
-          }
-        })
-      )
-    }
+          };
+        }),
+      );
+    };
 
-    setUpdatingStrategyIds((prev) => new Set(prev).add(strategyId))
+    setUpdatingStrategyIds((prev) => new Set(prev).add(strategyId));
 
     try {
       if (isBookmarked) {
         const response = await deleteBookmark({
           targetType: "strategy",
           targetId: strategyId,
-        })
+        });
 
         setStrategies((prev) =>
           prev.map((item) =>
-            item._id === strategyId ? { ...item, isBookmarked: false } : item
-          )
-        )
-        updateStrategyBookmarkCount(-1)
-        toast.success(response?.message || "Bookmark removed successfully.")
-        return
+            item._id === strategyId ? { ...item, isBookmarked: false } : item,
+          ),
+        );
+        updateStrategyBookmarkCount(-1);
+        toast.success(response?.message || "Bookmark removed successfully.");
+        return;
       }
 
       const response = await createBookmark({
         targetType: "strategy",
         target: strategyId,
-      })
+      });
 
       setStrategies((prev) =>
         prev.map((item) =>
-          item._id === strategyId ? { ...item, isBookmarked: true } : item
-        )
-      )
-      updateStrategyBookmarkCount(1)
-      toast.success(response?.message || "Bookmarked successfully.")
+          item._id === strategyId ? { ...item, isBookmarked: true } : item,
+        ),
+      );
+      updateStrategyBookmarkCount(1);
+      toast.success(response?.message || "Bookmarked successfully.");
     } catch (error) {
       const status =
         typeof error === "object" &&
         error !== null &&
         "response" in error &&
-        typeof (error as { response?: { status?: number } }).response?.status ===
-          "number"
+        typeof (error as { response?: { status?: number } }).response
+          ?.status === "number"
           ? (error as { response?: { status?: number } }).response!.status
-          : undefined
+          : undefined;
 
       if (isBookmarked && status === 404) {
         setStrategies((prev) =>
           prev.map((item) =>
-            item._id === strategyId ? { ...item, isBookmarked: false } : item
-          )
-        )
-        updateStrategyBookmarkCount(-1)
-        toast.success("Bookmark removed successfully.")
-        return
+            item._id === strategyId ? { ...item, isBookmarked: false } : item,
+          ),
+        );
+        updateStrategyBookmarkCount(-1);
+        toast.success("Bookmark removed successfully.");
+        return;
       }
 
-      toast.error(getApiErrorMessage(error, "Failed to update bookmark"))
+      toast.error(getApiErrorMessage(error, "Failed to update bookmark"));
     } finally {
       setUpdatingStrategyIds((prev) => {
-        const next = new Set(prev)
-        next.delete(strategyId)
-        return next
-      })
+        const next = new Set(prev);
+        next.delete(strategyId);
+        return next;
+      });
     }
-  }
+  };
 
   const onDeleteStrategy = async () => {
-    if (!strategyIdPendingDelete) return
+    if (!strategyIdPendingDelete) return;
 
     try {
-      setIsDeletingStrategy(true)
-      await deleteStrategy(strategyIdPendingDelete)
+      setIsDeletingStrategy(true);
+      await deleteStrategy(strategyIdPendingDelete);
 
       setStrategies((prev) =>
-        prev.filter((item) => item._id !== strategyIdPendingDelete)
-      )
-      setTotalCount((prev) => Math.max(0, prev - 1))
-      toast.success("Strategy deleted successfully")
-      setStrategyIdPendingDelete("")
+        prev.filter((item) => item._id !== strategyIdPendingDelete),
+      );
+      setTotalCount((prev) => Math.max(0, prev - 1));
+      toast.success("Strategy deleted successfully");
+      setStrategyIdPendingDelete("");
     } catch (error: unknown) {
       const responseMessage =
         typeof error === "object" &&
@@ -325,27 +325,29 @@ export default function StrategyPage() {
           .response?.data?.message === "string"
           ? (error as { response?: { data?: { message?: string } } }).response!
               .data!.message
-          : null
+          : null;
 
       toast.error(
         responseMessage ??
-          (error instanceof Error ? error.message : "Failed to delete strategy")
-      )
+          (error instanceof Error
+            ? error.message
+            : "Failed to delete strategy"),
+      );
     } finally {
-      setIsDeletingStrategy(false)
+      setIsDeletingStrategy(false);
     }
-  }
+  };
 
   const onCopyStrategyLink = async (strategyId: string) => {
-    const strategyUrl = `${window.location.origin}/strategy/${strategyId}`
+    const strategyUrl = `${window.location.origin}/strategy/${strategyId}`;
 
     try {
-      await navigator.clipboard.writeText(strategyUrl)
-      toast.success("Link copied")
+      await navigator.clipboard.writeText(strategyUrl);
+      toast.success("Link copied");
     } catch (error) {
-      toast.error(getApiErrorMessage(error, "Failed to copy link"))
+      toast.error(getApiErrorMessage(error, "Failed to copy link"));
     }
-  }
+  };
 
   const onCloneStrategy = (strategy: StrategyItem) => {
     navigate("/strategy/create", {
@@ -353,8 +355,8 @@ export default function StrategyPage() {
         duplicateStrategyId: strategy._id,
         duplicateStrategyName: strategy.name,
       },
-    })
-  }
+    });
+  };
 
   return (
     <div className="mx-auto w-full max-w-6xl min-w-0 space-y-4 overflow-x-hidden sm:space-y-6">
@@ -419,15 +421,43 @@ export default function StrategyPage() {
             </div>
           </div>
 
-          <div className="grid gap-2">
-            <div className="space-y-2">
+          <div className="grid gap-3">
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  variant={source === "all" ? "default" : "outline"}
+                  className="w-full gap-2"
+                  onClick={() => {
+                    setSource("all");
+                    setPage(1);
+                  }}
+                >
+                  <Compass className="h-4 w-4" />
+                  Explore
+                </Button>
+
+                <Button
+                  type="button"
+                  variant={source === "mine" ? "default" : "outline"}
+                  className="w-full gap-2"
+                  onClick={() => {
+                    setSource("mine");
+                    setPage(1);
+                  }}
+                >
+                  <UserRound className="h-4 w-4" />
+                  Me
+                </Button>
+              </div>
+
               <div className="relative">
                 <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   value={search}
                   onChange={(event) => {
-                    setSearch(event.target.value)
-                    setPage(1)
+                    setSearch(event.target.value);
+                    setPage(1);
                   }}
                   placeholder="Search"
                   className="pr-10 pl-9"
@@ -449,21 +479,21 @@ export default function StrategyPage() {
                       <DropdownMenuRadioGroup
                         value={sortBy}
                         onValueChange={(value) => {
-                          const nextSortBy = value as StrategySortBy
-                          setSortBy(nextSortBy)
+                          const nextSortBy = value as StrategySortBy;
+                          setSortBy(nextSortBy);
                           if (nextSortBy === "popular") {
-                            setOrder("desc")
+                            setOrder("desc");
                           }
                           if (nextSortBy === "name") {
-                            setOrder("asc")
+                            setOrder("asc");
                           }
                           if (
                             nextSortBy === "createdAt" ||
                             nextSortBy === "updatedAt"
                           ) {
-                            setOrder("desc")
+                            setOrder("desc");
                           }
-                          setPage(1)
+                          setPage(1);
                         }}
                       >
                         <DropdownMenuRadioItem value="popular">
@@ -485,8 +515,8 @@ export default function StrategyPage() {
                       <DropdownMenuRadioGroup
                         value={order}
                         onValueChange={(value) => {
-                          setOrder(value as "asc" | "desc")
-                          setPage(1)
+                          setOrder(value as "asc" | "desc");
+                          setPage(1);
                         }}
                       >
                         <DropdownMenuRadioItem value="asc">
@@ -499,34 +529,6 @@ export default function StrategyPage() {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  type="button"
-                  variant={source === "all" ? "default" : "outline"}
-                  className="gap-2"
-                  onClick={() => {
-                    setSource("all")
-                    setPage(1)
-                  }}
-                >
-                  <Compass className="h-4 w-4" />
-                  Explore
-                </Button>
-
-                <Button
-                  type="button"
-                  variant={source === "mine" ? "default" : "outline"}
-                  className="gap-2"
-                  onClick={() => {
-                    setSource("mine")
-                    setPage(1)
-                  }}
-                >
-                  <UserRound className="h-4 w-4" />
-                  Me
-                </Button>
               </div>
             </div>
           </div>
@@ -542,48 +544,115 @@ export default function StrategyPage() {
               No strategies found.
             </div>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="divide-y divide-border/60">
               {strategies.map((item) => {
                 const isMine =
-                  Boolean(user?._id) && item.user?._id === user?._id
-                const isBookmarked = Boolean(item.isBookmarked)
+                  Boolean(user?._id) && item.user?._id === user?._id;
+                const isBookmarked = Boolean(item.isBookmarked);
+                const description =
+                  item.description?.trim() || "No description";
 
                 return (
                   <article
                     key={item._id}
-                    className="min-w-0 rounded-xl border p-4 transition-colors hover:border-primary/30"
+                    className="relative min-w-0 cursor-pointer px-4 py-4 pr-20 transition-colors hover:bg-muted/30"
+                    role="link"
+                    tabIndex={0}
+                    onClick={(event) => {
+                      const clickTarget = event.target as HTMLElement;
+                      if (
+                        clickTarget.closest(
+                          "button, a, input, textarea, select, [role='menuitem']",
+                        )
+                      ) {
+                        return;
+                      }
+
+                      navigate(`/strategy/${item._id}`);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key !== "Enter" && event.key !== " ") return;
+
+                      event.preventDefault();
+                      navigate(`/strategy/${item._id}`);
+                    }}
                   >
-                    <div className="mb-3 flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                       <div className="min-w-0 flex-1">
-                        <h3 className="line-clamp-1 font-semibold">
-                          {item.name}
-                        </h3>
-                        <p className="text-xs text-muted-foreground">
+                        <div className="flex min-w-0 flex-wrap items-center gap-2">
+                          <h3 className="min-w-0 flex-1 truncate font-semibold">
+                            {item.name}
+                          </h3>
+                          <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[11px] text-primary">
+                            <Layers3 className="h-3.5 w-3.5" />
+                            Strategy
+                          </span>
+                        </div>
+
+                        <p className="mt-1 text-xs text-muted-foreground">
                           by @{item.user?.username || "unknown"}
                         </p>
+
+                        <p
+                          className="mt-2 line-clamp-2 text-sm text-muted-foreground"
+                          title={description}
+                        >
+                          {description}
+                        </p>
+
+                        <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                          <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5">
+                            <TrendingUp className="h-3.5 w-3.5" />
+                            {item.stats?.viewCount ?? 0}
+                          </span>
+                          <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5">
+                            <Bookmark className="h-3.5 w-3.5" />
+                            {item.stats?.bookmarkCount ?? 0}
+                          </span>
+                          <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5">
+                            {item.isPublic ? (
+                              <Globe className="h-3.5 w-3.5" />
+                            ) : (
+                              <Lock className="h-3.5 w-3.5" />
+                            )}
+                            {isMine
+                              ? "Mine"
+                              : item.isPublic
+                                ? "Public"
+                                : "Private"}
+                          </span>
+                        </div>
+
+                        <div className="mt-3 grid gap-1 text-xs text-muted-foreground">
+                          <p>Created: {toPrettyDate(item.createdAt)}</p>
+                          <p>Updated: {toPrettyDate(item.updatedAt)}</p>
+                        </div>
                       </div>
 
-                      <div className="flex items-center gap-1.5">
+                      <div className="absolute top-4 right-4 flex shrink-0 flex-col items-end gap-2">
+                        <span className="sr-only">Actions</span>
                         <ButtonGroup className="shrink-0">
                           <Button
                             type="button"
                             size="icon-sm"
                             variant={isBookmarked ? "outline" : "ghost"}
                             className="rounded-r-none border border-border text-muted-foreground"
-                            aria-label={isBookmarked ? "Bookmarked" : "Bookmark"}
+                            aria-label={
+                              isBookmarked ? "Bookmarked" : "Bookmark"
+                            }
                             title={isBookmarked ? "Bookmarked" : "Bookmark"}
                             disabled={updatingStrategyIds.has(item._id)}
                             onClick={() => {
-                              void onToggleBookmark(item._id)
+                              void onToggleBookmark(item._id);
                             }}
                           >
                             {updatingStrategyIds.has(item._id) ? (
                               <Loader2 className="h-3.5 w-3.5 animate-spin" />
                             ) : isBookmarked ? (
                               <BookmarkCheck className="h-3.5 w-3.5 text-primary" />
-                              ) : (
-                                <Bookmark className="h-3.5 w-3.5" />
-                              )}
+                            ) : (
+                              <Bookmark className="h-3.5 w-3.5" />
+                            )}
                           </Button>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -614,7 +683,7 @@ export default function StrategyPage() {
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onSelect={() => {
-                                  void onCopyStrategyLink(item._id)
+                                  void onCopyStrategyLink(item._id);
                                 }}
                               >
                                 <Copy className="h-4 w-4" />
@@ -631,7 +700,7 @@ export default function StrategyPage() {
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onSelect={() => {
-                                  void onToggleBookmark(item._id)
+                                  void onToggleBookmark(item._id);
                                 }}
                                 disabled={updatingStrategyIds.has(item._id)}
                               >
@@ -657,7 +726,7 @@ export default function StrategyPage() {
                                   <DropdownMenuItem
                                     variant="destructive"
                                     onSelect={() => {
-                                      setStrategyIdPendingDelete(item._id)
+                                      setStrategyIdPendingDelete(item._id);
                                     }}
                                   >
                                     <Trash2 className="h-4 w-4" />
@@ -669,7 +738,7 @@ export default function StrategyPage() {
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem
                                     onSelect={() => {
-                                      onCloneStrategy(item)
+                                      onCloneStrategy(item);
                                     }}
                                   >
                                     <CopyPlus className="h-4 w-4" />
@@ -682,56 +751,8 @@ export default function StrategyPage() {
                         </ButtonGroup>
                       </div>
                     </div>
-
-                    <p
-                      className="max-w-full truncate text-sm text-muted-foreground"
-                      title={item.description?.trim() || "No description"}
-                    >
-                      {item.description?.trim() || "No description"}
-                    </p>
-
-                    <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-                      <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5">
-                        <TrendingUp className="h-3.5 w-3.5" />
-                        {item.stats?.viewCount ?? "-"}
-                      </span>
-                      <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5">
-                        <Bookmark className="h-3.5 w-3.5" />
-                        {item.stats?.bookmarkCount ?? "-"}
-                      </span>
-                      <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5">
-                        {item.isPublic ? (
-                          <Globe className="h-3.5 w-3.5" />
-                        ) : (
-                          <Lock className="h-3.5 w-3.5" />
-                        )}
-                        {isMine ? "Mine" : item.isPublic ? "Public" : "Private"}
-                      </span>
-                    </div>
-
-                    <div className="mt-3 grid gap-1 text-xs text-muted-foreground">
-                      <p>Created: {toPrettyDate(item.createdAt)}</p>
-                      <p>Updated: {toPrettyDate(item.updatedAt)}</p>
-                    </div>
-
-                    <div className="mt-4">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="w-full sm:w-auto"
-                        asChild
-                      >
-                        <a
-                          href={`/strategy/${item._id}`}
-                          className="inline-flex items-center gap-1.5"
-                        >
-                          <SquareArrowOutUpRight className="h-3.5 w-3.5" />
-                          Open
-                        </a>
-                      </Button>
-                    </div>
                   </article>
-                )
+                );
               })}
             </div>
           )}
@@ -753,7 +774,7 @@ export default function StrategyPage() {
         open={Boolean(strategyIdPendingDelete)}
         onOpenChange={(open) => {
           if (!open && !isDeletingStrategy) {
-            setStrategyIdPendingDelete("")
+            setStrategyIdPendingDelete("");
           }
         }}
       >
@@ -771,8 +792,8 @@ export default function StrategyPage() {
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={(event) => {
-                event.preventDefault()
-                void onDeleteStrategy()
+                event.preventDefault();
+                void onDeleteStrategy();
               }}
               disabled={isDeletingStrategy}
               className="text-destructive-foreground bg-destructive hover:bg-destructive/90"
@@ -790,5 +811,5 @@ export default function StrategyPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  )
+  );
 }
