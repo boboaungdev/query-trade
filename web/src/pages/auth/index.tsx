@@ -630,8 +630,8 @@ export default function Auth() {
   return (
     <div className="flex min-h-[80vh] items-center justify-center p-6">
       <Card className="w-full max-w-sm">
-        <CardHeader>
-          <div className="mb-2 flex items-center justify-between">
+        <CardHeader className="px-6 pt-4 pb-4">
+          <div className="mb-1 flex items-center justify-start">
             <Button
               type="button"
               variant="ghost"
@@ -659,7 +659,7 @@ export default function Auth() {
           <CardDescription>{description}</CardDescription>
         </CardHeader>
 
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 px-6 pt-0 pb-6">
           {!showPassword && !isSignup && (
             <>
               <div className="relative w-full">

@@ -11,7 +11,13 @@ export const UserSchema = {
       .pattern(/^[a-z][a-z0-9]*$/)
       .min(6)
       .max(20)
-      .required(),
+      .required()
+      .messages({
+        "string.pattern.base":
+          "Start with a lowercase letter; use lowercase letters and numbers only",
+        "string.min": "At least 6 characters",
+        "string.max": "At most 20 characters",
+      }),
     email: Joi.string().email({ minDomainSegments: 2 }).lowercase().required(),
     password: Joi.string().min(6).max(50).required(),
   }),
@@ -61,7 +67,13 @@ export const UserSchema = {
       .pattern(/^[a-z][a-z0-9]*$/)
       .min(6)
       .max(20)
-      .optional(),
+      .optional()
+      .messages({
+        "string.pattern.base":
+          "Start with a lowercase letter; use lowercase letters and numbers only",
+        "string.min": "At least 6 characters",
+        "string.max": "At most 20 characters",
+      }),
 
     avatar: Joi.string().allow("").optional(),
 

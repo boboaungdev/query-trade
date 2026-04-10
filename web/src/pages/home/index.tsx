@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect } from "react";
 import {
   ArrowRight,
   BookMarked,
@@ -11,32 +11,32 @@ import {
   Sparkles,
   Workflow,
   Zap,
-} from "lucide-react"
-import { Link } from "react-router-dom"
+} from "lucide-react";
+import { Link } from "react-router-dom";
 
-import { Button } from "@/components/ui/button"
-import { APP_NAME, DEVELOPER_NAME, DEVELOPER_URL } from "@/constants"
-import { useAuthStore } from "@/store/auth"
+import { Button } from "@/components/ui/button";
+import { APP_NAME } from "@/constants";
+import { useAuthStore } from "@/store/auth";
 
 export default function Home() {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
-  const primaryHref = isAuthenticated ? "/dashboard" : "/auth"
-  const primaryLabel = isAuthenticated ? "Open Dashboard" : "Start Free"
-  const heroSecondaryHref = isAuthenticated ? "/backtest" : "/auth"
-  const heroSecondaryLabel = isAuthenticated ? "Run Backtests" : "Sign In"
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const primaryHref = isAuthenticated ? "/dashboard" : "/auth";
+  const primaryLabel = isAuthenticated ? "Open Dashboard" : "Start Free";
+  const heroSecondaryHref = isAuthenticated ? "/backtest" : "/auth";
+  const heroSecondaryLabel = isAuthenticated ? "Run Backtests" : "Sign In";
   const footerTitle = isAuthenticated
     ? "Ready to push your trading system further?"
-    : "Free crypto strategy building from idea to backtest."
+    : "Free crypto strategy building from idea to backtest.";
   const footerDescription = isAuthenticated
     ? "Open your workspace, build or pick a strategy, and backtest it with confidence."
-    : "Use Query Trade for free to explore thousands of strategies, build your own, and backtest faster."
-  const copyrightYear = 2026
+    : "Use Query Trade for free to explore thousands of strategies, build your own, and backtest faster.";
+  const copyrightYear = 2026;
 
   const stats = [
     { label: "Price", value: "Free" },
     { label: "Strategy Library", value: "1000+" },
     { label: "Workflow", value: "Build To Backtest" },
-  ]
+  ];
 
   const features = [
     {
@@ -75,7 +75,7 @@ export default function Home() {
         "Spend less time switching tools and more time building, testing, and refining stronger strategy systems.",
       icon: Zap,
     },
-  ]
+  ];
 
   const faq = [
     {
@@ -90,53 +90,52 @@ export default function Home() {
       q: "Can I go from idea to backtest in the app?",
       a: "Yes. Query Trade is built to help you go from strategy ideas to structured creation and backtesting in one workflow.",
     },
-  ]
+  ];
 
   useEffect(() => {
     const revealItems = Array.from(
-      document.querySelectorAll<HTMLElement>(".home-reveal-up")
-    )
+      document.querySelectorAll<HTMLElement>(".home-reveal-up"),
+    );
 
-    if (!revealItems.length) return
+    if (!revealItems.length) return;
 
     if (
       typeof IntersectionObserver === "undefined" ||
       window.matchMedia("(prefers-reduced-motion: reduce)").matches
     ) {
-      revealItems.forEach((item) => item.classList.add("is-visible"))
-      return
+      revealItems.forEach((item) => item.classList.add("is-visible"));
+      return;
     }
 
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (!entry.isIntersecting) return
+          if (!entry.isIntersecting) return;
 
-          entry.target.classList.add("is-visible")
-          observer.unobserve(entry.target)
-        })
+          entry.target.classList.add("is-visible");
+          observer.unobserve(entry.target);
+        });
       },
       {
         threshold: 0.16,
         rootMargin: "0px 0px -8% 0px",
-      }
-    )
+      },
+    );
 
-    revealItems.forEach((item) => observer.observe(item))
+    revealItems.forEach((item) => observer.observe(item));
 
-    return () => observer.disconnect()
-  }, [])
+    return () => observer.disconnect();
+  }, []);
 
   const scrollToTop = () => {
     window.scrollTo({
       top: 0,
       behavior: "smooth",
-    })
-  }
+    });
+  };
 
   return (
     <div className="-m-6 bg-background">
-
       <section className="relative mx-auto max-w-7xl px-6 pt-20 pb-10 sm:px-8 lg:px-12">
         <div className="home-reveal-up">
           <div className="inline-flex w-fit items-center gap-2 rounded-full border bg-muted px-4 py-1.5 text-sm font-medium text-foreground">
@@ -328,20 +327,14 @@ export default function Home() {
             </Link>
             {isAuthenticated ? (
               <Link to="/backtest">
-                <Button
-                  variant="outline"
-                  className="cursor-pointer"
-                >
+                <Button variant="outline" className="cursor-pointer">
                   Open Backtesting
                   <FlaskConical className="h-4 w-4" />
                 </Button>
               </Link>
             ) : (
               <Link to="/auth">
-                <Button
-                  variant="outline"
-                  className="cursor-pointer"
-                >
+                <Button variant="outline" className="cursor-pointer">
                   Sign In
                 </Button>
               </Link>
@@ -358,27 +351,16 @@ export default function Home() {
               to="/"
               className="font-medium text-primary transition-colors hover:text-primary/80"
               onClick={(event) => {
-                event.preventDefault()
-                scrollToTop()
+                event.preventDefault();
+                scrollToTop();
               }}
             >
               {APP_NAME}
             </Link>
             . All rights reserved.
           </p>
-          <p className="mt-1 text-muted-foreground sm:mt-0">
-            Developed by{" "}
-            <a
-              href={DEVELOPER_URL}
-              target="_blank"
-              rel="noreferrer"
-              className="font-medium text-primary transition-colors hover:text-primary/80"
-            >
-              {DEVELOPER_NAME}
-            </a>
-          </p>
         </div>
       </footer>
     </div>
-  )
+  );
 }

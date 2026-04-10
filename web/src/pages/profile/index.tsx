@@ -10,7 +10,6 @@ import {
 import {
   Bookmark,
   BookmarkCheck,
-  ChevronLeft,
   CandlestickChart,
   ChevronDown,
   Copy,
@@ -18,7 +17,6 @@ import {
   ListFilter,
   Loader2,
   Pencil,
-  Save,
   Search,
   SearchX,
   TrendingUp,
@@ -75,6 +73,14 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { editProfile } from "@/api/auth";
 import { fetchUserByUsername } from "@/api/user";
@@ -283,6 +289,7 @@ export default function Profile() {
 
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUsernameInvalid, setIsUsernameInvalid] = useState(false);
   const [viewedUser, setViewedUser] = useState<PublicProfileUser | null>(null);
   const [isProfileLoading, setIsProfileLoading] = useState(false);
   const [profileLoadError, setProfileLoadError] = useState("");
@@ -336,33 +343,12 @@ export default function Profile() {
     routeUsername === user?.username?.toLowerCase();
   const canEditProfile = Boolean(user) && isOwnProfileRoute;
   const currentProfileDialogUrl = `${location.pathname}?dialog=profile&tab=${activeProfileTab}`;
-  const fromProfileUrl =
-    typeof location.state === "object" &&
-    location.state !== null &&
-    "fromProfileUrl" in location.state &&
-    typeof (location.state as { fromProfileUrl?: unknown }).fromProfileUrl ===
-      "string"
-      ? (location.state as { fromProfileUrl: string }).fromProfileUrl
-      : "";
   const profileListRequestIdRef = useRef<Record<ProfileDialogTab, number>>({
     followers: 0,
     following: 0,
     strategies: 0,
     backtests: 0,
   });
-  const onBack = () => {
-    if (fromProfileUrl) {
-      navigate(fromProfileUrl, { replace: true });
-      return;
-    }
-
-    if (typeof window !== "undefined" && window.history.length > 1) {
-      navigate(-1);
-      return;
-    }
-
-    navigate(isAuthenticated ? "/dashboard" : "/");
-  };
 
   useEffect(() => {
     const normalizedTab =
@@ -804,16 +790,6 @@ export default function Profile() {
   ) {
     return (
       <div className="mx-auto w-full max-w-4xl">
-        <Button
-          variant="outline"
-          className="theme-glass-button mb-3 w-fit"
-          onClick={onBack}
-        >
-          <span className="inline-flex items-center gap-1.5">
-            <ChevronLeft className="h-4 w-4" />
-            Back
-          </span>
-        </Button>
         <h1 className="text-3xl font-bold">Profile</h1>
         <p className="mt-2 text-muted-foreground">Public profile details.</p>
 
@@ -835,16 +811,6 @@ export default function Profile() {
   if (!canEditProfile && isProfileLoading) {
     return (
       <div className="mx-auto w-full max-w-4xl">
-        <Button
-          variant="outline"
-          className="theme-glass-button mb-3 w-fit"
-          onClick={onBack}
-        >
-          <span className="inline-flex items-center gap-1.5">
-            <ChevronLeft className="h-4 w-4" />
-            Back
-          </span>
-        </Button>
         <h1 className="text-3xl font-bold">Profile</h1>
         <p className="mt-2 text-muted-foreground">Public profile details.</p>
 
@@ -863,6 +829,7 @@ export default function Profile() {
       username: user.username || "",
       avatar: user.avatar || "",
     });
+    setIsUsernameInvalid(false);
     setSelectedAvatarFileName("");
     setIsEditing(false);
   };
@@ -874,6 +841,7 @@ export default function Profile() {
       username: user.username || "",
       avatar: user.avatar || "",
     });
+    setIsUsernameInvalid(false);
     setSelectedAvatarFileName("");
     setIsEditing(true);
   };
@@ -889,8 +857,8 @@ export default function Profile() {
       return;
     }
 
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error("Image must be 2MB or smaller");
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be 5MB or smaller");
       setSelectedAvatarFileName("");
       return;
     }
@@ -946,6 +914,7 @@ export default function Profile() {
     if (Object.keys(payload).length === 0) return;
 
     setIsSaving(true);
+    setIsUsernameInvalid(false);
 
     const promise = editProfile(payload);
 
@@ -964,6 +933,19 @@ export default function Profile() {
         navigate(`/${nextUsername}`, { replace: true });
       })
       .catch((error: unknown) => {
+        const response = (
+          error as {
+            response?: { status?: number; data?: { message?: string } };
+          }
+        ).response;
+
+        if (
+          response?.status === 409 ||
+          (response?.status === 400 && payload.username !== undefined)
+        ) {
+          setIsUsernameInvalid(true);
+        }
+
         toast.error(getApiErrorMessage(error, "Failed to update profile!"));
       });
 
@@ -976,9 +958,11 @@ export default function Profile() {
     setIsFollowUpdating(true);
 
     try {
-      const response = isFollowing
-        ? await deleteFollow(viewedUser._id)
-        : await createFollow(viewedUser._id);
+      if (isFollowing) {
+        await deleteFollow(viewedUser._id);
+      } else {
+        await createFollow(viewedUser._id);
+      }
 
       setIsFollowing((prev) => !prev);
       setViewedUser((prev) =>
@@ -1006,13 +990,6 @@ export default function Profile() {
           },
         });
       }
-
-      toast.success(
-        response?.message ||
-          (isFollowing
-            ? "User unfollowed successfully."
-            : "User followed successfully."),
-      );
     } catch (error) {
       toast.error(getApiErrorMessage(error, "Failed to update follow status"));
     } finally {
@@ -1049,24 +1026,18 @@ export default function Profile() {
     const response = await toggleStrategyBookmark(strategyId);
     if (!response) return;
 
-    if (response.status === "success") {
-      toast.success(response.message);
-      return;
+    if (response.status !== "success") {
+      toast.error(response.message);
     }
-
-    toast.error(response.message);
   };
 
   const onToggleProfileBacktestBookmark = async (backtestId: string) => {
     const response = await toggleBacktestBookmark(backtestId);
     if (!response) return;
 
-    if (response.status === "success") {
-      toast.success(response.message);
-      return;
+    if (response.status !== "success") {
+      toast.error(response.message);
     }
-
-    toast.error(response.message);
   };
 
   const onToggleFollowListUser = async (targetUser: ProfileFollowListItem) => {
@@ -1083,9 +1054,11 @@ export default function Profile() {
     });
 
     try {
-      const response = isCurrentlyFollowing
-        ? await deleteFollow(targetUser._id)
-        : await createFollow(targetUser._id);
+      if (isCurrentlyFollowing) {
+        await deleteFollow(targetUser._id);
+      } else {
+        await createFollow(targetUser._id);
+      }
 
       setFollowListStatusById((prev) => ({
         ...prev,
@@ -1116,13 +1089,6 @@ export default function Profile() {
           },
         });
       }
-
-      toast.success(
-        response?.message ||
-          (isCurrentlyFollowing
-            ? "User unfollowed successfully."
-            : "User followed successfully."),
-      );
     } catch (error) {
       toast.error(getApiErrorMessage(error, "Failed to update follow status"));
     } finally {
@@ -1223,16 +1189,6 @@ export default function Profile() {
   return (
     <>
       <div className="mx-auto w-full max-w-4xl">
-        <Button
-          variant="outline"
-          className="theme-glass-button mb-3 w-fit"
-          onClick={onBack}
-        >
-          <span className="inline-flex items-center gap-1.5">
-            <ChevronLeft className="h-4 w-4" />
-            Back
-          </span>
-        </Button>
         <h1 className="text-3xl font-bold">Profile</h1>
         <p className="mt-2 text-muted-foreground">
           {canEditProfile
@@ -1243,9 +1199,7 @@ export default function Profile() {
         <div
           className={cn(
             "mt-6 grid items-start gap-6",
-            canEditProfile
-              ? "md:grid-cols-[280px_1fr]"
-              : "md:grid-cols-[minmax(0,1fr)]",
+            "md:grid-cols-[minmax(0,1fr)]",
           )}
         >
           <Card className="self-start">
@@ -1320,6 +1274,16 @@ export default function Profile() {
                 ).toLocaleDateString()}
               </div>
 
+              {canEditProfile ? (
+                <Button
+                  onClick={onStartEditing}
+                  variant="outline"
+                  className="w-full"
+                >
+                  Edit Profile
+                </Button>
+              ) : null}
+
               {!canEditProfile && viewedUser?._id ? (
                 <ButtonGroup
                   aria-label="Follow actions"
@@ -1354,7 +1318,6 @@ export default function Profile() {
                     <DropdownMenuTrigger asChild>
                       <Button
                         type="button"
-                        size="icon-sm"
                         variant={isFollowing ? "outline" : "default"}
                         className="-ml-px shrink-0 rounded-l-none"
                         aria-label="More follow actions"
@@ -1407,19 +1370,27 @@ export default function Profile() {
               ) : null}
             </CardContent>
           </Card>
+        </div>
+      </div>
+      {canEditProfile ? (
+        <Sheet
+          open={isEditing}
+          onOpenChange={(open) => {
+            if (!open) {
+              onCancel();
+            }
+          }}
+        >
+          <SheetContent side="right" className="w-full sm:max-w-md">
+            <SheetHeader className="border-b px-6 py-5">
+              <SheetTitle>Edit Profile</SheetTitle>
+              <SheetDescription>
+                Update your public profile details.
+              </SheetDescription>
+            </SheetHeader>
 
-          {canEditProfile ? (
-            <Card>
-              <CardHeader>
-                <div>
-                  <CardTitle>Edit Profile</CardTitle>
-                  <CardDescription>
-                    Keep your profile up to date.
-                  </CardDescription>
-                </div>
-              </CardHeader>
-
-              <CardContent className="space-y-4">
+            <div className="flex-1 overflow-y-auto px-6 py-5">
+              <div className="space-y-5">
                 <div className="space-y-2">
                   <Label>Avatar</Label>
                   <div className="flex items-center gap-3">
@@ -1431,52 +1402,48 @@ export default function Profile() {
                       <AvatarFallback>{initials}</AvatarFallback>
                     </Avatar>
 
-                    {isEditing && (
-                      <>
-                        <input
-                          ref={avatarInputRef}
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={onAvatarSelect}
-                        />
-                        <div className="relative w-full sm:max-w-[12rem]">
-                          <ImagePlus className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                          <Input
-                            readOnly
-                            value={selectedAvatarFileName || "Choose avatar"}
-                            disabled={isSaving}
-                            className="cursor-pointer pr-10 pl-9 text-sm text-muted-foreground"
-                            onClick={() => avatarInputRef.current?.click()}
-                          />
-                          {selectedAvatarFileName ? (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="absolute top-1/2 right-1 h-7 w-7 -translate-y-1/2"
-                              disabled={isSaving}
-                              onClick={onRemoveSelectedAvatar}
-                              aria-label="Remove selected avatar"
-                              title="Remove selected avatar"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          ) : null}
-                        </div>
-                      </>
-                    )}
+                    <input
+                      ref={avatarInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={onAvatarSelect}
+                    />
+                    <div className="relative w-full sm:max-w-[12rem]">
+                      <ImagePlus className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        readOnly
+                        value={selectedAvatarFileName || "Choose avatar"}
+                        disabled={isSaving}
+                        className="cursor-pointer pr-10 pl-9 text-sm text-muted-foreground"
+                        onClick={() => avatarInputRef.current?.click()}
+                      />
+                      {selectedAvatarFileName ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute top-1/2 right-1 h-7 w-7 -translate-y-1/2"
+                          disabled={isSaving}
+                          onClick={onRemoveSelectedAvatar}
+                          aria-label="Remove selected avatar"
+                          title="Remove selected avatar"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <div className="flex items-center gap-1.5">
-                    <Label htmlFor="name">Name</Label>
+                    <Label htmlFor="profile-sheet-name">Name</Label>
                   </div>
                   <Input
-                    id="name"
+                    id="profile-sheet-name"
                     value={form.name}
-                    disabled={!isEditing || isSaving}
+                    disabled={isSaving}
                     onChange={(event) =>
                       setForm((prev) => ({
                         ...prev,
@@ -1488,66 +1455,47 @@ export default function Profile() {
 
                 <div className="space-y-2">
                   <div className="flex items-center gap-1.5">
-                    <Label htmlFor="username">Username</Label>
+                    <Label htmlFor="profile-sheet-username">Username</Label>
                   </div>
                   <Input
-                    id="username"
+                    id="profile-sheet-username"
                     value={form.username}
-                    disabled={!isEditing || isSaving}
-                    onChange={(event) =>
+                    aria-invalid={isUsernameInvalid}
+                    disabled={isSaving}
+                    onChange={(event) => {
+                      setIsUsernameInvalid(false);
                       setForm((prev) => ({
                         ...prev,
                         username: sanitizeUsername(event.target.value),
-                      }))
-                    }
+                      }));
+                    }}
                   />
                 </div>
+              </div>
+            </div>
 
-                <div className="pt-1">
-                  {!isEditing ? (
-                    <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-start">
-                      <Button
-                        onClick={onStartEditing}
-                        variant="outline"
-                        className="w-full sm:w-40"
-                      >
-                        <Pencil className="h-4 w-4" />
-                        Edit
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-start">
-                      <Button
-                        onClick={onSave}
-                        disabled={!hasChanged || isSaving || !isFormValid}
-                        className="w-full sm:w-40"
-                      >
-                        {isSaving ? (
-                          <Loader2 className="animate-spin" />
-                        ) : (
-                          <>
-                            <Save className="h-4 w-4" />
-                            Save Changes
-                          </>
-                        )}
-                      </Button>
-                      <Button
-                        onClick={onCancel}
-                        disabled={isSaving}
-                        variant="outline"
-                        className="w-full sm:w-40"
-                      >
-                        <X className="h-4 w-4" />
-                        Cancel
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ) : null}
-        </div>
-      </div>
+            <SheetFooter className="border-t px-6 pt-4 pb-6">
+              <Button
+                onClick={onSave}
+                disabled={
+                  !hasChanged || isSaving || !isFormValid || isUsernameInvalid
+                }
+                className="w-full sm:w-auto"
+              >
+                {isSaving ? <Loader2 className="animate-spin" /> : "Save"}
+              </Button>
+              <Button
+                onClick={onCancel}
+                disabled={isSaving}
+                variant="outline"
+                className="w-full sm:w-auto"
+              >
+                Cancel
+              </Button>
+            </SheetFooter>
+          </SheetContent>
+        </Sheet>
+      ) : null}
       <Dialog
         open={isProfileListsOpen}
         onOpenChange={(open) => {
@@ -1681,7 +1629,7 @@ export default function Profile() {
                       ref={
                         tab === activeProfileTab ? profileListScrollRef : null
                       }
-                      className="max-h-[320px] min-w-0 overflow-x-hidden overflow-y-auto px-4 py-4"
+                      className="max-h-[520px] min-w-0 overflow-x-hidden overflow-y-auto px-4 py-4"
                     >
                       {tabState.isLoading ? (
                         <div className="flex min-h-16 items-center justify-center py-2 text-sm text-muted-foreground">
@@ -1703,7 +1651,7 @@ export default function Profile() {
                                 (item) => (
                                   <div
                                     key={item._id}
-                                    className="flex min-w-0 items-center justify-between gap-3 rounded-xl border border-border/70 bg-card px-3 py-3"
+                                    className="flex min-w-0 items-center justify-between gap-3 border-b border-border/60 px-2 py-2 transition-colors hover:bg-muted/30 last:border-b-0"
                                   >
                                     <Link
                                       to={`/${item.username}`}
@@ -1745,6 +1693,7 @@ export default function Profile() {
                                       >
                                         <Button
                                           type="button"
+                                          size="sm"
                                           variant={
                                             followListStatusById[item._id]
                                               ? "outline"
@@ -1791,7 +1740,7 @@ export default function Profile() {
                                           <DropdownMenuTrigger asChild>
                                             <Button
                                               type="button"
-                                              size="icon-sm"
+                                              size="sm"
                                               variant={
                                                 followListStatusById[item._id]
                                                   ? "outline"
@@ -1860,7 +1809,7 @@ export default function Profile() {
                                 ).map((item) => (
                                   <div
                                     key={item._id}
-                                    className="flex min-w-0 items-start justify-between gap-3 rounded-xl border border-border/70 bg-card px-3 py-3"
+                                    className="flex min-w-0 items-center justify-between gap-3 border-b border-border/60 px-2 py-2 transition-colors hover:bg-muted/30 last:border-b-0"
                                   >
                                     <Link
                                       to={`/strategy/${item._id}`}
@@ -1904,6 +1853,7 @@ export default function Profile() {
                                     >
                                       <Button
                                         type="button"
+                                        size="sm"
                                         variant={
                                           bookmarkedStrategyIds.has(item._id)
                                             ? "outline"
@@ -1943,7 +1893,7 @@ export default function Profile() {
                                         <DropdownMenuTrigger asChild>
                                           <Button
                                             type="button"
-                                            size="icon-sm"
+                                            size="sm"
                                             variant={
                                               bookmarkedStrategyIds.has(
                                                 item._id,
@@ -2014,7 +1964,7 @@ export default function Profile() {
                                   return (
                                     <div
                                       key={item._id}
-                                      className="flex min-w-0 items-start justify-between gap-3 rounded-xl border border-border/70 bg-card px-3 py-3"
+                                      className="flex min-w-0 items-center justify-between gap-3 border-b border-border/60 px-2 py-2 transition-colors hover:bg-muted/30 last:border-b-0"
                                     >
                                       <Link
                                         to={`/backtest/${item._id}`}
@@ -2053,6 +2003,7 @@ export default function Profile() {
                                       >
                                         <Button
                                           type="button"
+                                          size="sm"
                                           variant={
                                             bookmarkedBacktestIds.has(item._id)
                                               ? "outline"
@@ -2092,7 +2043,7 @@ export default function Profile() {
                                           <DropdownMenuTrigger asChild>
                                             <Button
                                               type="button"
-                                              size="icon-sm"
+                                              size="sm"
                                               variant={
                                                 bookmarkedBacktestIds.has(
                                                   item._id,
