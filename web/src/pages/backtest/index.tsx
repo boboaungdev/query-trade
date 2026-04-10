@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react"
-import { format } from "date-fns"
-import axios from "axios"
-import { useLocation, useNavigate, useParams } from "react-router-dom"
+import { useEffect, useMemo, useRef, useState } from "react";
+import { format } from "date-fns";
+import axios from "axios";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   AreaChart,
   ArrowRight,
@@ -27,32 +27,32 @@ import {
   ArrowLeftRight,
   Target,
   TrendingUp,
-} from "lucide-react"
-import { toast } from "sonner"
+} from "lucide-react";
+import { toast } from "sonner";
 
-import { getApiErrorMessage } from "@/api/axios"
-import { createBookmark, deleteBookmark } from "@/api/bookmark"
+import { getApiErrorMessage } from "@/api/axios";
+import { createBookmark, deleteBookmark } from "@/api/bookmark";
 import {
   fetchBacktestById,
   fetchExchangeData,
   runBacktest,
   updateBacktest,
-} from "@/api/backtest"
+} from "@/api/backtest";
 import {
   fetchStrategyById,
   fetchStrategies,
   type StrategySource,
-} from "@/api/strategy"
+} from "@/api/strategy";
 
-import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -61,7 +61,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -69,264 +69,247 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Toggle } from "@/components/ui/toggle"
-import { useAuthStore } from "@/store/auth"
-import { cn } from "@/lib/utils"
+} from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Toggle } from "@/components/ui/toggle";
+import { useAuthStore } from "@/store/auth";
+import { cn } from "@/lib/utils";
 
-type TimeframeMap = Record<string, string>
+type TimeframeMap = Record<string, string>;
 
 type ExchangeDataPayload = {
-  symbols: string[]
-  timeframes: TimeframeMap
-}
+  symbols: string[];
+  timeframes: TimeframeMap;
+};
 
 type ExchangeDataResponse = {
-  status: boolean
-  message: string
+  status: boolean;
+  message: string;
   result: {
-    data: ExchangeDataPayload
-  }
-}
+    data: ExchangeDataPayload;
+  };
+};
 
 type BacktestResult = {
-  initialBalance: number
-  finalBalance: number
-  totalPnL: number
-  totalTrades: number
-  wins: number
-  losses: number
-  winRate: number
-  profitFactor: number
-  maxDrawdownPercent: number
-  totalFees: number
-  averageTradePnL: number
-  equityCurves: Array<{ timestamp: number; equity: number }>
+  initialBalance: number;
+  finalBalance: number;
+  totalPnL: number;
+  totalTrades: number;
+  wins: number;
+  losses: number;
+  winRate: number;
+  profitFactor: number;
+  maxDrawdownPercent: number;
+  totalFees: number;
+  averageTradePnL: number;
+  equityCurves: Array<{ timestamp: number; equity: number }>;
   trades: Array<{
-    side: "buy" | "sell" | string
-    entryTime: number
-    exitTime: number
-    entryPrice: number
-    exitPrice: number
-    pnl: number
-    pnlPercent: number
-    exitReason: "stopLoss" | "takeProfit" | string
-  }>
-}
+    side: "buy" | "sell" | string;
+    entryTime: number;
+    exitTime: number;
+    entryPrice: number;
+    exitPrice: number;
+    pnl: number;
+    pnlPercent: number;
+    exitReason: "stopLoss" | "takeProfit" | string;
+  }>;
+};
 
 type BacktestRunResponse = {
-  status: boolean
-  message: string
+  status: boolean;
+  message: string;
   result: {
     backtest: {
-      _id: string
-      result: BacktestResult
-    }
-  }
-}
+      _id: string;
+      result: BacktestResult;
+    };
+  };
+};
 
 type EditableBacktestDetail = {
-  _id: string
-  exchange?: string
-  symbol: string
-  timeframe: string
-  startDate: string
-  endDate: string
-  initialBalance?: number
-  amountPerTrade: number
-  entryFeeRate?: number
-  exitFeeRate?: number
-  hedgeMode?: boolean
+  _id: string;
+  exchange?: string;
+  symbol: string;
+  timeframe: string;
+  startDate: string;
+  endDate: string;
+  initialBalance?: number;
+  amountPerTrade: number;
+  entryFeeRate?: number;
+  exitFeeRate?: number;
+  hedgeMode?: boolean;
   strategy?: {
-    _id?: string
-    name?: string
-  }
+    _id?: string;
+    name?: string;
+  };
   user?: {
-    _id?: string
-  }
-}
+    _id?: string;
+  };
+};
 
 type BacktestDraftSnapshot = {
-  symbol: string
-  timeframe: string
-  startDate: string
-  endDate: string
-  initialBalance: string
-  amountPerTrade: string
-  entryFeeRate: string
-  exitFeeRate: string
-  hedgeMode: boolean
-  strategyId: string
-}
+  symbol: string;
+  timeframe: string;
+  startDate: string;
+  endDate: string;
+  initialBalance: string;
+  amountPerTrade: string;
+  entryFeeRate: string;
+  exitFeeRate: string;
+  hedgeMode: boolean;
+  strategyId: string;
+};
 
 type StrategyItem = {
-  _id: string
-  name: string
-  isBookmarked?: boolean
-  isPublic?: boolean
+  _id: string;
+  name: string;
+  isBookmarked?: boolean;
+  isPublic?: boolean;
   stats?: {
-    viewCount?: number
-    bookmarkCount?: number
-  }
+    viewCount?: number;
+    bookmarkCount?: number;
+  };
   user?: {
-    _id?: string
-    username?: string
-  }
-}
+    _id?: string;
+    username?: string;
+  };
+};
 
 type StrategyListResult = {
-  total?: number
-  totalPage?: number
-  currentPage?: number
-  limitPerPage?: number
-  hasNextPage?: boolean
-  hasPrevPage?: boolean
-  strategies?: StrategyItem[]
-  indicators?: StrategyItem[]
-}
+  total?: number;
+  totalPage?: number;
+  currentPage?: number;
+  limitPerPage?: number;
+  hasNextPage?: boolean;
+  hasPrevPage?: boolean;
+  strategies?: StrategyItem[];
+  indicators?: StrategyItem[];
+};
 
 type StrategyListResponse = {
-  status: boolean
-  message: string
-  result: StrategyListResult
-}
+  status: boolean;
+  message: string;
+  result: StrategyListResult;
+};
 
-const inFlightRequestMap = new Map<string, Promise<unknown>>()
+const inFlightRequestMap = new Map<string, Promise<unknown>>();
 
 function dedupeRequest<T>(key: string, requestFn: () => Promise<T>) {
-  const existing = inFlightRequestMap.get(key)
+  const existing = inFlightRequestMap.get(key);
   if (existing) {
-    return existing as Promise<T>
+    return existing as Promise<T>;
   }
 
   const next = requestFn().finally(() => {
-    inFlightRequestMap.delete(key)
-  })
+    inFlightRequestMap.delete(key);
+  });
 
-  inFlightRequestMap.set(key, next)
-  return next
-}
-
-function getErrorMessage(error: unknown) {
-  if (typeof error === "object" && error !== null) {
-    const maybeError = error as {
-      response?: { data?: { message?: string } }
-      message?: string
-    }
-
-    return (
-      maybeError.response?.data?.message ||
-      maybeError.message ||
-      "Backtest failed"
-    )
-  }
-
-  return "Backtest failed"
+  inFlightRequestMap.set(key, next);
+  return next;
 }
 
 function toUtcStartOfDayIso(date: Date) {
   return new Date(
-    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0)
-  ).toISOString()
+    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0),
+  ).toISOString();
 }
 
 function normalizeSymbolText(value: string) {
-  return value.toLowerCase().replace(/[^a-z0-9]/g, "")
+  return value.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
 function sanitizeNumericInput(value: string, allowDecimal = true) {
-  const cleaned = value.replace(allowDecimal ? /[^0-9.]/g : /[^0-9]/g, "")
+  const cleaned = value.replace(allowDecimal ? /[^0-9.]/g : /[^0-9]/g, "");
 
   if (!allowDecimal) {
-    return cleaned
+    return cleaned;
   }
 
-  const [head, ...tail] = cleaned.split(".")
-  return tail.length > 0 ? `${head}.${tail.join("")}` : head
+  const [head, ...tail] = cleaned.split(".");
+  return tail.length > 0 ? `${head}.${tail.join("")}` : head;
 }
 
 export default function BacktestPage() {
-  const { backtestId = "" } = useParams()
-  const location = useLocation()
-  const navigate = useNavigate()
-  const user = useAuthStore((state) => state.user)
-  const isEditing = Boolean(backtestId)
+  const { backtestId = "" } = useParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const user = useAuthStore((state) => state.user);
+  const isEditing = Boolean(backtestId);
 
-  const [exchange, setExchange] = useState("binance")
-  const [symbol, setSymbol] = useState("")
-  const [timeframe, setTimeframe] = useState("")
+  const [exchange, setExchange] = useState("binance");
+  const [symbol, setSymbol] = useState("");
+  const [timeframe, setTimeframe] = useState("");
 
-  const [symbols, setSymbols] = useState<string[]>([])
-  const [timeframes, setTimeframes] = useState<TimeframeMap>({})
+  const [symbols, setSymbols] = useState<string[]>([]);
+  const [timeframes, setTimeframes] = useState<TimeframeMap>({});
 
-  const [symbolSearch, setSymbolSearch] = useState("")
-  const [isSymbolMenuOpen, setIsSymbolMenuOpen] = useState(false)
-  const symbolSearchInputRef = useRef<HTMLInputElement | null>(null)
-  const [visibleSymbolCount, setVisibleSymbolCount] = useState(20)
+  const [symbolSearch, setSymbolSearch] = useState("");
+  const [isSymbolMenuOpen, setIsSymbolMenuOpen] = useState(false);
+  const symbolSearchInputRef = useRef<HTMLInputElement | null>(null);
+  const [visibleSymbolCount, setVisibleSymbolCount] = useState(20);
 
-  const [strategies, setStrategies] = useState<StrategyItem[]>([])
-  const [strategySearch, setStrategySearch] = useState("")
-  const [isStrategyMenuOpen, setIsStrategyMenuOpen] = useState(false)
-  const strategySearchInputRef = useRef<HTMLInputElement | null>(null)
-  const [strategyPage, setStrategyPage] = useState(1)
-  const [strategyHasNextPage, setStrategyHasNextPage] = useState(false)
-  const [isAppendingStrategies, setIsAppendingStrategies] = useState(false)
+  const [strategies, setStrategies] = useState<StrategyItem[]>([]);
+  const [strategySearch, setStrategySearch] = useState("");
+  const [isStrategyMenuOpen, setIsStrategyMenuOpen] = useState(false);
+  const strategySearchInputRef = useRef<HTMLInputElement | null>(null);
+  const [strategyPage, setStrategyPage] = useState(1);
+  const [strategyHasNextPage, setStrategyHasNextPage] = useState(false);
+  const [isAppendingStrategies, setIsAppendingStrategies] = useState(false);
   const [strategySortBy, setStrategySortBy] = useState<
     "name" | "createdAt" | "updatedAt" | "popular"
-  >("name")
-  const [strategyOrder, setStrategyOrder] = useState<"asc" | "desc">("asc")
-  const [strategySource, setStrategySource] = useState<StrategySource>("all")
-  const [strategyPublicOnly, setStrategyPublicOnly] = useState(true)
-  const [selectedStrategyName, setSelectedStrategyName] = useState("")
-  const [strategyId, setStrategyId] = useState("")
-  const strategyIdRef = useRef("")
+  >("name");
+  const [strategyOrder, setStrategyOrder] = useState<"asc" | "desc">("asc");
+  const [strategySource, setStrategySource] = useState<StrategySource>("all");
+  const [strategyPublicOnly, setStrategyPublicOnly] = useState(true);
+  const [selectedStrategyName, setSelectedStrategyName] = useState("");
+  const [strategyId, setStrategyId] = useState("");
+  const strategyIdRef = useRef("");
   const [startDate, setStartDate] = useState<Date | undefined>(
-    new Date("2025-01-01T00:00:00Z")
-  )
+    new Date("2025-01-01T00:00:00Z"),
+  );
   const [endDate, setEndDate] = useState<Date | undefined>(
-    new Date("2025-03-01T00:00:00Z")
-  )
-  const [isStartDateOpen, setIsStartDateOpen] = useState(false)
-  const [isEndDateOpen, setIsEndDateOpen] = useState(false)
-  const [initialBalance, setInitialBalance] = useState("10000")
-  const [amountPerTrade, setAmountPerTrade] = useState("100")
-  const [entryFeeRate, setEntryFeeRate] = useState("0.00")
-  const [exitFeeRate, setExitFeeRate] = useState("0.00")
-  const [hedgeMode, setHedgeMode] = useState(false)
+    new Date("2025-03-01T00:00:00Z"),
+  );
+  const [isStartDateOpen, setIsStartDateOpen] = useState(false);
+  const [isEndDateOpen, setIsEndDateOpen] = useState(false);
+  const [initialBalance, setInitialBalance] = useState("10000");
+  const [amountPerTrade, setAmountPerTrade] = useState("100");
+  const [entryFeeRate, setEntryFeeRate] = useState("0.00");
+  const [exitFeeRate, setExitFeeRate] = useState("0.00");
+  const [hedgeMode, setHedgeMode] = useState(false);
 
-  const [isLoadingExchange, setIsLoadingExchange] = useState(true)
-  const [isLoadingStrategies, setIsLoadingStrategies] = useState(true)
-  const [isLoadingBacktest, setIsLoadingBacktest] = useState(isEditing)
-  const [isRunning, setIsRunning] = useState(false)
+  const [isLoadingExchange, setIsLoadingExchange] = useState(true);
+  const [isLoadingStrategies, setIsLoadingStrategies] = useState(true);
+  const [isLoadingBacktest, setIsLoadingBacktest] = useState(isEditing);
+  const [isRunning, setIsRunning] = useState(false);
   const [isPreparingStrategyEditor, setIsPreparingStrategyEditor] =
-    useState(false)
+    useState(false);
   const [canEditSelectedStrategy, setCanEditSelectedStrategy] = useState<
     boolean | null
-  >(null)
-  const [exchangeRefreshTick, setExchangeRefreshTick] = useState(0)
-  const [strategyRefreshTick, setStrategyRefreshTick] = useState(0)
-  const [hasExchangeData, setHasExchangeData] = useState(false)
-  const [hasHydratedFromBacktest, setHasHydratedFromBacktest] = useState(false)
+  >(null);
+  const [exchangeRefreshTick, setExchangeRefreshTick] = useState(0);
+  const [strategyRefreshTick, setStrategyRefreshTick] = useState(0);
+  const [hasExchangeData, setHasExchangeData] = useState(false);
+  const [hasHydratedFromBacktest, setHasHydratedFromBacktest] = useState(false);
   const [initialSnapshot, setInitialSnapshot] =
-    useState<BacktestDraftSnapshot | null>(null)
+    useState<BacktestDraftSnapshot | null>(null);
   const [updatingStrategyIds, setUpdatingStrategyIds] = useState<Set<string>>(
-    new Set()
-  )
+    new Set(),
+  );
   const preselectedStrategyId =
     typeof location.state === "object" &&
     location.state !== null &&
     "strategyId" in location.state &&
     typeof (location.state as { strategyId?: unknown }).strategyId === "string"
       ? (location.state as { strategyId: string }).strategyId
-      : ""
+      : "";
   const preselectedStrategyName =
     typeof location.state === "object" &&
     location.state !== null &&
@@ -334,77 +317,77 @@ export default function BacktestPage() {
     typeof (location.state as { strategyName?: unknown }).strategyName ===
       "string"
       ? (location.state as { strategyName: string }).strategyName
-      : ""
+      : "";
 
   useEffect(() => {
-    strategyIdRef.current = strategyId
-  }, [strategyId])
+    strategyIdRef.current = strategyId;
+  }, [strategyId]);
 
   useEffect(() => {
-    if (isEditing) return
-    if (!preselectedStrategyId) return
+    if (isEditing) return;
+    if (!preselectedStrategyId) return;
 
-    setStrategyId(preselectedStrategyId)
-    setSelectedStrategyName(preselectedStrategyName)
-  }, [isEditing, preselectedStrategyId, preselectedStrategyName])
+    setStrategyId(preselectedStrategyId);
+    setSelectedStrategyName(preselectedStrategyName);
+  }, [isEditing, preselectedStrategyId, preselectedStrategyName]);
 
   useEffect(() => {
     if (!isEditing) {
-      setHasHydratedFromBacktest(false)
-      setIsLoadingBacktest(false)
-      setInitialSnapshot(null)
-      return
+      setHasHydratedFromBacktest(false);
+      setIsLoadingBacktest(false);
+      setInitialSnapshot(null);
+      return;
     }
 
-    let isMounted = true
+    let isMounted = true;
 
     const loadBacktest = async () => {
-      setIsLoadingBacktest(true)
+      setIsLoadingBacktest(true);
 
       try {
         const response = (await fetchBacktestById(backtestId)) as {
-          result?: { backtest?: EditableBacktestDetail }
-        }
-        const backtest = response?.result?.backtest
+          result?: { backtest?: EditableBacktestDetail };
+        };
+        const backtest = response?.result?.backtest;
 
         if (!isMounted || !backtest) {
-          return
+          return;
         }
 
         if (backtest.user?._id && user?._id && backtest.user._id !== user._id) {
-          toast.error("You can only edit your own backtests")
-          navigate(`/backtest/${backtestId}`, { replace: true })
-          return
+          toast.error("You can only edit your own backtests");
+          navigate(`/backtest/${backtestId}`, { replace: true });
+          return;
         }
 
-        const nextSymbol = backtest.symbol || ""
-        const nextTimeframe = backtest.timeframe || ""
+        const nextSymbol = backtest.symbol || "";
+        const nextTimeframe = backtest.timeframe || "";
         const nextStartDate = backtest.startDate
           ? new Date(backtest.startDate)
-          : undefined
+          : undefined;
         const nextEndDate = backtest.endDate
           ? new Date(backtest.endDate)
-          : undefined
-        const nextInitialBalance = String(backtest.initialBalance ?? 10000)
-        const nextAmountPerTrade = String(backtest.amountPerTrade ?? 100)
-        const nextEntryFeeRate = String(backtest.entryFeeRate ?? 0)
-        const nextExitFeeRate = String(backtest.exitFeeRate ?? 0)
-        const nextHedgeMode = Boolean(backtest.hedgeMode)
-        const nextStrategyId = backtest.strategy?._id ?? ""
-        const nextStrategyName = backtest.strategy?.name ?? ""
+          : undefined;
+        const nextInitialBalance = String(backtest.initialBalance ?? 10000);
+        const nextAmountPerTrade = String(backtest.amountPerTrade ?? 100);
+        const nextEntryFeeRate = String(backtest.entryFeeRate ?? 0);
+        const nextExitFeeRate = String(backtest.exitFeeRate ?? 0);
+        const nextHedgeMode = Boolean(backtest.hedgeMode);
+        const nextStrategyId = backtest.strategy?._id ?? "";
+        const nextStrategyName = backtest.strategy?.name ?? "";
 
-        setSymbol(nextSymbol)
-        setTimeframe(nextTimeframe)
-        setExchange(backtest.exchange || "binance")
-        setStartDate(nextStartDate)
-        setEndDate(nextEndDate)
-        setInitialBalance(nextInitialBalance)
-        setAmountPerTrade(nextAmountPerTrade)
-        setEntryFeeRate(nextEntryFeeRate)
-        setExitFeeRate(nextExitFeeRate)
-        setHedgeMode(nextHedgeMode)
-        setStrategyId(nextStrategyId)
-        setSelectedStrategyName(nextStrategyName)
+        setSymbol(nextSymbol);
+        setTimeframe(nextTimeframe);
+        setExchange(backtest.exchange || "binance");
+        setStartDate(nextStartDate);
+        setEndDate(nextEndDate);
+        setInitialBalance(nextInitialBalance);
+        setAmountPerTrade(nextAmountPerTrade);
+        setEntryFeeRate(nextEntryFeeRate);
+        setExitFeeRate(nextExitFeeRate);
+        setHedgeMode(nextHedgeMode);
+        setStrategyId(nextStrategyId);
+        setSelectedStrategyName(nextStrategyName);
         setInitialSnapshot({
           symbol: nextSymbol,
           timeframe: nextTimeframe,
@@ -416,94 +399,88 @@ export default function BacktestPage() {
           exitFeeRate: nextExitFeeRate,
           hedgeMode: nextHedgeMode,
           strategyId: nextStrategyId,
-        })
-        setHasHydratedFromBacktest(true)
+        });
+        setHasHydratedFromBacktest(true);
       } catch (error) {
         if (!isMounted) {
-          return
+          return;
         }
 
-        toast.error(getApiErrorMessage(error, "Failed to load backtest"))
-        navigate("/leaderboard", { replace: true })
+        toast.error(getApiErrorMessage(error, "Failed to load backtest"));
+        navigate("/leaderboard", { replace: true });
       } finally {
         if (isMounted) {
-          setIsLoadingBacktest(false)
+          setIsLoadingBacktest(false);
         }
       }
-    }
+    };
 
-    void loadBacktest()
+    void loadBacktest();
 
     return () => {
-      isMounted = false
-    }
-  }, [backtestId, isEditing, navigate, user?._id])
+      isMounted = false;
+    };
+  }, [backtestId, isEditing, navigate, user?._id]);
 
   useEffect(() => {
     const loadExchangeData = async () => {
-      setIsLoadingExchange(true)
-      setHasExchangeData(false)
-      setIsLoadingStrategies(true)
+      setIsLoadingExchange(true);
+      setHasExchangeData(false);
+      setIsLoadingStrategies(true);
 
       try {
         const response = (await dedupeRequest(`exchange-data:${exchange}`, () =>
-          fetchExchangeData({ exchange })
-        )) as ExchangeDataResponse
+          fetchExchangeData({ exchange }),
+        )) as ExchangeDataResponse;
 
-        const payload = response?.result?.data
+        const payload = response?.result?.data;
 
         if (!payload?.symbols?.length) {
-          throw new Error("No symbols returned")
+          throw new Error("No symbols returned");
         }
 
-        setSymbols(payload.symbols)
-        setTimeframes(payload.timeframes)
+        setSymbols(payload.symbols);
+        setTimeframes(payload.timeframes);
 
-        const timeframeKeys = Object.keys(payload.timeframes)
+        const timeframeKeys = Object.keys(payload.timeframes);
         const preferredSymbol = payload.symbols.includes("BTC/USDT")
           ? "BTC/USDT"
-          : (payload.symbols[0] ?? "")
+          : (payload.symbols[0] ?? "");
         const preferredTimeframe = timeframeKeys.includes("15m")
           ? "15m"
-          : (timeframeKeys[0] ?? "")
+          : (timeframeKeys[0] ?? "");
 
         if (!isEditing || !hasHydratedFromBacktest) {
-          setSymbol(preferredSymbol)
-          setTimeframe(preferredTimeframe)
+          setSymbol(preferredSymbol);
+          setTimeframe(preferredTimeframe);
         }
-        setHasExchangeData(true)
-
+        setHasExchangeData(true);
       } catch (error) {
-        setStrategies([])
-        setStrategyHasNextPage(false)
+        setStrategies([]);
+        setStrategyHasNextPage(false);
         toast.error(
           getApiErrorMessage(error, "Failed to fetch exchange data"),
           {
             id: "backtest-exchange-fetch-error",
-          }
-        )
-        setIsLoadingStrategies(false)
+          },
+        );
+        setIsLoadingStrategies(false);
       } finally {
-        setIsLoadingExchange(false)
+        setIsLoadingExchange(false);
       }
-    }
+    };
 
-    void loadExchangeData()
-  }, [
-    exchange,
-    exchangeRefreshTick,
-    hasHydratedFromBacktest,
-    isEditing,
-  ])
+    void loadExchangeData();
+  }, [exchange, exchangeRefreshTick, hasHydratedFromBacktest, isEditing]);
 
   useEffect(() => {
     if (isLoadingExchange || !hasExchangeData) {
-      return
+      return;
     }
 
     const timer = setTimeout(() => {
       const loadStrategiesPage = async () => {
-        setIsLoadingStrategies(true)
+        setIsLoadingStrategies(true);
 
         try {
           const queryKey = [
@@ -515,7 +492,7 @@ export default function BacktestPage() {
             strategyOrder,
             strategySource,
             strategyPublicOnly,
-          ].join(":")
+          ].join(":");
 
           const response = (await dedupeRequest(queryKey, () =>
             fetchStrategies({
@@ -526,44 +503,44 @@ export default function BacktestPage() {
               source: strategySource,
               isPublic:
                 strategySource === "all" ? strategyPublicOnly : undefined,
-            })
-          )) as StrategyListResponse
+            }),
+          )) as StrategyListResponse;
 
-          const result = response?.result
-          const pageItems = result?.strategies ?? result?.indicators ?? []
+          const result = response?.result;
+          const pageItems = result?.strategies ?? result?.indicators ?? [];
           setStrategies((prev) => {
             if (strategyPage === 1) {
-              return pageItems
+              return pageItems;
             }
-            const merged = [...prev, ...pageItems]
+            const merged = [...prev, ...pageItems];
             return Array.from(
-              new Map(merged.map((item) => [item._id, item])).values()
-            )
-          })
-          setStrategyHasNextPage(Boolean(result?.hasNextPage))
-          setIsAppendingStrategies(false)
+              new Map(merged.map((item) => [item._id, item])).values(),
+            );
+          });
+          setStrategyHasNextPage(Boolean(result?.hasNextPage));
+          setIsAppendingStrategies(false);
 
           const matchedCurrent = pageItems.find(
-            (item) => item._id === strategyIdRef.current
-          )
+            (item) => item._id === strategyIdRef.current,
+          );
 
           if (matchedCurrent) {
-            setSelectedStrategyName(matchedCurrent.name)
+            setSelectedStrategyName(matchedCurrent.name);
           } else if (!strategyIdRef.current) {
-            setSelectedStrategyName("")
+            setSelectedStrategyName("");
           }
         } catch (error) {
-          toast.error(getApiErrorMessage(error, "Failed to fetch strategies"))
-          setIsAppendingStrategies(false)
+          toast.error(getApiErrorMessage(error, "Failed to fetch strategies"));
+          setIsAppendingStrategies(false);
         } finally {
-          setIsLoadingStrategies(false)
+          setIsLoadingStrategies(false);
         }
-      }
+      };
 
-      void loadStrategiesPage()
-    }, 250)
+      void loadStrategiesPage();
+    }, 250);
 
-    return () => clearTimeout(timer)
+    return () => clearTimeout(timer);
   }, [
     hasExchangeData,
     isLoadingExchange,
@@ -574,51 +551,51 @@ export default function BacktestPage() {
     strategyPage,
     strategySearch,
     strategySortBy,
-  ])
+  ]);
 
-  const timeframeOptions = Object.keys(timeframes)
+  const timeframeOptions = Object.keys(timeframes);
 
   const visibleSymbols = useMemo(() => {
-    const search = normalizeSymbolText(symbolSearch.trim())
+    const search = normalizeSymbolText(symbolSearch.trim());
 
     if (!search) {
-      return symbols.slice(0, visibleSymbolCount)
+      return symbols.slice(0, visibleSymbolCount);
     }
 
     return symbols
       .filter((item) => normalizeSymbolText(item).includes(search))
-      .slice(0, visibleSymbolCount)
-  }, [symbolSearch, symbols, visibleSymbolCount])
+      .slice(0, visibleSymbolCount);
+  }, [symbolSearch, symbols, visibleSymbolCount]);
 
   const totalSymbolMatches = useMemo(() => {
-    const search = normalizeSymbolText(symbolSearch.trim())
-    if (!search) return symbols.length
+    const search = normalizeSymbolText(symbolSearch.trim());
+    if (!search) return symbols.length;
     return symbols.filter((item) => normalizeSymbolText(item).includes(search))
-      .length
-  }, [symbolSearch, symbols])
+      .length;
+  }, [symbolSearch, symbols]);
 
   useEffect(() => {
-    setVisibleSymbolCount(20)
-  }, [symbolSearch, isSymbolMenuOpen])
+    setVisibleSymbolCount(20);
+  }, [symbolSearch, isSymbolMenuOpen]);
 
   const selectedStrategy = useMemo(
     () => strategies.find((item) => item._id === strategyId),
-    [strategies, strategyId]
-  )
+    [strategies, strategyId],
+  );
   useEffect(() => {
     if (!strategyId) {
-      setCanEditSelectedStrategy(null)
-      return
+      setCanEditSelectedStrategy(null);
+      return;
     }
 
     if (selectedStrategy?.user?._id) {
       setCanEditSelectedStrategy(
-        Boolean(user?._id) && selectedStrategy.user._id === user?._id
-      )
-      return
+        Boolean(user?._id) && selectedStrategy.user._id === user?._id,
+      );
+      return;
     }
 
-    let isActive = true
+    let isActive = true;
 
     const resolveStrategyOwnership = async () => {
       try {
@@ -626,43 +603,43 @@ export default function BacktestPage() {
           result?: {
             strategy?: {
               user?: {
-                _id?: string
-              }
-            }
-          }
-        }
+                _id?: string;
+              };
+            };
+          };
+        };
 
-        if (!isActive) return
+        if (!isActive) return;
 
         setCanEditSelectedStrategy(
           Boolean(user?._id) &&
-            response?.result?.strategy?.user?._id === user?._id
-        )
+            response?.result?.strategy?.user?._id === user?._id,
+        );
       } catch {
-        if (!isActive) return
-        setCanEditSelectedStrategy(null)
+        if (!isActive) return;
+        setCanEditSelectedStrategy(null);
       }
-    }
+    };
 
-    void resolveStrategyOwnership()
+    void resolveStrategyOwnership();
 
     return () => {
-      isActive = false
-    }
-  }, [selectedStrategy?.user?._id, strategyId, user?._id])
+      isActive = false;
+    };
+  }, [selectedStrategy?.user?._id, strategyId, user?._id]);
 
   const strategyEditorActionLabel =
     canEditSelectedStrategy === true
       ? "Edit"
       : canEditSelectedStrategy === false
         ? "Clone"
-        : "Modify"
+        : "Modify";
   const StrategyEditorActionIcon =
-    canEditSelectedStrategy === false ? CopyPlus : Settings2
+    canEditSelectedStrategy === false ? CopyPlus : Settings2;
   const selectedStrategyLabel =
-    selectedStrategy?.name || selectedStrategyName || "No strategy selected"
-  const currentStartDateIso = startDate ? toUtcStartOfDayIso(startDate) : ""
-  const currentEndDateIso = endDate ? toUtcStartOfDayIso(endDate) : ""
+    selectedStrategy?.name || selectedStrategyName || "No strategy selected";
+  const currentStartDateIso = startDate ? toUtcStartOfDayIso(startDate) : "";
+  const currentEndDateIso = endDate ? toUtcStartOfDayIso(endDate) : "";
   const isSetupReady =
     !isLoadingExchange &&
     !isLoadingStrategies &&
@@ -670,7 +647,7 @@ export default function BacktestPage() {
     symbols.length > 0 &&
     Boolean(symbol) &&
     Boolean(timeframe) &&
-    Boolean(strategyId)
+    Boolean(strategyId);
   const hasChanges = isEditing
     ? Boolean(
         initialSnapshot &&
@@ -683,36 +660,36 @@ export default function BacktestPage() {
           initialSnapshot.entryFeeRate !== entryFeeRate ||
           initialSnapshot.exitFeeRate !== exitFeeRate ||
           initialSnapshot.hedgeMode !== hedgeMode ||
-          initialSnapshot.strategyId !== strategyId)
+          initialSnapshot.strategyId !== strategyId),
       )
-    : true
+    : true;
 
   const onToggleStrategyBookmark = async (strategyIdToToggle: string) => {
     if (!user?._id) {
-      toast.error("Please sign in to bookmark strategies.")
-      return
+      toast.error("Please sign in to bookmark strategies.");
+      return;
     }
 
     const currentStrategy = strategies.find(
-      (item) => item._id === strategyIdToToggle
-    )
-    if (!currentStrategy) return
+      (item) => item._id === strategyIdToToggle,
+    );
+    if (!currentStrategy) return;
 
     if (updatingStrategyIds.has(strategyIdToToggle)) {
-      return
+      return;
     }
 
-    const isBookmarked = Boolean(currentStrategy.isBookmarked)
+    const isBookmarked = Boolean(currentStrategy.isBookmarked);
     const updateStrategyBookmarkCount = (delta: 1 | -1) => {
       setStrategies((prev) =>
         prev.map((item) => {
-          if (item._id !== strategyIdToToggle) return item
+          if (item._id !== strategyIdToToggle) return item;
 
           const current =
             typeof item.stats?.bookmarkCount === "number"
               ? item.stats.bookmarkCount
-              : 0
-          const next = Math.max(0, current + delta)
+              : 0;
+          const next = Math.max(0, current + delta);
 
           return {
             ...item,
@@ -720,94 +697,94 @@ export default function BacktestPage() {
               ...item.stats,
               bookmarkCount: next,
             },
-          }
-        })
-      )
-    }
+          };
+        }),
+      );
+    };
 
-    setUpdatingStrategyIds((prev) => new Set(prev).add(strategyIdToToggle))
+    setUpdatingStrategyIds((prev) => new Set(prev).add(strategyIdToToggle));
 
     try {
       if (isBookmarked) {
         const response = await deleteBookmark({
           targetType: "strategy",
           targetId: strategyIdToToggle,
-        })
+        });
 
         setStrategies((prev) =>
           prev.map((item) =>
             item._id === strategyIdToToggle
               ? { ...item, isBookmarked: false }
-              : item
-          )
-        )
-        updateStrategyBookmarkCount(-1)
+              : item,
+          ),
+        );
+        updateStrategyBookmarkCount(-1);
         if (strategySource === "bookmarked") {
           setStrategies((prev) =>
-            prev.filter((item) => item._id !== strategyIdToToggle)
-          )
+            prev.filter((item) => item._id !== strategyIdToToggle),
+          );
         }
-        toast.success(response?.message || "Bookmark removed successfully.")
+        toast.success(response?.message || "Bookmark removed successfully.");
       } else {
         const response = await createBookmark({
           targetType: "strategy",
           target: strategyIdToToggle,
-        })
+        });
 
         setStrategies((prev) =>
           prev.map((item) =>
             item._id === strategyIdToToggle
               ? { ...item, isBookmarked: true }
-              : item
-          )
-        )
-        updateStrategyBookmarkCount(1)
+              : item,
+          ),
+        );
+        updateStrategyBookmarkCount(1);
         if (strategySource === "bookmarked") {
-          setStrategyPage(1)
-          setStrategyRefreshTick((prev) => prev + 1)
+          setStrategyPage(1);
+          setStrategyRefreshTick((prev) => prev + 1);
         }
-        toast.success(response?.message || "Bookmarked successfully.")
+        toast.success(response?.message || "Bookmarked successfully.");
       }
     } catch (error) {
       const status =
         typeof error === "object" && error !== null
           ? (error as { response?: { status?: number } }).response?.status
-          : undefined
+          : undefined;
 
       if (isBookmarked && status === 404) {
         setStrategies((prev) =>
           prev.map((item) =>
             item._id === strategyIdToToggle
               ? { ...item, isBookmarked: false }
-              : item
-          )
-        )
-        updateStrategyBookmarkCount(-1)
+              : item,
+          ),
+        );
+        updateStrategyBookmarkCount(-1);
         if (strategySource === "bookmarked") {
           setStrategies((prev) =>
-            prev.filter((item) => item._id !== strategyIdToToggle)
-          )
+            prev.filter((item) => item._id !== strategyIdToToggle),
+          );
         }
-        toast.success("Bookmark removed successfully.")
-        return
+        toast.success("Bookmark removed successfully.");
+        return;
       }
 
-      toast.error(getApiErrorMessage(error, "Failed to update bookmark"))
+      toast.error(getApiErrorMessage(error, "Failed to update bookmark"));
     } finally {
       setUpdatingStrategyIds((prev) => {
-        const next = new Set(prev)
-        next.delete(strategyIdToToggle)
-        return next
-      })
+        const next = new Set(prev);
+        next.delete(strategyIdToToggle);
+        return next;
+      });
     }
-  }
+  };
 
   const onOpenStrategyEditor = async () => {
-    if (!strategyId) return
+    if (!strategyId) return;
 
     if (canEditSelectedStrategy === true) {
-      navigate(`/strategy/${strategyId}/edit`)
-      return
+      navigate(`/strategy/${strategyId}/edit`);
+      return;
     }
 
     if (canEditSelectedStrategy === false) {
@@ -816,31 +793,31 @@ export default function BacktestPage() {
           duplicateStrategyId: strategyId,
           duplicateStrategyName: selectedStrategy?.name ?? selectedStrategyName,
         },
-      })
-      return
+      });
+      return;
     }
 
-    setIsPreparingStrategyEditor(true)
+    setIsPreparingStrategyEditor(true);
 
     try {
       const response = (await fetchStrategyById(strategyId)) as {
         result?: {
           strategy?: {
-            _id?: string
-            name?: string
+            _id?: string;
+            name?: string;
             user?: {
-              _id?: string
-            }
-          }
-        }
-      }
+              _id?: string;
+            };
+          };
+        };
+      };
 
-      const strategy = response?.result?.strategy
-      const isOwner = Boolean(user?._id) && strategy?.user?._id === user?._id
+      const strategy = response?.result?.strategy;
+      const isOwner = Boolean(user?._id) && strategy?.user?._id === user?._id;
 
       if (isOwner) {
-        navigate(`/strategy/${strategyId}/edit`)
-        return
+        navigate(`/strategy/${strategyId}/edit`);
+        return;
       }
 
       navigate("/strategy/create", {
@@ -848,69 +825,69 @@ export default function BacktestPage() {
           duplicateStrategyId: strategyId,
           duplicateStrategyName: strategy?.name ?? selectedStrategyName,
         },
-      })
+      });
     } catch (error) {
-      toast.error(getApiErrorMessage(error, "Failed to open strategy editor"))
+      toast.error(getApiErrorMessage(error, "Failed to open strategy editor"));
     } finally {
-      setIsPreparingStrategyEditor(false)
+      setIsPreparingStrategyEditor(false);
     }
-  }
+  };
 
   const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
+    event.preventDefault();
 
-    const parsedInitialBalance = Number(initialBalance)
-    const parsedAmountPerTrade = Number(amountPerTrade)
-    const parsedEntryFee = Number(entryFeeRate)
-    const parsedExitFee = Number(exitFeeRate)
+    const parsedInitialBalance = Number(initialBalance);
+    const parsedAmountPerTrade = Number(amountPerTrade);
+    const parsedEntryFee = Number(entryFeeRate);
+    const parsedExitFee = Number(exitFeeRate);
 
     if (!Number.isFinite(parsedInitialBalance) || parsedInitialBalance <= 0) {
-      toast.error("Initial balance must be greater than 0")
-      return
+      toast.error("Initial balance must be greater than 0");
+      return;
     }
 
     if (!Number.isFinite(parsedAmountPerTrade) || parsedAmountPerTrade <= 0) {
-      toast.error("Amount per trade must be greater than 0")
-      return
+      toast.error("Amount per trade must be greater than 0");
+      return;
     }
 
     if (!symbol.trim()) {
-      toast.error("Please select a symbol")
-      return
+      toast.error("Please select a symbol");
+      return;
     }
 
     if (!timeframe.trim()) {
-      toast.error("Please select a timeframe")
-      return
+      toast.error("Please select a timeframe");
+      return;
     }
 
     if (!strategyId.trim()) {
-      toast.error("Strategy ID is required")
-      return
+      toast.error("Strategy ID is required");
+      return;
     }
 
     if (!startDate || !endDate) {
-      toast.error("Please select start and end dates")
-      return
+      toast.error("Please select start and end dates");
+      return;
     }
 
-    const startDateIso = toUtcStartOfDayIso(startDate)
-    const endDateIso = toUtcStartOfDayIso(endDate)
+    const startDateIso = toUtcStartOfDayIso(startDate);
+    const endDateIso = toUtcStartOfDayIso(endDate);
 
     if (
       Number.isNaN(new Date(startDateIso).getTime()) ||
       Number.isNaN(new Date(endDateIso).getTime())
     ) {
-      toast.error("Please provide valid start and end dates")
-      return
+      toast.error("Please provide valid start and end dates");
+      return;
     }
 
     if (new Date(startDateIso).getTime() >= new Date(endDateIso).getTime()) {
-      toast.error("Start date must be before end date")
-      return
+      toast.error("Start date must be before end date");
+      return;
     }
 
-    setIsRunning(true)
+    setIsRunning(true);
     try {
       const payload = {
         exchange,
@@ -924,45 +901,35 @@ export default function BacktestPage() {
         exitFeeRate: parsedExitFee,
         strategyId: strategyId.trim(),
         hedgeMode,
-      }
+      };
 
       const backtestPromise = (
         isEditing ? updateBacktest(backtestId, payload) : runBacktest(payload)
-      ) as Promise<BacktestRunResponse>
+      ) as Promise<BacktestRunResponse>;
 
-      void toast.promise(backtestPromise, {
-        loading: isEditing ? "Updating backtest..." : "Backtesting...",
-        success: (response) =>
-          response.message ||
-          (isEditing
-            ? "Backtest updated successfully"
-            : "Backtest completed successfully"),
-        error: (error) => getErrorMessage(error),
-      })
-
-      const response = await backtestPromise
-      const nextResult = response?.result?.backtest?.result
+      const response = await backtestPromise;
+      const nextResult = response?.result?.backtest?.result;
 
       if (!nextResult) {
-        throw new Error("Invalid backtest result")
+        throw new Error("Invalid backtest result");
       }
 
-      const nextBacktestId = response?.result?.backtest?._id
+      const nextBacktestId = response?.result?.backtest?._id;
 
       if (!nextBacktestId) {
-        throw new Error("Saved backtest ID missing")
+        throw new Error("Saved backtest ID missing");
       }
 
-      navigate(`/backtest/${nextBacktestId}`)
+      navigate(`/backtest/${nextBacktestId}`);
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        toast.error(getApiErrorMessage(error, "Backtest failed"))
-        return
+        toast.error(getApiErrorMessage(error, "Backtest failed"));
+        return;
       }
     } finally {
-      setIsRunning(false)
+      setIsRunning(false);
     }
-  }
+  };
 
   return (
     <div className="mx-auto w-full max-w-6xl min-w-0 space-y-4 overflow-x-hidden sm:space-y-6">
@@ -1063,13 +1030,13 @@ export default function BacktestPage() {
                       <Dialog
                         open={isSymbolMenuOpen}
                         onOpenChange={(open) => {
-                          setIsSymbolMenuOpen(open)
+                          setIsSymbolMenuOpen(open);
                           if (open) {
-                            setVisibleSymbolCount(20)
+                            setVisibleSymbolCount(20);
                           }
                           if (!open) {
-                            setSymbolSearch("")
-                            setVisibleSymbolCount(20)
+                            setSymbolSearch("");
+                            setVisibleSymbolCount(20);
                           }
                         }}
                       >
@@ -1081,7 +1048,7 @@ export default function BacktestPage() {
                               "relative w-full justify-start overflow-hidden pr-10 text-left",
                               !isLoadingExchange &&
                                 !symbol &&
-                                "text-muted-foreground"
+                                "text-muted-foreground",
                             )}
                             disabled={isLoadingExchange}
                           >
@@ -1097,7 +1064,7 @@ export default function BacktestPage() {
                         <DialogContent
                           className="top-[8vh] max-h-[calc(100vh-4rem)] -translate-y-0 gap-0 overflow-hidden p-0 sm:top-[10vh] sm:max-w-2xl"
                           onOpenAutoFocus={(event) => {
-                            event.preventDefault()
+                            event.preventDefault();
                           }}
                         >
                           <DialogHeader className="border-b px-4 pt-4 pb-3">
@@ -1125,14 +1092,14 @@ export default function BacktestPage() {
                                 className="absolute top-1/2 right-1.5 h-6 w-6 -translate-y-1/2"
                                 disabled={isLoadingExchange}
                                 onClick={() => {
-                                  setVisibleSymbolCount(20)
-                                  setExchangeRefreshTick((prev) => prev + 1)
+                                  setVisibleSymbolCount(20);
+                                  setExchangeRefreshTick((prev) => prev + 1);
                                 }}
                               >
                                 <RefreshCcw
                                   className={cn(
                                     "h-3.5 w-3.5",
-                                    isLoadingExchange && "animate-spin"
+                                    isLoadingExchange && "animate-spin",
                                   )}
                                 />
                               </Button>
@@ -1147,17 +1114,17 @@ export default function BacktestPage() {
                             <ScrollArea
                               className="h-[320px] px-4 pb-4"
                               onScrollCapture={(event) => {
-                                const node = event.target as HTMLElement
+                                const node = event.target as HTMLElement;
                                 const distanceToBottom =
                                   node.scrollHeight -
                                   node.scrollTop -
-                                  node.clientHeight
+                                  node.clientHeight;
 
                                 if (
                                   distanceToBottom < 24 &&
                                   visibleSymbolCount < totalSymbolMatches
                                 ) {
-                                  setVisibleSymbolCount((prev) => prev + 20)
+                                  setVisibleSymbolCount((prev) => prev + 20);
                                 }
                               }}
                             >
@@ -1171,23 +1138,23 @@ export default function BacktestPage() {
                                       "flex w-full overflow-hidden rounded-lg border px-3.5 py-2 text-left text-sm transition-colors",
                                       item === symbol
                                         ? "border-primary/40 bg-muted"
-                                        : "border-border/70 bg-muted/40 hover:bg-accent"
+                                        : "border-border/70 bg-muted/40 hover:bg-accent",
                                     )}
                                     onClick={() => {
-                                      setSymbol(item)
-                                      setIsSymbolMenuOpen(false)
+                                      setSymbol(item);
+                                      setIsSymbolMenuOpen(false);
                                     }}
                                     onKeyDown={(event) => {
                                       if (
                                         event.key !== "Enter" &&
                                         event.key !== " "
                                       ) {
-                                        return
+                                        return;
                                       }
 
-                                      event.preventDefault()
-                                      setSymbol(item)
-                                      setIsSymbolMenuOpen(false)
+                                      event.preventDefault();
+                                      setSymbol(item);
+                                      setIsSymbolMenuOpen(false);
                                     }}
                                   >
                                     {item}
@@ -1212,7 +1179,7 @@ export default function BacktestPage() {
                             variant="outline"
                             className={cn(
                               "w-full justify-between",
-                              !timeframe && "text-muted-foreground"
+                              !timeframe && "text-muted-foreground",
                             )}
                             disabled={isLoadingExchange}
                           >
@@ -1272,7 +1239,7 @@ export default function BacktestPage() {
                               data-empty={!startDate}
                               className={cn(
                                 "w-full justify-start text-left font-normal",
-                                !startDate && "text-muted-foreground"
+                                !startDate && "text-muted-foreground",
                               )}
                             >
                               <CalendarIcon />
@@ -1289,9 +1256,9 @@ export default function BacktestPage() {
                               selected={startDate}
                               month={startDate}
                               onSelect={(date) => {
-                                setStartDate(date)
+                                setStartDate(date);
                                 if (date) {
-                                  setIsStartDateOpen(false)
+                                  setIsStartDateOpen(false);
                                 }
                               }}
                               disabled={{ after: new Date() }}
@@ -1316,7 +1283,7 @@ export default function BacktestPage() {
                               data-empty={!endDate}
                               className={cn(
                                 "w-full justify-start text-left font-normal",
-                                !endDate && "text-muted-foreground"
+                                !endDate && "text-muted-foreground",
                               )}
                             >
                               <CalendarIcon />
@@ -1333,9 +1300,9 @@ export default function BacktestPage() {
                               selected={endDate}
                               month={endDate}
                               onSelect={(date) => {
-                                setEndDate(date)
+                                setEndDate(date);
                                 if (date) {
-                                  setIsEndDateOpen(false)
+                                  setIsEndDateOpen(false);
                                 }
                               }}
                               disabled={{ after: new Date() }}
@@ -1360,7 +1327,7 @@ export default function BacktestPage() {
                               isPreparingStrategyEditor || isLoadingStrategies
                             }
                             onClick={() => {
-                              void onOpenStrategyEditor()
+                              void onOpenStrategyEditor();
                             }}
                           >
                             {isPreparingStrategyEditor ? (
@@ -1377,14 +1344,14 @@ export default function BacktestPage() {
                         <Dialog
                           open={isStrategyMenuOpen}
                           onOpenChange={(open) => {
-                            setIsStrategyMenuOpen(open)
+                            setIsStrategyMenuOpen(open);
                             if (open) {
-                              setStrategyPage(1)
+                              setStrategyPage(1);
                             }
                             if (!open) {
-                              setStrategySearch("")
-                              setStrategyPage(1)
-                              setIsAppendingStrategies(false)
+                              setStrategySearch("");
+                              setStrategyPage(1);
+                              setIsAppendingStrategies(false);
                             }
                           }}
                         >
@@ -1398,7 +1365,7 @@ export default function BacktestPage() {
                                 !isLoadingStrategies &&
                                   !selectedStrategy?.name &&
                                   !selectedStrategyName &&
-                                  "text-muted-foreground"
+                                  "text-muted-foreground",
                               )}
                               disabled={isLoadingStrategies}
                             >
@@ -1416,7 +1383,7 @@ export default function BacktestPage() {
                           <DialogContent
                             className="top-[8vh] max-h-[calc(100vh-4rem)] -translate-y-0 gap-0 overflow-hidden p-0 sm:top-[10vh] sm:max-w-2xl"
                             onOpenAutoFocus={(event) => {
-                              event.preventDefault()
+                              event.preventDefault();
                             }}
                           >
                             <DialogHeader className="border-b px-4 pt-4 pb-3">
@@ -1433,8 +1400,8 @@ export default function BacktestPage() {
                                   ref={strategySearchInputRef}
                                   value={strategySearch}
                                   onChange={(event) => {
-                                    setStrategySearch(event.target.value)
-                                    setStrategyPage(1)
+                                    setStrategySearch(event.target.value);
+                                    setStrategyPage(1);
                                   }}
                                   placeholder="Search"
                                   className="h-9 w-full pr-14 pl-7"
@@ -1447,15 +1414,17 @@ export default function BacktestPage() {
                                     className="h-6 w-6"
                                     disabled={isLoadingStrategies}
                                     onClick={() => {
-                                      setIsAppendingStrategies(false)
-                                      setStrategyPage(1)
-                                      setStrategyRefreshTick((prev) => prev + 1)
+                                      setIsAppendingStrategies(false);
+                                      setStrategyPage(1);
+                                      setStrategyRefreshTick(
+                                        (prev) => prev + 1,
+                                      );
                                     }}
                                   >
                                     <RefreshCcw
                                       className={cn(
                                         "h-3.5 w-3.5",
-                                        isLoadingStrategies && "animate-spin"
+                                        isLoadingStrategies && "animate-spin",
                                       )}
                                     />
                                   </Button>
@@ -1487,21 +1456,21 @@ export default function BacktestPage() {
                                             | "name"
                                             | "createdAt"
                                             | "updatedAt"
-                                            | "popular"
-                                          setStrategySortBy(nextSortBy)
+                                            | "popular";
+                                          setStrategySortBy(nextSortBy);
                                           if (nextSortBy === "popular") {
-                                            setStrategyOrder("desc")
+                                            setStrategyOrder("desc");
                                           }
                                           if (nextSortBy === "name") {
-                                            setStrategyOrder("asc")
+                                            setStrategyOrder("asc");
                                           }
                                           if (
                                             nextSortBy === "createdAt" ||
                                             nextSortBy === "updatedAt"
                                           ) {
-                                            setStrategyOrder("desc")
+                                            setStrategyOrder("desc");
                                           }
-                                          setStrategyPage(1)
+                                          setStrategyPage(1);
                                         }}
                                       >
                                         <DropdownMenuRadioItem value="popular">
@@ -1525,9 +1494,9 @@ export default function BacktestPage() {
                                         value={strategyOrder}
                                         onValueChange={(value) => {
                                           setStrategyOrder(
-                                            value as "asc" | "desc"
-                                          )
-                                          setStrategyPage(1)
+                                            value as "asc" | "desc",
+                                          );
+                                          setStrategyPage(1);
                                         }}
                                       >
                                         <DropdownMenuRadioItem value="asc">
@@ -1552,11 +1521,11 @@ export default function BacktestPage() {
                                   }
                                   className="h-7 rounded-md px-2.5 text-[11px]"
                                   onClick={(event) => {
-                                    event.preventDefault()
-                                    event.stopPropagation()
-                                    setStrategySource("all")
-                                    setStrategyPublicOnly(true)
-                                    setStrategyPage(1)
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    setStrategySource("all");
+                                    setStrategyPublicOnly(true);
+                                    setStrategyPage(1);
                                   }}
                                 >
                                   All
@@ -1570,11 +1539,11 @@ export default function BacktestPage() {
                                   }
                                   className="h-7 rounded-md px-2.5 text-[11px]"
                                   onClick={(event) => {
-                                    event.preventDefault()
-                                    event.stopPropagation()
-                                    setStrategySource("bookmarked")
-                                    setStrategyPublicOnly(false)
-                                    setStrategyPage(1)
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    setStrategySource("bookmarked");
+                                    setStrategyPublicOnly(false);
+                                    setStrategyPage(1);
                                   }}
                                 >
                                   Bookmarked
@@ -1588,11 +1557,11 @@ export default function BacktestPage() {
                                   }
                                   className="h-7 rounded-md px-2.5 text-[11px]"
                                   onClick={(event) => {
-                                    event.preventDefault()
-                                    event.stopPropagation()
-                                    setStrategySource("mine")
-                                    setStrategyPublicOnly(false)
-                                    setStrategyPage(1)
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    setStrategySource("mine");
+                                    setStrategyPublicOnly(false);
+                                    setStrategyPage(1);
                                   }}
                                 >
                                   My Strategy
@@ -1608,14 +1577,14 @@ export default function BacktestPage() {
                               <ScrollArea
                                 className={cn(
                                   "px-4 pb-4",
-                                  strategies.length > 4 && "h-[320px]"
+                                  strategies.length > 4 && "h-[320px]",
                                 )}
                                 onScrollCapture={(event) => {
-                                  const node = event.target as HTMLElement
+                                  const node = event.target as HTMLElement;
                                   const distanceToBottom =
                                     node.scrollHeight -
                                     node.scrollTop -
-                                    node.clientHeight
+                                    node.clientHeight;
 
                                   if (
                                     distanceToBottom < 24 &&
@@ -1623,14 +1592,14 @@ export default function BacktestPage() {
                                     !isLoadingStrategies &&
                                     !isAppendingStrategies
                                   ) {
-                                    setIsAppendingStrategies(true)
-                                    setStrategyPage((prev) => prev + 1)
+                                    setIsAppendingStrategies(true);
+                                    setStrategyPage((prev) => prev + 1);
                                   }
                                 }}
                               >
                                 <div className="space-y-1">
                                   {strategies.map((item) => {
-                                    const isSelected = item._id === strategyId
+                                    const isSelected = item._id === strategyId;
 
                                     return (
                                       <div
@@ -1641,25 +1610,25 @@ export default function BacktestPage() {
                                           "flex w-full overflow-hidden rounded-lg border px-3.5 py-2 text-left transition-colors",
                                           isSelected
                                             ? "border-primary/40 bg-muted"
-                                            : "border-border/70 bg-muted/40 hover:bg-accent"
+                                            : "border-border/70 bg-muted/40 hover:bg-accent",
                                         )}
                                         onClick={() => {
-                                          setStrategyId(item._id)
-                                          setSelectedStrategyName(item.name)
-                                          setIsStrategyMenuOpen(false)
+                                          setStrategyId(item._id);
+                                          setSelectedStrategyName(item.name);
+                                          setIsStrategyMenuOpen(false);
                                         }}
                                         onKeyDown={(event) => {
                                           if (
                                             event.key !== "Enter" &&
                                             event.key !== " "
                                           ) {
-                                            return
+                                            return;
                                           }
 
-                                          event.preventDefault()
-                                          setStrategyId(item._id)
-                                          setSelectedStrategyName(item.name)
-                                          setIsStrategyMenuOpen(false)
+                                          event.preventDefault();
+                                          setStrategyId(item._id);
+                                          setSelectedStrategyName(item.name);
+                                          setIsStrategyMenuOpen(false);
                                         }}
                                       >
                                         <div className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-2 text-[11px] text-muted-foreground sm:items-center">
@@ -1684,7 +1653,7 @@ export default function BacktestPage() {
                                                   "inline-flex h-4 w-4 items-center justify-center rounded-sm",
                                                   item.isBookmarked
                                                     ? "text-primary"
-                                                    : "text-muted-foreground"
+                                                    : "text-muted-foreground",
                                                 )}
                                                 aria-label={
                                                   item.isBookmarked
@@ -1697,18 +1666,18 @@ export default function BacktestPage() {
                                                     : "Add bookmark"
                                                 }
                                                 disabled={updatingStrategyIds.has(
-                                                  item._id
+                                                  item._id,
                                                 )}
                                                 onClick={(event) => {
-                                                  event.preventDefault()
-                                                  event.stopPropagation()
+                                                  event.preventDefault();
+                                                  event.stopPropagation();
                                                   void onToggleStrategyBookmark(
-                                                    item._id
-                                                  )
+                                                    item._id,
+                                                  );
                                                 }}
                                               >
                                                 {updatingStrategyIds.has(
-                                                  item._id
+                                                  item._id,
                                                 ) ? (
                                                   <Loader2 className="h-3 w-3 animate-spin" />
                                                 ) : item.isBookmarked ? (
@@ -1722,7 +1691,7 @@ export default function BacktestPage() {
                                           </span>
                                         </div>
                                       </div>
-                                    )
+                                    );
                                   })}
                                   {strategyHasNextPage ? (
                                     <div className="flex h-10 items-center justify-center">
@@ -1757,12 +1726,12 @@ export default function BacktestPage() {
                             tabIndex={isRunning ? -1 : undefined}
                             onClick={(event) => {
                               if (isRunning) {
-                                event.preventDefault()
+                                event.preventDefault();
                               }
                             }}
                             className={cn(
                               "inline-flex items-center justify-center gap-1.5",
-                              isRunning && "pointer-events-none opacity-60"
+                              isRunning && "pointer-events-none opacity-60",
                             )}
                           >
                             <Plus className="h-3.5 w-3.5" />
@@ -1782,12 +1751,12 @@ export default function BacktestPage() {
                             tabIndex={isRunning ? -1 : undefined}
                             onClick={(event) => {
                               if (isRunning) {
-                                event.preventDefault()
+                                event.preventDefault();
                               }
                             }}
                             className={cn(
                               "inline-flex items-center justify-center gap-1.5",
-                              isRunning && "pointer-events-none opacity-60"
+                              isRunning && "pointer-events-none opacity-60",
                             )}
                           >
                             <Compass className="h-3.5 w-3.5" />
@@ -1825,7 +1794,7 @@ export default function BacktestPage() {
                         value={initialBalance}
                         onChange={(event) =>
                           setInitialBalance(
-                            sanitizeNumericInput(event.target.value, true)
+                            sanitizeNumericInput(event.target.value, true),
                           )
                         }
                         placeholder="10000"
@@ -1847,7 +1816,7 @@ export default function BacktestPage() {
                         value={amountPerTrade}
                         onChange={(event) =>
                           setAmountPerTrade(
-                            sanitizeNumericInput(event.target.value, true)
+                            sanitizeNumericInput(event.target.value, true),
                           )
                         }
                         placeholder="1000"
@@ -1871,7 +1840,7 @@ export default function BacktestPage() {
                         value={entryFeeRate}
                         onChange={(event) =>
                           setEntryFeeRate(
-                            sanitizeNumericInput(event.target.value, true)
+                            sanitizeNumericInput(event.target.value, true),
                           )
                         }
                         placeholder="0.00"
@@ -1893,7 +1862,7 @@ export default function BacktestPage() {
                         value={exitFeeRate}
                         onChange={(event) =>
                           setExitFeeRate(
-                            sanitizeNumericInput(event.target.value, true)
+                            sanitizeNumericInput(event.target.value, true),
                           )
                         }
                         placeholder="0.00"
@@ -2002,5 +1971,5 @@ export default function BacktestPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

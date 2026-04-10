@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react"
-import { Link } from "react-router-dom"
+import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   Bookmark,
   BookmarkCheck,
@@ -21,11 +21,11 @@ import {
   TrendingUp,
   Trophy,
   UserRound,
-} from "lucide-react"
-import { toast } from "sonner"
+} from "lucide-react";
+import { toast } from "sonner";
 
-import { getApiErrorMessage } from "@/api/axios"
-import { deleteBacktest, fetchBacktestLeaderboard } from "@/api/backtest"
+import { getApiErrorMessage } from "@/api/axios";
+import { deleteBacktest, fetchBacktestLeaderboard } from "@/api/backtest";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,16 +35,16 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { Button } from "@/components/ui/button"
-import { ButtonGroup } from "@/components/ui/button-group"
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -54,24 +54,24 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import { cn } from "@/lib/utils"
-import { useAuthStore } from "@/store/auth"
-import { useBookmarkIds } from "@/hooks/use-bookmark-ids"
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/store/auth";
+import { useBookmarkIds } from "@/hooks/use-bookmark-ids";
 
 type BacktestSortBy =
   | "createdAt"
   | "winRate"
   | "roi"
   | "maxDrawdownPercent"
-  | "profitFactor"
+  | "profitFactor";
 
-type BacktestDurationFilter = "all" | "7d" | "1m" | "3m" | "6m" | "1y"
+type BacktestDurationFilter = "all" | "7d" | "1m" | "3m" | "6m" | "1y";
 
 const durationFilterOptions: Array<{
-  value: BacktestDurationFilter
-  label: string
+  value: BacktestDurationFilter;
+  label: string;
 }> = [
   { value: "all", label: "All" },
   { value: "7d", label: "7D" },
@@ -79,145 +79,145 @@ const durationFilterOptions: Array<{
   { value: "3m", label: "3M" },
   { value: "6m", label: "6M" },
   { value: "1y", label: "1Y" },
-]
+];
 
 type LeaderboardBacktest = {
-  _id: string
-  exchange: string
-  symbol: string
-  timeframe: string
-  startDate: string
-  endDate: string
-  entryFeeRate?: number
-  exitFeeRate?: number
-  hedgeMode?: boolean
-  createdAt?: string
-  updatedAt?: string
+  _id: string;
+  exchange: string;
+  symbol: string;
+  timeframe: string;
+  startDate: string;
+  endDate: string;
+  entryFeeRate?: number;
+  exitFeeRate?: number;
+  hedgeMode?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
   strategy?: {
-    _id?: string
-    name?: string
-    isPublic?: boolean
-  }
+    _id?: string;
+    name?: string;
+    isPublic?: boolean;
+  };
   user?: {
-    _id?: string
-    name?: string
-    username?: string
-    avatar?: string
-  }
+    _id?: string;
+    name?: string;
+    username?: string;
+    avatar?: string;
+  };
   result: {
-    duration: number
-    initialBalance: number
-    finalBalance: number
-    totalPnL: number
-    roi: number
-    totalTrades: number
-    winRate: number
-    profitFactor: number
-    maxDrawdownPercent: number
-    totalFees: number
-  }
-}
+    duration: number;
+    initialBalance: number;
+    finalBalance: number;
+    totalPnL: number;
+    roi: number;
+    totalTrades: number;
+    winRate: number;
+    profitFactor: number;
+    maxDrawdownPercent: number;
+    totalFees: number;
+  };
+};
 
 type LeaderboardResponse = {
-  status: boolean
-  message: string
+  status: boolean;
+  message: string;
   result: {
-    total?: number
-    hasNextPage?: boolean
-    backtests?: LeaderboardBacktest[]
-  }
-}
+    total?: number;
+    hasNextPage?: boolean;
+    backtests?: LeaderboardBacktest[];
+  };
+};
 
 const ratio = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
-})
+});
 
 function mergeBacktestPages(
   prev: LeaderboardBacktest[],
-  nextItems: LeaderboardBacktest[]
+  nextItems: LeaderboardBacktest[],
 ) {
   return Array.from(
-    new Map([...prev, ...nextItems].map((item) => [item._id, item])).values()
-  )
+    new Map([...prev, ...nextItems].map((item) => [item._id, item])).values(),
+  );
 }
 
 function formatDateLabel(value?: string) {
-  if (!value) return "-"
+  if (!value) return "-";
 
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return "-"
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
 
   return date.toLocaleDateString("en-US", {
     month: "short",
     day: "2-digit",
     year: "numeric",
-  })
+  });
 }
 
 function formatDuration(durationMs?: number) {
   if (!Number.isFinite(durationMs) || !durationMs || durationMs <= 0) {
-    return "-"
+    return "-";
   }
 
-  const totalMinutes = Math.floor(durationMs / 60000)
-  const totalHours = Math.floor(durationMs / 3600000)
-  const totalDays = Math.floor(durationMs / 86400000)
+  const totalMinutes = Math.floor(durationMs / 60000);
+  const totalHours = Math.floor(durationMs / 3600000);
+  const totalDays = Math.floor(durationMs / 86400000);
 
   if (totalDays >= 1) {
-    return `${totalDays}d`
+    return `${totalDays}d`;
   }
 
   if (totalHours >= 1) {
-    const hours = totalHours
-    const minutes = totalMinutes % 60
-    return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`
+    const hours = totalHours;
+    const minutes = totalMinutes % 60;
+    return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
   }
 
-  return `${Math.max(1, totalMinutes)}m`
+  return `${Math.max(1, totalMinutes)}m`;
 }
 
 export default function LeaderboardPage() {
-  const user = useAuthStore((state) => state.user)
-  const [backtests, setBacktests] = useState<LeaderboardBacktest[]>([])
-  const [search, setSearch] = useState("")
-  const [debouncedSearch, setDebouncedSearch] = useState("")
-  const [source, setSource] = useState<"all" | "me">("all")
-  const [duration, setDuration] = useState<BacktestDurationFilter>("all")
-  const [page, setPage] = useState(1)
-  const [totalCount, setTotalCount] = useState(0)
-  const [hasNextPage, setHasNextPage] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isAppending, setIsAppending] = useState(false)
-  const [sortBy, setSortBy] = useState<BacktestSortBy>("roi")
-  const [order, setOrder] = useState<"asc" | "desc">("desc")
-  const [backtestIdPendingDelete, setBacktestIdPendingDelete] = useState("")
-  const [isDeletingBacktest, setIsDeletingBacktest] = useState(false)
-  const loadMoreRef = useRef<HTMLDivElement | null>(null)
-  const requestIdRef = useRef(0)
+  const user = useAuthStore((state) => state.user);
+  const [backtests, setBacktests] = useState<LeaderboardBacktest[]>([]);
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [source, setSource] = useState<"all" | "me">("all");
+  const [duration, setDuration] = useState<BacktestDurationFilter>("all");
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAppending, setIsAppending] = useState(false);
+  const [sortBy, setSortBy] = useState<BacktestSortBy>("roi");
+  const [order, setOrder] = useState<"asc" | "desc">("desc");
+  const [backtestIdPendingDelete, setBacktestIdPendingDelete] = useState("");
+  const [isDeletingBacktest, setIsDeletingBacktest] = useState(false);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const requestIdRef = useRef(0);
   const {
     bookmarkedIds: bookmarkedBacktestIds,
     updatingIds: updatingBacktestIds,
     loadBookmarks: loadBacktestBookmarks,
     toggleBookmark: toggleBacktestBookmark,
-  } = useBookmarkIds("backtest")
+  } = useBookmarkIds("backtest");
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedSearch(search.trim())
-    }, 500)
+      setDebouncedSearch(search.trim());
+    }, 500);
 
-    return () => clearTimeout(timer)
-  }, [search])
+    return () => clearTimeout(timer);
+  }, [search]);
 
   useEffect(() => {
     const loadLeaderboard = async () => {
-      const requestId = requestIdRef.current + 1
-      requestIdRef.current = requestId
+      const requestId = requestIdRef.current + 1;
+      requestIdRef.current = requestId;
 
       if (page === 1) {
-        setIsLoading(true)
+        setIsLoading(true);
       } else {
-        setIsAppending(true)
+        setIsAppending(true);
       }
 
       try {
@@ -228,124 +228,118 @@ export default function LeaderboardPage() {
           duration,
           sortBy,
           order,
-        })) as LeaderboardResponse
+        })) as LeaderboardResponse;
 
-        const result = response?.result
-        const pageItems = result?.backtests ?? []
+        const result = response?.result;
+        const pageItems = result?.backtests ?? [];
 
         if (requestIdRef.current !== requestId) {
-          return
+          return;
         }
 
         setBacktests((prev) => {
           if (page === 1) {
-            return pageItems
+            return pageItems;
           }
 
-          return mergeBacktestPages(prev, pageItems)
-        })
+          return mergeBacktestPages(prev, pageItems);
+        });
 
-        setTotalCount(result?.total ?? 0)
-        setHasNextPage(Boolean(result?.hasNextPage))
+        setTotalCount(result?.total ?? 0);
+        setHasNextPage(Boolean(result?.hasNextPage));
       } catch (error) {
         if (requestIdRef.current !== requestId) {
-          return
+          return;
         }
 
-        toast.error(getApiErrorMessage(error, "Failed to load leaderboard"))
+        toast.error(getApiErrorMessage(error, "Failed to load leaderboard"));
       } finally {
         if (requestIdRef.current === requestId) {
-          setIsLoading(false)
-          setIsAppending(false)
+          setIsLoading(false);
+          setIsAppending(false);
         }
       }
-    }
+    };
 
-    void loadLeaderboard()
-  }, [page, debouncedSearch, source, duration, sortBy, order])
+    void loadLeaderboard();
+  }, [page, debouncedSearch, source, duration, sortBy, order]);
 
   useEffect(() => {
-    const node = loadMoreRef.current
-    if (!node || !hasNextPage || isLoading || isAppending) return
+    const node = loadMoreRef.current;
+    if (!node || !hasNextPage || isLoading || isAppending) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
-        const firstEntry = entries[0]
+        const firstEntry = entries[0];
         if (firstEntry?.isIntersecting && !isAppending && !isLoading) {
-          setPage((prev) => prev + 1)
+          setPage((prev) => prev + 1);
         }
       },
       {
         root: null,
         rootMargin: "220px 0px",
         threshold: 0,
-      }
-    )
+      },
+    );
 
-    observer.observe(node)
-    return () => observer.disconnect()
-  }, [hasNextPage, isAppending, isLoading])
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasNextPage, isAppending, isLoading]);
 
   useEffect(() => {
     void loadBacktestBookmarks().catch((error) => {
-      toast.error(getApiErrorMessage(error, "Failed to load bookmarks"))
-    })
-  }, [loadBacktestBookmarks])
+      toast.error(getApiErrorMessage(error, "Failed to load bookmarks"));
+    });
+  }, [loadBacktestBookmarks]);
 
   const onCopyResultLink = async (backtestId: string) => {
-    const resultUrl = `${window.location.origin}/backtest/${backtestId}`
+    const resultUrl = `${window.location.origin}/backtest/${backtestId}`;
 
     try {
-      await navigator.clipboard.writeText(resultUrl)
-      toast.success("Link copied")
+      await navigator.clipboard.writeText(resultUrl);
+      toast.success("Link copied");
     } catch {
-      toast.error("Failed to copy link")
+      toast.error("Failed to copy link");
     }
-  }
+  };
 
   const onToggleBacktestBookmark = async (backtestId: string) => {
-    const result = await toggleBacktestBookmark(backtestId)
+    const result = await toggleBacktestBookmark(backtestId);
     if (!result) {
-      return
+      return;
     }
 
     if (result.status === "success") {
-      toast.success(result.message)
-      return
+      toast.success(result.message);
+      return;
     }
 
-    toast.error(result.message)
-  }
+    toast.error(result.message);
+  };
 
   const onDeleteBacktest = async () => {
     if (!backtestIdPendingDelete) {
-      return
+      return;
     }
 
-    setIsDeletingBacktest(true)
+    setIsDeletingBacktest(true);
 
     try {
-      const promise = deleteBacktest(backtestIdPendingDelete)
+      const promise = deleteBacktest(backtestIdPendingDelete);
 
-      toast.promise(promise, {
-        loading: "Deleting backtest...",
-        success: (response) =>
-          response?.message || "Backtest deleted successfully",
-        error: (error) =>
-          getApiErrorMessage(error, "Failed to delete backtest"),
-      })
-
-      await promise
+      await promise;
 
       setBacktests((prev) =>
-        prev.filter((item) => item._id !== backtestIdPendingDelete)
-      )
-      setTotalCount((prev) => Math.max(0, prev - 1))
-      setBacktestIdPendingDelete("")
+        prev.filter((item) => item._id !== backtestIdPendingDelete),
+      );
+      setTotalCount((prev) => Math.max(0, prev - 1));
+      setBacktestIdPendingDelete("");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Failed to delete backtest"));
     } finally {
-      setIsDeletingBacktest(false)
+      setIsDeletingBacktest(false);
     }
-  }
+  };
 
   return (
     <div className="mx-auto w-full max-w-6xl min-w-0 space-y-4 overflow-x-hidden sm:space-y-6">
@@ -404,8 +398,8 @@ export default function LeaderboardPage() {
             <Input
               value={search}
               onChange={(event) => {
-                setSearch(event.target.value)
-                setPage(1)
+                setSearch(event.target.value);
+                setPage(1);
               }}
               placeholder="Search"
               className="pr-10 pl-9 sm:pr-[19rem]"
@@ -419,8 +413,8 @@ export default function LeaderboardPage() {
                     variant={duration === option.value ? "secondary" : "ghost"}
                     className="h-7 min-w-10 justify-center px-2 text-center text-[11px] uppercase"
                     onClick={() => {
-                      setDuration(option.value)
-                      setPage(1)
+                      setDuration(option.value);
+                      setPage(1);
                     }}
                   >
                     {option.label}
@@ -443,17 +437,17 @@ export default function LeaderboardPage() {
                   <DropdownMenuRadioGroup
                     value={sortBy}
                     onValueChange={(value) => {
-                      const nextSortBy = value as BacktestSortBy
-                      setSortBy(nextSortBy)
+                      const nextSortBy = value as BacktestSortBy;
+                      setSortBy(nextSortBy);
                       setOrder(
                         nextSortBy === "roi" ||
                           nextSortBy === "winRate" ||
                           nextSortBy === "profitFactor" ||
                           nextSortBy === "createdAt"
                           ? "desc"
-                          : "asc"
-                      )
-                      setPage(1)
+                          : "asc",
+                      );
+                      setPage(1);
                     }}
                   >
                     <DropdownMenuRadioItem value="roi">
@@ -477,8 +471,8 @@ export default function LeaderboardPage() {
                   <DropdownMenuRadioGroup
                     value={order}
                     onValueChange={(value) => {
-                      setOrder(value as "asc" | "desc")
-                      setPage(1)
+                      setOrder(value as "asc" | "desc");
+                      setPage(1);
                     }}
                   >
                     <DropdownMenuRadioItem value="desc">
@@ -501,8 +495,8 @@ export default function LeaderboardPage() {
                 variant={duration === option.value ? "secondary" : "outline"}
                 className="h-8 min-w-0 flex-1 justify-center px-1 text-center text-[10px] uppercase"
                 onClick={() => {
-                  setDuration(option.value)
-                  setPage(1)
+                  setDuration(option.value);
+                  setPage(1);
                 }}
               >
                 {option.label}
@@ -516,8 +510,8 @@ export default function LeaderboardPage() {
               variant={source === "all" ? "default" : "outline"}
               className="gap-2"
               onClick={() => {
-                setSource("all")
-                setPage(1)
+                setSource("all");
+                setPage(1);
               }}
             >
               <Compass className="h-4 w-4" />
@@ -528,8 +522,8 @@ export default function LeaderboardPage() {
               variant={source === "me" ? "default" : "outline"}
               className="gap-2"
               onClick={() => {
-                setSource("me")
-                setPage(1)
+                setSource("me");
+                setPage(1);
               }}
             >
               <UserRound className="h-4 w-4" />
@@ -558,14 +552,14 @@ export default function LeaderboardPage() {
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {backtests.map((backtest, index) => {
             const isMine =
-              Boolean(user?._id) && backtest.user?._id === user?._id
+              Boolean(user?._id) && backtest.user?._id === user?._id;
 
             return (
               <Card
                 key={backtest._id}
                 className={cn(
                   "overflow-hidden transition-colors hover:border-primary/30",
-                  index === 0 && "border-primary/30"
+                  index === 0 && "border-primary/30",
                 )}
               >
                 <CardHeader className="space-y-3 border-b border-border/60 pb-4">
@@ -595,7 +589,7 @@ export default function LeaderboardPage() {
                             "mt-1 text-base font-semibold",
                             backtest.result.roi >= 0
                               ? "text-success"
-                              : "text-destructive"
+                              : "text-destructive",
                           )}
                         >
                           {backtest.result.roi >= 0 ? "+" : ""}
@@ -625,7 +619,7 @@ export default function LeaderboardPage() {
                           }
                           disabled={updatingBacktestIds.has(backtest._id)}
                           onClick={() => {
-                            void onToggleBacktestBookmark(backtest._id)
+                            void onToggleBacktestBookmark(backtest._id);
                           }}
                         >
                           {updatingBacktestIds.has(backtest._id) ? (
@@ -669,7 +663,7 @@ export default function LeaderboardPage() {
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onSelect={() => {
-                                void onCopyResultLink(backtest._id)
+                                void onCopyResultLink(backtest._id);
                               }}
                             >
                               <Copy className="h-4 w-4" />
@@ -677,7 +671,7 @@ export default function LeaderboardPage() {
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onSelect={() => {
-                                void onToggleBacktestBookmark(backtest._id)
+                                void onToggleBacktestBookmark(backtest._id);
                               }}
                               disabled={updatingBacktestIds.has(backtest._id)}
                             >
@@ -705,7 +699,7 @@ export default function LeaderboardPage() {
                                 <DropdownMenuItem
                                   variant="destructive"
                                   onSelect={() => {
-                                    setBacktestIdPendingDelete(backtest._id)
+                                    setBacktestIdPendingDelete(backtest._id);
                                   }}
                                 >
                                   <Trash2 className="h-4 w-4" />
@@ -763,7 +757,7 @@ export default function LeaderboardPage() {
                       <p className="mt-1 text-sm font-semibold text-foreground">
                         -
                         {ratio.format(
-                          Math.abs(backtest.result.maxDrawdownPercent)
+                          Math.abs(backtest.result.maxDrawdownPercent),
                         )}
                         %
                       </p>
@@ -817,7 +811,7 @@ export default function LeaderboardPage() {
                   </Button>
                 </CardContent>
               </Card>
-            )
+            );
           })}
         </div>
       )}
@@ -835,7 +829,7 @@ export default function LeaderboardPage() {
         open={Boolean(backtestIdPendingDelete)}
         onOpenChange={(open) => {
           if (!open && !isDeletingBacktest) {
-            setBacktestIdPendingDelete("")
+            setBacktestIdPendingDelete("");
           }
         }}
       >
@@ -855,8 +849,8 @@ export default function LeaderboardPage() {
               className="text-destructive-foreground bg-destructive hover:bg-destructive/90"
               disabled={isDeletingBacktest}
               onClick={(event) => {
-                event.preventDefault()
-                void onDeleteBacktest()
+                event.preventDefault();
+                void onDeleteBacktest();
               }}
             >
               {isDeletingBacktest ? (
@@ -872,5 +866,5 @@ export default function LeaderboardPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  )
+  );
 }

@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Link, useLocation, useNavigate } from "react-router-dom"
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
-import { Button } from "@/components/ui/button"
-import ThemeToggle from "./ThemeToggle"
-import { APP_NAME } from "@/constants"
+import { Button } from "@/components/ui/button";
+import ThemeToggle from "./ThemeToggle";
+import { APP_NAME } from "@/constants";
 
-import { useAuthStore } from "@/store/auth"
+import { useAuthStore } from "@/store/auth";
 
 import {
   DropdownMenu,
@@ -13,43 +13,40 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
-import { SidebarTrigger } from "@/components/ui/sidebar"
-import { getApiErrorMessage } from "@/api/axios"
-import { signout } from "@/api/auth"
-import { toast } from "sonner"
-import { CircleHelp, Settings, LogOut } from "lucide-react"
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { getApiErrorMessage } from "@/api/axios";
+import { signout } from "@/api/auth";
+import { toast } from "sonner";
+import { CircleHelp, Settings, LogOut } from "lucide-react";
 
 export default function Navbar() {
-  const user = useAuthStore((state) => state.user)
-  const logout = useAuthStore((state) => state.logout)
+  const user = useAuthStore((state) => state.user);
+  const logout = useAuthStore((state) => state.logout);
 
-  const location = useLocation()
-  const navigate = useNavigate()
-  const isAuthPage = location.pathname === "/auth"
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isAuthPage = location.pathname === "/auth";
 
-  const handleSignout = () => {
-    toast.promise(signout(), {
-      loading: "Signing out...",
-      success: (data) => {
-        logout()
-        navigate("/")
-        return data.message
-      },
-      error: (error: unknown) =>
-        getApiErrorMessage(error, "Sign out failed on server."),
-    })
-  }
+  const handleSignout = async () => {
+    try {
+      await signout();
+      logout();
+      navigate("/");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Sign out failed on server."));
+    }
+  };
 
   const initials =
     user?.name
       ?.split(" ")
       .map((n) => n[0])
       .join("")
-      .toUpperCase() || "U"
+      .toUpperCase() || "U";
 
   return (
     <nav className="flex items-center justify-between border-b px-6 py-4">
@@ -58,7 +55,10 @@ export default function Navbar() {
         {/* Sidebar toggle only when logged in */}
         {user && <SidebarTrigger />}
 
-        <Link to="/" className="flex items-center gap-2.5 text-xl font-bold tracking-tight">
+        <Link
+          to="/"
+          className="flex items-center gap-2.5 text-xl font-bold tracking-tight text-primary"
+        >
           <img
             src="/query-trade.svg"
             alt={`${APP_NAME} logo`}
@@ -134,5 +134,5 @@ export default function Navbar() {
         )}
       </div>
     </nav>
-  )
+  );
 }

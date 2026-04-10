@@ -49,17 +49,14 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const handleSignout = () => {
-    toast.promise(signout(), {
-      loading: "Signing out...",
-      success: (data) => {
-        logout();
-        navigate("/");
-        return data.message;
-      },
-      error: (error: unknown) =>
-        getApiErrorMessage(error, "Sign out failed on server."),
-    });
+  const handleSignout = async () => {
+    try {
+      await signout();
+      logout();
+      navigate("/");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Sign out failed on server."));
+    }
   };
 
   const initials =

@@ -1,11 +1,11 @@
-import { useMemo, useState } from "react"
-import { Navigate, useNavigate } from "react-router-dom"
-import { useGoogleLogin } from "@react-oauth/google"
-import axios from "axios"
-import { Check, ChevronsUpDown } from "lucide-react"
-import { toast } from "sonner"
+import { useMemo, useState } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
+import { useGoogleLogin } from "@react-oauth/google";
+import axios from "axios";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { toast } from "sonner";
 
-import { getApiErrorMessage } from "@/api/axios"
+import { getApiErrorMessage } from "@/api/axios";
 import {
   checkChangeEmail,
   connectGoogle,
@@ -14,15 +14,15 @@ import {
   deleteAccount,
   disconnectGoogle,
   verifyChangeEmail,
-} from "@/api/auth"
+} from "@/api/auth";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,41 +30,41 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Label } from "@/components/ui/label"
-import { useAuthStore } from "@/store/auth"
-import { cn } from "@/lib/utils"
-import { sections } from "./config"
-import { AccountSection, AppearanceSection } from "./sections"
+} from "@/components/ui/dropdown-menu";
+import { Label } from "@/components/ui/label";
+import { useAuthStore } from "@/store/auth";
+import { cn } from "@/lib/utils";
+import { sections } from "./config";
+import { AccountSection, AppearanceSection } from "./sections";
 
 export default function Settings() {
-  const user = useAuthStore((state) => state.user)
-  const updateUser = useAuthStore((state) => state.updateUser)
-  const logout = useAuthStore((state) => state.logout)
-  const navigate = useNavigate()
-  const [activeSection, setActiveSection] = useState(sections[0].id)
+  const user = useAuthStore((state) => state.user);
+  const updateUser = useAuthStore((state) => state.updateUser);
+  const logout = useAuthStore((state) => state.logout);
+  const navigate = useNavigate();
+  const [activeSection, setActiveSection] = useState(sections[0].id);
   const [emailChangeStep, setEmailChangeStep] = useState<
     "idle" | "draft" | "verify"
-  >("idle")
-  const [emailChangePassword, setEmailChangePassword] = useState("")
-  const [emailDraft, setEmailDraft] = useState("")
-  const [newEmailCode, setNewEmailCode] = useState("")
-  const [isCheckingChangeEmail, setIsCheckingChangeEmail] = useState(false)
-  const [isSavingEmailChange, setIsSavingEmailChange] = useState(false)
+  >("idle");
+  const [emailChangePassword, setEmailChangePassword] = useState("");
+  const [emailDraft, setEmailDraft] = useState("");
+  const [newEmailCode, setNewEmailCode] = useState("");
+  const [isCheckingChangeEmail, setIsCheckingChangeEmail] = useState(false);
+  const [isSavingEmailChange, setIsSavingEmailChange] = useState(false);
   const [isUpdatingGoogleProvider, setIsUpdatingGoogleProvider] =
-    useState(false)
-  const [isDeletingAccount, setIsDeletingAccount] = useState(false)
-  const [isSendingDeleteVerify, setIsSendingDeleteVerify] = useState(false)
+    useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [isSendingDeleteVerify, setIsSendingDeleteVerify] = useState(false);
 
   const currentSection = useMemo(
     () =>
       sections.find((section) => section.id === activeSection) ?? sections[0],
-    [activeSection]
-  )
+    [activeSection],
+  );
 
   const connectGoogleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
-      setIsUpdatingGoogleProvider(true)
+      setIsUpdatingGoogleProvider(true);
 
       try {
         const userInfo = await axios.get(
@@ -73,49 +73,41 @@ export default function Settings() {
             headers: {
               Authorization: `Bearer ${tokenResponse.access_token}`,
             },
-          }
-        )
-
-        const { sub: googleId } = userInfo.data
-        const promise = connectGoogle({ googleId })
-
-        toast.promise(promise, {
-          loading: "Connecting Google...",
-          success: (data) => {
-            if (data?.result?.user) {
-              updateUser(data.result.user)
-            }
-
-            return data.message || "Google connected."
           },
-          error: (error: unknown) =>
-            getApiErrorMessage(error, "Failed to connect Google."),
-        })
+        );
 
-        await promise
+        const { sub: googleId } = userInfo.data;
+        const promise = connectGoogle({ googleId });
+        const data = await promise;
+
+        if (data?.result?.user) {
+          updateUser(data.result.user);
+        }
+      } catch (error) {
+        toast.error(getApiErrorMessage(error, "Failed to connect Google."));
       } finally {
-        setIsUpdatingGoogleProvider(false)
+        setIsUpdatingGoogleProvider(false);
       }
     },
     onError: () => {
-      setIsUpdatingGoogleProvider(false)
-      toast.error("Google connect failed!")
+      setIsUpdatingGoogleProvider(false);
+      toast.error("Google connect failed!");
     },
-  })
+  });
 
   if (!user) {
-    return <Navigate to="/auth" replace />
+    return <Navigate to="/auth" replace />;
   }
 
   const cancelEmailChange = () => {
-    setEmailChangeStep("idle")
-    setEmailChangePassword("")
-    setEmailDraft("")
-    setNewEmailCode("")
-  }
+    setEmailChangeStep("idle");
+    setEmailChangePassword("");
+    setEmailDraft("");
+    setNewEmailCode("");
+  };
 
   const verifyEmailChange = () => {
-    const nextEmail = emailDraft.trim().toLowerCase()
+    const nextEmail = emailDraft.trim().toLowerCase();
 
     if (
       !nextEmail ||
@@ -123,76 +115,74 @@ export default function Settings() {
       emailChangePassword.length < 6 ||
       emailChangePassword.length > 50
     ) {
-      return
+      return;
     }
 
-    setIsCheckingChangeEmail(true)
+    setIsCheckingChangeEmail(true);
     const promise = checkChangeEmail({
       newEmail: nextEmail,
       password: emailChangePassword,
-    })
+    });
 
-    toast.promise(promise, {
-      loading: "Verifying...",
-      success: (data) => {
-        setEmailDraft(nextEmail)
-        setEmailChangeStep("verify")
-        return data.message || "Email available."
-      },
-      error: (error: unknown) =>
-        getApiErrorMessage(error, "Failed to check email."),
-    })
+    promise
+      .then(() => {
+        setEmailDraft(nextEmail);
+        setEmailChangeStep("verify");
+      })
+      .catch((error: unknown) => {
+        toast.error(getApiErrorMessage(error, "Failed to check email."));
+      });
 
-    promise.finally(() => setIsCheckingChangeEmail(false))
-  }
+    promise.finally(() => setIsCheckingChangeEmail(false));
+  };
 
   const saveEmailChange = () => {
-    const nextEmail = emailDraft.trim()
+    const nextEmail = emailDraft.trim();
 
     if (!nextEmail || nextEmail === user.email || !newEmailCode.trim()) {
-      return
+      return;
     }
 
-    setIsSavingEmailChange(true)
+    setIsSavingEmailChange(true);
 
     const promise = verifyChangeEmail({
       newEmail: nextEmail,
       newEmailCode: newEmailCode,
-    })
+    });
 
-    toast.promise(promise, {
-      loading: "Changing email...",
-      success: (data) => {
-        updateUser({ email: nextEmail })
-        setEmailDraft("")
-        setNewEmailCode("")
-        setEmailChangeStep("idle")
-        return data.message || "Email changed."
-      },
-      error: (error: unknown) =>
-        typeof error === "object" &&
-        error !== null &&
-        "response" in error &&
-        typeof (error as { response?: { data?: { message?: string } } })
-          .response?.data?.message === "string"
-          ? (error as { response?: { data?: { message?: string } } }).response!
-              .data!.message!
-          : "Failed to change email.",
-    })
+    promise
+      .then(() => {
+        updateUser({ email: nextEmail });
+        setEmailDraft("");
+        setNewEmailCode("");
+        setEmailChangeStep("idle");
+      })
+      .catch((error: unknown) => {
+        toast.error(
+          typeof error === "object" &&
+            error !== null &&
+            "response" in error &&
+            typeof (error as { response?: { data?: { message?: string } } })
+              .response?.data?.message === "string"
+            ? (error as { response?: { data?: { message?: string } } })
+                .response!.data!.message!
+            : "Failed to change email.",
+        );
+      });
 
-    promise.finally(() => setIsSavingEmailChange(false))
-  }
+    promise.finally(() => setIsSavingEmailChange(false));
+  };
 
   const handlePasswordAction = async (password: string) => {
     if (user.authProviders.some((provider) => provider.provider === "server")) {
-      return
+      return;
     }
 
-    const data = await createPassword({ password })
+    const data = await createPassword({ password });
 
     if (data?.result?.user) {
-      updateUser(data.result.user)
-      return
+      updateUser(data.result.user);
+      return;
     }
 
     updateUser({
@@ -204,98 +194,91 @@ export default function Settings() {
           providerId: user._id,
         },
       ],
-    })
-  }
+    });
+  };
 
   const handleGoogleProviderAction = () => {
     const hasGoogleProvider = user.authProviders.some(
-      (provider) => provider.provider === "google"
-    )
+      (provider) => provider.provider === "google",
+    );
 
     if (hasGoogleProvider) {
-      setIsUpdatingGoogleProvider(true)
+      setIsUpdatingGoogleProvider(true);
 
-      const promise = disconnectGoogle()
+      const promise = disconnectGoogle();
 
-      toast.promise(promise, {
-        loading: "Disconnecting Google...",
-        success: (data) => {
+      promise
+        .then((data) => {
           if (data?.result?.user) {
-            updateUser(data.result.user)
+            updateUser(data.result.user);
           }
+        })
+        .catch((error: unknown) => {
+          toast.error(
+            typeof error === "object" &&
+              error !== null &&
+              "response" in error &&
+              typeof (error as { response?: { data?: { message?: string } } })
+                .response?.data?.message === "string"
+              ? (error as { response?: { data?: { message?: string } } })
+                  .response!.data!.message!
+              : "Failed to disconnect Google.",
+          );
+        });
 
-          return data.message || "Google disconnected."
-        },
-        error: (error: unknown) =>
-          typeof error === "object" &&
+      promise.finally(() => setIsUpdatingGoogleProvider(false));
+      return;
+    }
+
+    connectGoogleLogin();
+  };
+
+  const handleDeleteAccountVerify = async () => {
+    setIsSendingDeleteVerify(true);
+
+    try {
+      await deleteAccountVerify();
+    } catch (error) {
+      toast.error(
+        typeof error === "object" &&
           error !== null &&
           "response" in error &&
           typeof (error as { response?: { data?: { message?: string } } })
             .response?.data?.message === "string"
-            ? (error as { response?: { data?: { message?: string } } })
-                .response!.data!.message!
-            : "Failed to disconnect Google.",
-      })
-
-      promise.finally(() => setIsUpdatingGoogleProvider(false))
-      return
-    }
-
-    connectGoogleLogin()
-  }
-
-  const handleDeleteAccountVerify = async () => {
-    setIsSendingDeleteVerify(true)
-
-    const promise = deleteAccountVerify()
-    toast.promise(promise, {
-      loading: "Sending verification code...",
-      success: (data) =>
-        data?.message ||
-        "Delete account verification code sent. Please check your email.",
-      error: (error: unknown) =>
-        typeof error === "object" &&
-        error !== null &&
-        "response" in error &&
-        typeof (error as { response?: { data?: { message?: string } } })
-          .response?.data?.message === "string"
           ? (error as { response?: { data?: { message?: string } } }).response!
               .data!.message!
           : "Failed to send verification code.",
-    })
-
-    promise.finally(() => setIsSendingDeleteVerify(false))
-    await promise
-  }
+      );
+    } finally {
+      setIsSendingDeleteVerify(false);
+    }
+  };
 
   const handleDeleteAccount = async (payload: {
-    password?: string
-    code?: string
+    password?: string;
+    code?: string;
   }) => {
-    setIsDeletingAccount(true)
+    setIsDeletingAccount(true);
 
-    const promise = deleteAccount(payload)
-    toast.promise(promise, {
-      loading: "Deleting account...",
-      success: (data) => {
-        logout()
-        navigate("/", { replace: true })
-        return data?.message || "Account deleted successfully."
-      },
-      error: (error: unknown) =>
+    try {
+      await deleteAccount(payload);
+      logout();
+      navigate("/", { replace: true });
+    } catch (error) {
+      toast.error(
         typeof error === "object" &&
-        error !== null &&
-        "response" in error &&
-        typeof (error as { response?: { data?: { message?: string } } })
-          .response?.data?.message === "string"
+          error !== null &&
+          "response" in error &&
+          typeof (error as { response?: { data?: { message?: string } } })
+            .response?.data?.message === "string"
           ? (error as { response?: { data?: { message?: string } } }).response!
               .data!.message!
           : "Failed to delete account.",
-    })
-
-    promise.finally(() => setIsDeletingAccount(false))
-    await promise
-  }
+      );
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  };
 
   return (
     <div className="mx-auto w-full max-w-6xl min-w-0 space-y-6 overflow-x-hidden">
@@ -343,8 +326,8 @@ export default function Settings() {
                   <DropdownMenuLabel>Select section</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   {sections.map((section) => {
-                    const Icon = section.icon
-                    const isActive = section.id === activeSection
+                    const Icon = section.icon;
+                    const isActive = section.id === activeSection;
 
                     return (
                       <DropdownMenuItem
@@ -357,7 +340,7 @@ export default function Settings() {
                             "rounded-lg p-2",
                             isActive
                               ? "bg-primary text-primary-foreground"
-                              : "bg-muted text-foreground"
+                              : "bg-muted text-foreground",
                           )}
                         >
                           <Icon className="size-4" />
@@ -374,7 +357,7 @@ export default function Settings() {
                           <Check className="size-4 shrink-0 text-primary" />
                         ) : null}
                       </DropdownMenuItem>
-                    )
+                    );
                   })}
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -382,8 +365,8 @@ export default function Settings() {
 
             <div className="hidden space-y-2 lg:block">
               {sections.map((section) => {
-                const Icon = section.icon
-                const isActive = section.id === activeSection
+                const Icon = section.icon;
+                const isActive = section.id === activeSection;
 
                 return (
                   <button
@@ -394,7 +377,7 @@ export default function Settings() {
                       "flex w-full items-start gap-3 rounded-2xl border px-4 py-3 text-left transition-colors",
                       isActive
                         ? "border-primary/40 bg-primary/8"
-                        : "border-transparent bg-muted/40 hover:border-border hover:bg-muted/80"
+                        : "border-transparent bg-muted/40 hover:border-border hover:bg-muted/80",
                     )}
                   >
                     <span
@@ -402,7 +385,7 @@ export default function Settings() {
                         "mt-0.5 rounded-lg p-2",
                         isActive
                           ? "bg-primary text-primary-foreground"
-                          : "bg-background"
+                          : "bg-background",
                       )}
                     >
                       <Icon className="size-4" />
@@ -414,7 +397,7 @@ export default function Settings() {
                       </span>
                     </span>
                   </button>
-                )
+                );
               })}
             </div>
           </div>
@@ -468,5 +451,5 @@ export default function Settings() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

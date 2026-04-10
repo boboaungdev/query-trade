@@ -1,40 +1,40 @@
-import { Navigate, Outlet, Routes, Route } from "react-router-dom"
-import { SpeedInsights } from "@vercel/speed-insights/react"
-import { Toaster } from "@/components/ui/sonner"
+import { Navigate, Outlet, Routes, Route } from "react-router-dom";
+import { SpeedInsights } from "@vercel/speed-insights/react";
+import { Toaster } from "@/components/ui/sonner";
 
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
-import { AppSidebar } from "@/components/AppSidebar"
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/AppSidebar";
 
-import Navbar from "./components/Navbar"
+import Navbar from "./components/Navbar";
 
-import Home from "./pages/home"
-import Auth from "./pages/auth"
-import Dashboard from "./pages/dashboard"
-import Leaderboard from "./pages/leaderboard"
-import Backtest from "./pages/backtest/index"
-import BacktestResult from "./pages/backtest/result"
-import Strategy from "./pages/strategy"
-import StrategyEditor from "./pages/strategy/editor"
-import StrategyDetail from "./pages/strategy/detail"
-import Bookmark from "./pages/bookmark"
-import Profile from "./pages/profile"
-import NotFound from "./pages/not-found"
+import Home from "./pages/home";
+import Auth from "./pages/auth";
+import Dashboard from "./pages/dashboard";
+import Leaderboard from "./pages/leaderboard";
+import Backtest from "./pages/backtest/index";
+import BacktestResult from "./pages/backtest/result";
+import Strategy from "./pages/strategy";
+import StrategyEditor from "./pages/strategy/editor";
+import StrategyDetail from "./pages/strategy/detail";
+import Bookmark from "./pages/bookmark";
+import Profile from "./pages/profile";
+import NotFound from "./pages/not-found";
 
-import { useAuthStore } from "@/store/auth"
-import Settings from "./pages/settings"
+import { useAuthStore } from "@/store/auth";
+import Settings from "./pages/settings";
 
 function ProtectedRoute() {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   if (!isAuthenticated) {
-    return <Navigate to="/auth" replace />
+    return <Navigate to="/auth" replace />;
   }
 
-  return <Outlet />
+  return <Outlet />;
 }
 
 export default function App() {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   return (
     <SidebarProvider defaultOpen={false}>
@@ -64,10 +64,7 @@ export default function App() {
               />
               <Route path="/bookmark" element={<Bookmark />} />
               <Route path="/backtest" element={<Backtest />} />
-              <Route
-                path="/backtest/:backtestId/edit"
-                element={<Backtest />}
-              />
+              <Route path="/backtest/:backtestId/edit" element={<Backtest />} />
               <Route
                 path="/backtest/:backtestId"
                 element={<BacktestResult />}
@@ -82,9 +79,9 @@ export default function App() {
           </Routes>
         </main>
 
-        <Toaster position="top-center" duration={1500} />
+        <Toaster position="top-center" duration={1500} richColors />
         <SpeedInsights />
       </SidebarInset>
     </SidebarProvider>
-  )
+  );
 }

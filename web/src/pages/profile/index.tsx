@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react"
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import {
   Link,
   Navigate,
@@ -6,7 +6,7 @@ import {
   useNavigate,
   useParams,
   useSearchParams,
-} from "react-router-dom"
+} from "react-router-dom";
 import {
   Bookmark,
   BookmarkCheck,
@@ -26,19 +26,19 @@ import {
   UserPlus,
   Users,
   X,
-} from "lucide-react"
-import { toast } from "sonner"
+} from "lucide-react";
+import { toast } from "sonner";
 
-import { getApiErrorMessage } from "@/api/axios"
-import { createFollow, deleteFollow, fetchFollowStatus } from "@/api/follow"
+import { getApiErrorMessage } from "@/api/axios";
+import { createFollow, deleteFollow, fetchFollowStatus } from "@/api/follow";
 import {
   fetchUserBacktestsByUsername,
   fetchUserFollowsByUsername,
   fetchUserStrategiesByUsername,
-} from "@/api/user"
-import { useBookmarkIds } from "@/hooks/use-bookmark-ids"
-import { useAuthStore } from "@/store/auth"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+} from "@/api/user";
+import { useBookmarkIds } from "@/hooks/use-bookmark-ids";
+import { useAuthStore } from "@/store/auth";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -48,16 +48,16 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { Button } from "@/components/ui/button"
-import { ButtonGroup } from "@/components/ui/button-group"
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -65,117 +65,117 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { editProfile } from "@/api/auth"
-import { fetchUserByUsername } from "@/api/user"
-import { cn } from "@/lib/utils"
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { editProfile } from "@/api/auth";
+import { fetchUserByUsername } from "@/api/user";
+import { cn } from "@/lib/utils";
 
 function sanitizeUsername(value: string) {
   return value
     .toLowerCase()
     .replace(/[^a-z0-9]/g, "")
-    .slice(0, 20)
+    .slice(0, 20);
 }
 
 const compactNumber = new Intl.NumberFormat("en", {
   notation: "compact",
   maximumFractionDigits: 1,
-})
+});
 
 type FormState = {
-  name: string
-  username: string
-  avatar: string
-}
+  name: string;
+  username: string;
+  avatar: string;
+};
 
 type PublicProfileUser = {
-  _id?: string
-  name?: string
-  username?: string
-  avatar?: string
-  createdAt?: string
+  _id?: string;
+  name?: string;
+  username?: string;
+  avatar?: string;
+  createdAt?: string;
   stats?: {
-    followerCount?: number
-    followingCount?: number
-    strategyCount?: number
-    backtestCount?: number
-  }
-}
+    followerCount?: number;
+    followingCount?: number;
+    strategyCount?: number;
+    backtestCount?: number;
+  };
+};
 
 type PublicProfileResponse = {
   result?: {
-    user?: PublicProfileUser
-  }
-}
+    user?: PublicProfileUser;
+  };
+};
 
-type ProfileDialogTab = "followers" | "following" | "strategies" | "backtests"
+type ProfileDialogTab = "followers" | "following" | "strategies" | "backtests";
 
 type ProfileFollowListItem = {
-  _id: string
-  name?: string
-  username?: string
-  avatar?: string
-}
+  _id: string;
+  name?: string;
+  username?: string;
+  avatar?: string;
+};
 
 type ProfileStrategyListItem = {
-  _id: string
-  name?: string
-  description?: string
-  isPublic?: boolean
-  createdAt?: string
-  updatedAt?: string
+  _id: string;
+  name?: string;
+  description?: string;
+  isPublic?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
   stats?: {
-    viewCount?: number
-    bookmarkCount?: number
-  }
-}
+    viewCount?: number;
+    bookmarkCount?: number;
+  };
+};
 
 type ProfileBacktestListItem = {
-  _id: string
-  symbol?: string
-  timeframe?: string
-  createdAt?: string
+  _id: string;
+  symbol?: string;
+  timeframe?: string;
+  createdAt?: string;
   strategy?: {
-    name?: string
-  }
+    name?: string;
+  };
   result?: {
-    roi?: number
-    totalTrades?: number
-    winRate?: number
-    profitFactor?: number
-    maxDrawdownPercent?: number
-  }
-}
+    roi?: number;
+    totalTrades?: number;
+    winRate?: number;
+    profitFactor?: number;
+    maxDrawdownPercent?: number;
+  };
+};
 
 type ProfileListState = {
   items: Array<
     ProfileFollowListItem | ProfileStrategyListItem | ProfileBacktestListItem
-  >
-  total: number
-  page: number
-  hasNextPage: boolean
-  isLoading: boolean
-  isAppending: boolean
-  error: string
-  search: string
-  debouncedSearch: string
-  sortBy: string
-  order: "asc" | "desc"
-}
+  >;
+  total: number;
+  page: number;
+  hasNextPage: boolean;
+  isLoading: boolean;
+  isAppending: boolean;
+  error: string;
+  search: string;
+  debouncedSearch: string;
+  sortBy: string;
+  order: "asc" | "desc";
+};
 
 const defaultProfileListState = (
   sortBy: string,
-  order: "asc" | "desc"
+  order: "asc" | "desc",
 ): ProfileListState => ({
   items: [],
   total: 0,
@@ -188,37 +188,37 @@ const defaultProfileListState = (
   debouncedSearch: "",
   sortBy,
   order,
-})
+});
 
 const dialogTabLabels: Record<ProfileDialogTab, string> = {
   followers: "Followers",
   following: "Following",
   strategies: "Strategies",
   backtests: "Backtests",
-}
+};
 
 const ratio = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
-})
+});
 
 const shortDate = new Intl.DateTimeFormat("en-US", {
   month: "short",
   day: "numeric",
   year: "numeric",
-})
+});
 
 function formatSignedPercent(value?: number) {
-  const numericValue = value ?? 0
-  return `${numericValue >= 0 ? "+" : ""}${ratio.format(numericValue)}%`
+  const numericValue = value ?? 0;
+  return `${numericValue >= 0 ? "+" : ""}${ratio.format(numericValue)}%`;
 }
 
 function getProfileBacktestMetric(
   item: ProfileBacktestListItem,
-  sortBy: string
+  sortBy: string,
 ): {
-  label: string
-  value: string
-  valueClassName: string
+  label: string;
+  value: string;
+  valueClassName: string;
 } {
   switch (sortBy) {
     case "winRate":
@@ -226,19 +226,19 @@ function getProfileBacktestMetric(
         label: "Win Rate",
         value: `${ratio.format(item.result?.winRate ?? 0)}%`,
         valueClassName: "text-foreground",
-      }
+      };
     case "profitFactor":
       return {
         label: "Profit Factor",
         value: ratio.format(item.result?.profitFactor ?? 0),
         valueClassName: "text-foreground",
-      }
+      };
     case "maxDrawdownPercent":
       return {
         label: "Max DD",
         value: `${ratio.format(item.result?.maxDrawdownPercent ?? 0)}%`,
         valueClassName: "text-foreground",
-      }
+      };
     case "createdAt":
       return {
         label: "Created",
@@ -246,65 +246,65 @@ function getProfileBacktestMetric(
           ? shortDate.format(new Date(item.createdAt))
           : "-",
         valueClassName: "text-foreground",
-      }
+      };
     case "roi":
     default: {
-      const roiValue = item.result?.roi ?? 0
+      const roiValue = item.result?.roi ?? 0;
 
       return {
         label: "ROI",
         value: formatSignedPercent(roiValue),
         valueClassName: roiValue >= 0 ? "text-emerald-600" : "text-destructive",
-      }
+      };
     }
   }
 }
 
 export default function Profile() {
-  const { username: routeUsernameParam = "" } = useParams()
-  const location = useLocation()
-  const navigate = useNavigate()
-  const [searchParams, setSearchParams] = useSearchParams()
-  const user = useAuthStore((state) => state.user)
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
-  const updateUser = useAuthStore((state) => state.updateUser)
+  const { username: routeUsernameParam = "" } = useParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const user = useAuthStore((state) => state.user);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const updateUser = useAuthStore((state) => state.updateUser);
   const {
     bookmarkedIds: bookmarkedStrategyIds,
     updatingIds: updatingStrategyIds,
     loadBookmarks: loadStrategyBookmarks,
     toggleBookmark: toggleStrategyBookmark,
-  } = useBookmarkIds("strategy")
+  } = useBookmarkIds("strategy");
   const {
     bookmarkedIds: bookmarkedBacktestIds,
     updatingIds: updatingBacktestIds,
     loadBookmarks: loadBacktestBookmarks,
     toggleBookmark: toggleBacktestBookmark,
-  } = useBookmarkIds("backtest")
+  } = useBookmarkIds("backtest");
 
-  const [isEditing, setIsEditing] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
-  const [viewedUser, setViewedUser] = useState<PublicProfileUser | null>(null)
-  const [isProfileLoading, setIsProfileLoading] = useState(false)
-  const [profileLoadError, setProfileLoadError] = useState("")
-  const [selectedAvatarFileName, setSelectedAvatarFileName] = useState("")
-  const [isFollowing, setIsFollowing] = useState(false)
-  const [isFollowStatusLoading, setIsFollowStatusLoading] = useState(false)
-  const [isFollowUpdating, setIsFollowUpdating] = useState(false)
-  const [isUnfollowDialogOpen, setIsUnfollowDialogOpen] = useState(false)
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [viewedUser, setViewedUser] = useState<PublicProfileUser | null>(null);
+  const [isProfileLoading, setIsProfileLoading] = useState(false);
+  const [profileLoadError, setProfileLoadError] = useState("");
+  const [selectedAvatarFileName, setSelectedAvatarFileName] = useState("");
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [isFollowStatusLoading, setIsFollowStatusLoading] = useState(false);
+  const [isFollowUpdating, setIsFollowUpdating] = useState(false);
+  const [isUnfollowDialogOpen, setIsUnfollowDialogOpen] = useState(false);
   const [pendingFollowListUnfollowUser, setPendingFollowListUnfollowUser] =
-    useState<ProfileFollowListItem | null>(null)
-  const [isProfileListsOpen, setIsProfileListsOpen] = useState(false)
+    useState<ProfileFollowListItem | null>(null);
+  const [isProfileListsOpen, setIsProfileListsOpen] = useState(false);
   const [followListStatusById, setFollowListStatusById] = useState<
     Record<string, boolean>
-  >({})
+  >({});
   const [followListStatusLoadingIds, setFollowListStatusLoadingIds] = useState<
     Set<string>
-  >(new Set())
+  >(new Set());
   const [followListUpdatingIds, setFollowListUpdatingIds] = useState<
     Set<string>
-  >(new Set())
+  >(new Set());
   const [activeProfileTab, setActiveProfileTab] =
-    useState<ProfileDialogTab>("followers")
+    useState<ProfileDialogTab>("followers");
   const [profileLists, setProfileLists] = useState<
     Record<ProfileDialogTab, ProfileListState>
   >({
@@ -312,30 +312,30 @@ export default function Profile() {
     following: defaultProfileListState("name", "asc"),
     strategies: defaultProfileListState("name", "asc"),
     backtests: defaultProfileListState("roi", "desc"),
-  })
-  const avatarInputRef = useRef<HTMLInputElement | null>(null)
-  const profileListScrollRef = useRef<HTMLDivElement | null>(null)
-  const profileListLoadMoreRef = useRef<HTMLDivElement | null>(null)
+  });
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
+  const profileListScrollRef = useRef<HTMLDivElement | null>(null);
+  const profileListLoadMoreRef = useRef<HTMLDivElement | null>(null);
   const bookmarkListLoadedRef = useRef({
     strategies: false,
     backtests: false,
-  })
+  });
 
   const [form, setForm] = useState<FormState>({
     name: user?.name || "",
     username: user?.username || "",
     avatar: user?.avatar || "",
-  })
+  });
 
-  const routeUsername = routeUsernameParam.toLowerCase()
-  const requestedDialog = searchParams.get("dialog")
-  const requestedTab = searchParams.get("tab")
+  const routeUsername = routeUsernameParam.toLowerCase();
+  const requestedDialog = searchParams.get("dialog");
+  const requestedTab = searchParams.get("tab");
   const isOwnProfileRoute =
     Boolean(user?.username) &&
     Boolean(routeUsername) &&
-    routeUsername === user?.username?.toLowerCase()
-  const canEditProfile = Boolean(user) && isOwnProfileRoute
-  const currentProfileDialogUrl = `${location.pathname}?dialog=profile&tab=${activeProfileTab}`
+    routeUsername === user?.username?.toLowerCase();
+  const canEditProfile = Boolean(user) && isOwnProfileRoute;
+  const currentProfileDialogUrl = `${location.pathname}?dialog=profile&tab=${activeProfileTab}`;
   const fromProfileUrl =
     typeof location.state === "object" &&
     location.state !== null &&
@@ -343,60 +343,60 @@ export default function Profile() {
     typeof (location.state as { fromProfileUrl?: unknown }).fromProfileUrl ===
       "string"
       ? (location.state as { fromProfileUrl: string }).fromProfileUrl
-      : ""
+      : "";
   const profileListRequestIdRef = useRef<Record<ProfileDialogTab, number>>({
     followers: 0,
     following: 0,
     strategies: 0,
     backtests: 0,
-  })
+  });
   const onBack = () => {
     if (fromProfileUrl) {
-      navigate(fromProfileUrl, { replace: true })
-      return
+      navigate(fromProfileUrl, { replace: true });
+      return;
     }
 
     if (typeof window !== "undefined" && window.history.length > 1) {
-      navigate(-1)
-      return
+      navigate(-1);
+      return;
     }
 
-    navigate(isAuthenticated ? "/dashboard" : "/")
-  }
+    navigate(isAuthenticated ? "/dashboard" : "/");
+  };
 
   useEffect(() => {
     const normalizedTab =
       requestedTab &&
       ["followers", "following", "strategies", "backtests"].includes(
-        requestedTab
+        requestedTab,
       )
         ? (requestedTab as ProfileDialogTab)
-        : null
+        : null;
 
     if (requestedDialog === "profile" && normalizedTab) {
-      setActiveProfileTab(normalizedTab)
-      setIsProfileListsOpen(true)
-      return
+      setActiveProfileTab(normalizedTab);
+      setIsProfileListsOpen(true);
+      return;
     }
 
-    setIsProfileListsOpen(false)
-  }, [requestedDialog, requestedTab])
+    setIsProfileListsOpen(false);
+  }, [requestedDialog, requestedTab]);
 
   useEffect(() => {
-    if (!isProfileListsOpen) return
+    if (!isProfileListsOpen) return;
 
-    const nextParams = new URLSearchParams(searchParams)
-    const currentTab = nextParams.get("tab")
-    const currentDialog = nextParams.get("dialog")
+    const nextParams = new URLSearchParams(searchParams);
+    const currentTab = nextParams.get("tab");
+    const currentDialog = nextParams.get("dialog");
 
     if (currentDialog === "profile" && currentTab === activeProfileTab) {
-      return
+      return;
     }
 
-    nextParams.set("dialog", "profile")
-    nextParams.set("tab", activeProfileTab)
-    setSearchParams(nextParams, { replace: true })
-  }, [activeProfileTab, isProfileListsOpen, searchParams, setSearchParams])
+    nextParams.set("dialog", "profile");
+    nextParams.set("tab", activeProfileTab);
+    setSearchParams(nextParams, { replace: true });
+  }, [activeProfileTab, isProfileListsOpen, searchParams, setSearchParams]);
 
   const initials =
     (canEditProfile ? form.name || user?.name : viewedUser?.name)
@@ -405,78 +405,78 @@ export default function Profile() {
       .map((part) => part[0])
       .join("")
       .slice(0, 2)
-      .toUpperCase() || "U"
+      .toUpperCase() || "U";
 
   const hasChanged = useMemo(() => {
-    if (!user) return false
+    if (!user) return false;
 
     return (
       form.name.trim() !== user.name ||
       form.username.trim() !== user.username ||
       (form.avatar.trim() || "") !== (user.avatar || "")
-    )
-  }, [form, user])
+    );
+  }, [form, user]);
 
   const isFormValid = useMemo(() => {
-    if (!user) return false
+    if (!user) return false;
 
-    const nextName = form.name.trim()
-    const nextUsername = form.username.trim()
-    const isNameChanged = nextName !== user.name
-    const isUsernameChanged = nextUsername !== user.username
+    const nextName = form.name.trim();
+    const nextUsername = form.username.trim();
+    const isNameChanged = nextName !== user.name;
+    const isUsernameChanged = nextUsername !== user.username;
 
-    if (isNameChanged && !/^[A-Za-z0-9 ]{1,20}$/.test(nextName)) return false
+    if (isNameChanged && !/^[A-Za-z0-9 ]{1,20}$/.test(nextName)) return false;
     if (isUsernameChanged && !/^[a-z0-9]{6,20}$/.test(nextUsername))
-      return false
+      return false;
 
-    return true
-  }, [form.name, form.username, user])
+    return true;
+  }, [form.name, form.username, user]);
 
   useEffect(() => {
-    let isActive = true
+    let isActive = true;
 
     if (!routeUsername) {
-      setViewedUser(null)
-      setIsFollowing(false)
-      setProfileLoadError("")
-      setIsProfileLoading(false)
-      setIsFollowStatusLoading(false)
+      setViewedUser(null);
+      setIsFollowing(false);
+      setProfileLoadError("");
+      setIsProfileLoading(false);
+      setIsFollowStatusLoading(false);
       return () => {
-        isActive = false
-      }
+        isActive = false;
+      };
     }
 
     const loadUserProfile = async () => {
-      setIsProfileLoading(true)
-      setIsFollowStatusLoading(isAuthenticated && !canEditProfile)
-      setProfileLoadError("")
+      setIsProfileLoading(true);
+      setIsFollowStatusLoading(isAuthenticated && !canEditProfile);
+      setProfileLoadError("");
 
       try {
         const response = (await fetchUserByUsername(
-          routeUsername
-        )) as PublicProfileResponse
+          routeUsername,
+        )) as PublicProfileResponse;
 
-        if (!isActive) return
+        if (!isActive) return;
 
-        const nextUser = response?.result?.user ?? null
+        const nextUser = response?.result?.user ?? null;
 
         if (!nextUser?._id) {
-          setProfileLoadError("User not found.")
-          setViewedUser(null)
-          setIsFollowing(false)
-          return
+          setProfileLoadError("User not found.");
+          setViewedUser(null);
+          setIsFollowing(false);
+          return;
         }
 
-        let nextIsFollowing = false
+        let nextIsFollowing = false;
 
         if (isAuthenticated && !canEditProfile) {
-          const followStatusResponse = await fetchFollowStatus(nextUser._id)
-          if (!isActive) return
-          nextIsFollowing = Boolean(followStatusResponse?.result?.isFollowing)
+          const followStatusResponse = await fetchFollowStatus(nextUser._id);
+          if (!isActive) return;
+          nextIsFollowing = Boolean(followStatusResponse?.result?.isFollowing);
         }
 
-        setViewedUser(nextUser)
-        setIsFollowing(nextIsFollowing)
+        setViewedUser(nextUser);
+        setIsFollowing(nextIsFollowing);
 
         if (
           canEditProfile &&
@@ -492,39 +492,39 @@ export default function Profile() {
             username: nextUser.username ?? user.username,
             avatar: nextUser.avatar || undefined,
             stats: nextUser.stats ?? user.stats,
-          })
+          });
         }
       } catch (error) {
-        if (!isActive) return
+        if (!isActive) return;
         const message =
           typeof error === "object" && error !== null
             ? (error as { response?: { data?: { message?: string } } }).response
                 ?.data?.message
-            : undefined
-        setProfileLoadError(message || "Failed to load user profile.")
+            : undefined;
+        setProfileLoadError(message || "Failed to load user profile.");
       } finally {
         if (isActive) {
-          setIsProfileLoading(false)
-          setIsFollowStatusLoading(false)
+          setIsProfileLoading(false);
+          setIsFollowStatusLoading(false);
         }
       }
-    }
+    };
 
-    void loadUserProfile()
+    void loadUserProfile();
 
     return () => {
-      isActive = false
-    }
-  }, [canEditProfile, isAuthenticated, routeUsername, updateUser, user])
+      isActive = false;
+    };
+  }, [canEditProfile, isAuthenticated, routeUsername, updateUser, user]);
 
   useEffect(() => {
     const timers = (Object.keys(profileLists) as Array<ProfileDialogTab>).map(
       (tab) =>
         setTimeout(() => {
           setProfileLists((prev) => {
-            const nextSearch = prev[tab].search.trim()
+            const nextSearch = prev[tab].search.trim();
             if (prev[tab].debouncedSearch === nextSearch) {
-              return prev
+              return prev;
             }
 
             return {
@@ -534,29 +534,29 @@ export default function Profile() {
                 debouncedSearch: nextSearch,
                 page: 1,
               },
-            }
-          })
-        }, 350)
-    )
+            };
+          });
+        }, 350),
+    );
 
     return () => {
-      timers.forEach((timer) => clearTimeout(timer))
-    }
-  }, [profileLists])
+      timers.forEach((timer) => clearTimeout(timer));
+    };
+  }, [profileLists]);
 
-  const activeListState = profileLists[activeProfileTab]
-  const activeListPage = activeListState.page
-  const activeListSearch = activeListState.debouncedSearch
-  const activeListSortBy = activeListState.sortBy
-  const activeListOrder = activeListState.order
-  const currentUserId = user?._id
+  const activeListState = profileLists[activeProfileTab];
+  const activeListPage = activeListState.page;
+  const activeListSearch = activeListState.debouncedSearch;
+  const activeListSortBy = activeListState.sortBy;
+  const activeListOrder = activeListState.order;
+  const currentUserId = user?._id;
 
   useEffect(() => {
-    if (!isProfileListsOpen || !routeUsername) return
+    if (!isProfileListsOpen || !routeUsername) return;
 
-    const tab = activeProfileTab
-    const requestId = profileListRequestIdRef.current[tab] + 1
-    profileListRequestIdRef.current[tab] = requestId
+    const tab = activeProfileTab;
+    const requestId = profileListRequestIdRef.current[tab] + 1;
+    profileListRequestIdRef.current[tab] = requestId;
 
     setProfileLists((prev) => ({
       ...prev,
@@ -566,7 +566,7 @@ export default function Profile() {
         isLoading: prev[tab].page === 1,
         isAppending: prev[tab].page > 1,
       },
-    }))
+    }));
 
     const load = async () => {
       try {
@@ -577,12 +577,12 @@ export default function Profile() {
                   | ProfileFollowListItem
                   | ProfileStrategyListItem
                   | ProfileBacktestListItem
-                >
-                total?: number
-                hasNextPage?: boolean
-              }
+                >;
+                total?: number;
+                hasNextPage?: boolean;
+              };
             }
-          | undefined
+          | undefined;
 
         if (tab === "followers" || tab === "following") {
           result = await fetchUserFollowsByUsername(routeUsername, {
@@ -591,12 +591,12 @@ export default function Profile() {
             search: activeListSearch,
             sortBy: activeListSortBy,
             order: activeListOrder,
-          })
+          });
         } else if (tab === "strategies") {
           const shouldLoadBookmarks =
             isAuthenticated &&
             activeListPage === 1 &&
-            !bookmarkListLoadedRef.current.strategies
+            !bookmarkListLoadedRef.current.strategies;
 
           const [strategyResult] = await Promise.all([
             fetchUserStrategiesByUsername(routeUsername, {
@@ -607,17 +607,17 @@ export default function Profile() {
             }),
             shouldLoadBookmarks
               ? loadStrategyBookmarks().then(() => {
-                  bookmarkListLoadedRef.current.strategies = true
+                  bookmarkListLoadedRef.current.strategies = true;
                 })
               : Promise.resolve(),
-          ])
+          ]);
 
-          result = strategyResult
+          result = strategyResult;
         } else {
           const shouldLoadBookmarks =
             isAuthenticated &&
             activeListPage === 1 &&
-            !bookmarkListLoadedRef.current.backtests
+            !bookmarkListLoadedRef.current.backtests;
 
           const [backtestResult] = await Promise.all([
             fetchUserBacktestsByUsername(routeUsername, {
@@ -628,57 +628,57 @@ export default function Profile() {
             }),
             shouldLoadBookmarks
               ? loadBacktestBookmarks().then(() => {
-                  bookmarkListLoadedRef.current.backtests = true
+                  bookmarkListLoadedRef.current.backtests = true;
                 })
               : Promise.resolve(),
-          ])
+          ]);
 
-          result = backtestResult
+          result = backtestResult;
         }
 
-        if (profileListRequestIdRef.current[tab] !== requestId) return
+        if (profileListRequestIdRef.current[tab] !== requestId) return;
 
-        const nextItems = result?.result?.items ?? []
+        const nextItems = result?.result?.items ?? [];
 
         if (isAuthenticated && (tab === "followers" || tab === "following")) {
-          const followItems = nextItems as ProfileFollowListItem[]
+          const followItems = nextItems as ProfileFollowListItem[];
           const idsToFetch = followItems
             .map((item) => item._id)
-            .filter((itemId) => itemId && itemId !== currentUserId)
+            .filter((itemId) => itemId && itemId !== currentUserId);
 
           if (idsToFetch.length > 0) {
             setFollowListStatusLoadingIds((prev) => {
-              const next = new Set(prev)
-              idsToFetch.forEach((itemId) => next.add(itemId))
-              return next
-            })
+              const next = new Set(prev);
+              idsToFetch.forEach((itemId) => next.add(itemId));
+              return next;
+            });
 
             try {
               const followStatuses = await Promise.all(
                 idsToFetch.map(async (itemId) => {
-                  const response = await fetchFollowStatus(itemId)
+                  const response = await fetchFollowStatus(itemId);
                   return {
                     itemId,
                     isFollowing: Boolean(response?.result?.isFollowing),
-                  }
-                })
-              )
+                  };
+                }),
+              );
 
-              if (profileListRequestIdRef.current[tab] !== requestId) return
+              if (profileListRequestIdRef.current[tab] !== requestId) return;
 
               setFollowListStatusById((prev) => {
-                const next = { ...prev }
+                const next = { ...prev };
                 followStatuses.forEach(({ itemId, isFollowing }) => {
-                  next[itemId] = isFollowing
-                })
-                return next
-              })
+                  next[itemId] = isFollowing;
+                });
+                return next;
+              });
             } finally {
               setFollowListStatusLoadingIds((prev) => {
-                const next = new Set(prev)
-                idsToFetch.forEach((itemId) => next.delete(itemId))
-                return next
-              })
+                const next = new Set(prev);
+                idsToFetch.forEach((itemId) => next.delete(itemId));
+                return next;
+              });
             }
           }
         }
@@ -695,8 +695,8 @@ export default function Profile() {
                     ...nextItems.filter(
                       (item) =>
                         !prev[tab].items.some(
-                          (existing) => existing._id === item._id
-                        )
+                          (existing) => existing._id === item._id,
+                        ),
                     ),
                   ],
             total: result?.result?.total ?? 0,
@@ -705,9 +705,9 @@ export default function Profile() {
             isAppending: false,
             error: "",
           },
-        }))
+        }));
       } catch (error) {
-        if (profileListRequestIdRef.current[tab] !== requestId) return
+        if (profileListRequestIdRef.current[tab] !== requestId) return;
 
         setProfileLists((prev) => ({
           ...prev,
@@ -717,11 +717,11 @@ export default function Profile() {
             isAppending: false,
             error: getApiErrorMessage(error, "Failed to load items"),
           },
-        }))
+        }));
       }
-    }
+    };
 
-    void load()
+    void load();
   }, [
     activeListOrder,
     activeListPage,
@@ -734,11 +734,11 @@ export default function Profile() {
     isAuthenticated,
     loadStrategyBookmarks,
     loadBacktestBookmarks,
-  ])
+  ]);
 
   useEffect(() => {
-    const node = profileListLoadMoreRef.current
-    const root = profileListScrollRef.current
+    const node = profileListLoadMoreRef.current;
+    const root = profileListScrollRef.current;
 
     if (
       !node ||
@@ -748,52 +748,52 @@ export default function Profile() {
       activeListState.isLoading ||
       activeListState.isAppending
     ) {
-      return
+      return;
     }
 
     const observer = new IntersectionObserver(
       (entries) => {
-        const firstEntry = entries[0]
+        const firstEntry = entries[0];
 
         if (firstEntry?.isIntersecting) {
           updateProfileListState(activeProfileTab, (state) => ({
             ...state,
             page: state.page + 1,
-          }))
+          }));
         }
       },
       {
         root,
         rootMargin: "220px 0px",
         threshold: 0,
-      }
-    )
+      },
+    );
 
-    observer.observe(node)
-    return () => observer.disconnect()
+    observer.observe(node);
+    return () => observer.disconnect();
   }, [
     activeListState.hasNextPage,
     activeListState.isAppending,
     activeListState.isLoading,
     activeProfileTab,
     isProfileListsOpen,
-  ])
+  ]);
 
   useEffect(() => {
     if (!isAuthenticated) {
       bookmarkListLoadedRef.current = {
         strategies: false,
         backtests: false,
-      }
+      };
     }
-  }, [isAuthenticated])
+  }, [isAuthenticated]);
 
   if (!routeUsername && isAuthenticated && user?.username) {
-    return <Navigate to={`/${user.username}`} replace />
+    return <Navigate to={`/${user.username}`} replace />;
   }
 
   if (!routeUsername && !isAuthenticated) {
-    return <Navigate to="/auth" replace />
+    return <Navigate to="/auth" replace />;
   }
 
   if (
@@ -802,157 +802,156 @@ export default function Profile() {
     !viewedUser &&
     Boolean(profileLoadError)
   ) {
-      return (
-          <div className="mx-auto w-full max-w-4xl">
-          <Button
-            variant="outline"
-            className="theme-glass-button mb-3 w-fit"
-            onClick={onBack}
-          >
-            <span className="inline-flex items-center gap-1.5">
-              <ChevronLeft className="h-4 w-4" />
-              Back
-            </span>
-          </Button>
-          <h1 className="text-3xl font-bold">Profile</h1>
-          <p className="mt-2 text-muted-foreground">Public profile details.</p>
+    return (
+      <div className="mx-auto w-full max-w-4xl">
+        <Button
+          variant="outline"
+          className="theme-glass-button mb-3 w-fit"
+          onClick={onBack}
+        >
+          <span className="inline-flex items-center gap-1.5">
+            <ChevronLeft className="h-4 w-4" />
+            Back
+          </span>
+        </Button>
+        <h1 className="text-3xl font-bold">Profile</h1>
+        <p className="mt-2 text-muted-foreground">Public profile details.</p>
 
-          <Card className="mt-6">
-            <CardContent className="flex min-h-[220px] flex-col items-center justify-center gap-2 text-center">
-              <SearchX className="h-8 w-8 text-muted-foreground" />
-              <p className="text-lg font-semibold text-foreground">
-                User not found
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {profileLoadError || "This username does not exist."}
-              </p>
-            </CardContent>
-          </Card>
-          </div>
-      )
+        <Card className="mt-6">
+          <CardContent className="flex min-h-[220px] flex-col items-center justify-center gap-2 text-center">
+            <SearchX className="h-8 w-8 text-muted-foreground" />
+            <p className="text-lg font-semibold text-foreground">
+              User not found
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {profileLoadError || "This username does not exist."}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   if (!canEditProfile && isProfileLoading) {
-      return (
-          <div className="mx-auto w-full max-w-4xl">
-          <Button
-            variant="outline"
-            className="theme-glass-button mb-3 w-fit"
-            onClick={onBack}
-          >
-            <span className="inline-flex items-center gap-1.5">
-              <ChevronLeft className="h-4 w-4" />
-              Back
-            </span>
-          </Button>
-          <h1 className="text-3xl font-bold">Profile</h1>
-          <p className="mt-2 text-muted-foreground">Public profile details.</p>
+    return (
+      <div className="mx-auto w-full max-w-4xl">
+        <Button
+          variant="outline"
+          className="theme-glass-button mb-3 w-fit"
+          onClick={onBack}
+        >
+          <span className="inline-flex items-center gap-1.5">
+            <ChevronLeft className="h-4 w-4" />
+            Back
+          </span>
+        </Button>
+        <h1 className="text-3xl font-bold">Profile</h1>
+        <p className="mt-2 text-muted-foreground">Public profile details.</p>
 
-          <div className="mt-6 flex min-h-[220px] items-center justify-center text-sm text-muted-foreground">
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Searching profile...
-          </div>
-          </div>
-      )
+        <div className="mt-6 flex min-h-[220px] items-center justify-center text-sm text-muted-foreground">
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          Searching profile...
+        </div>
+      </div>
+    );
   }
 
   const onCancel = () => {
-    if (!user) return
+    if (!user) return;
     setForm({
       name: user.name || "",
       username: user.username || "",
       avatar: user.avatar || "",
-    })
-    setSelectedAvatarFileName("")
-    setIsEditing(false)
-  }
+    });
+    setSelectedAvatarFileName("");
+    setIsEditing(false);
+  };
 
   const onStartEditing = () => {
-    if (!user) return
+    if (!user) return;
     setForm({
       name: user.name || "",
       username: user.username || "",
       avatar: user.avatar || "",
-    })
-    setSelectedAvatarFileName("")
-    setIsEditing(true)
-  }
+    });
+    setSelectedAvatarFileName("");
+    setIsEditing(true);
+  };
 
   const onAvatarSelect = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
+    const file = event.target.files?.[0];
 
-    if (!file) return
+    if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      toast.error("Please select an image file")
-      setSelectedAvatarFileName("")
-      return
+      toast.error("Please select an image file");
+      setSelectedAvatarFileName("");
+      return;
     }
 
     if (file.size > 2 * 1024 * 1024) {
-      toast.error("Image must be 2MB or smaller")
-      setSelectedAvatarFileName("")
-      return
+      toast.error("Image must be 2MB or smaller");
+      setSelectedAvatarFileName("");
+      return;
     }
 
-    const reader = new FileReader()
+    const reader = new FileReader();
 
     reader.onload = () => {
       setForm((prev) => ({
         ...prev,
         avatar: typeof reader.result === "string" ? reader.result : prev.avatar,
-      }))
-      setSelectedAvatarFileName(file.name)
-    }
+      }));
+      setSelectedAvatarFileName(file.name);
+    };
 
     reader.onerror = () => {
-      toast.error("Failed to read selected image")
-    }
+      toast.error("Failed to read selected image");
+    };
 
-    reader.readAsDataURL(file)
-    event.target.value = ""
-  }
+    reader.readAsDataURL(file);
+    event.target.value = "";
+  };
 
   const onRemoveSelectedAvatar = () => {
-    if (!user) return
+    if (!user) return;
     setForm((prev) => ({
       ...prev,
       avatar: user.avatar || "",
-    }))
-    setSelectedAvatarFileName("")
-  }
+    }));
+    setSelectedAvatarFileName("");
+  };
 
   const onSave = async () => {
-    if (!user) return
-    const nextName = form.name.trim()
-    const nextUsername = form.username.trim()
-    const nextAvatar = form.avatar.trim()
-    const payload: { name?: string; username?: string; avatar?: string } = {}
+    if (!user) return;
+    const nextName = form.name.trim();
+    const nextUsername = form.username.trim();
+    const nextAvatar = form.avatar.trim();
+    const payload: { name?: string; username?: string; avatar?: string } = {};
 
-    if (!isFormValid) return
+    if (!isFormValid) return;
 
     if (nextName !== user.name) {
-      payload.name = nextName
+      payload.name = nextName;
     }
 
     if (nextUsername !== user.username) {
-      payload.username = nextUsername
+      payload.username = nextUsername;
     }
 
     if ((nextAvatar || "") !== (user.avatar || "")) {
-      payload.avatar = nextAvatar
+      payload.avatar = nextAvatar;
     }
 
-    if (Object.keys(payload).length === 0) return
+    if (Object.keys(payload).length === 0) return;
 
-    setIsSaving(true)
+    setIsSaving(true);
 
-    const promise = editProfile(payload)
+    const promise = editProfile(payload);
 
-    toast.promise(promise, {
-      loading: "Updating profile...",
-      success: (data) => {
-        const nextUsername = payload.username ?? user.username
+    promise
+      .then(() => {
+        const nextUsername = payload.username ?? user.username;
         updateUser({
           name: payload.name ?? user.name,
           username: nextUsername,
@@ -960,29 +959,28 @@ export default function Profile() {
             payload.avatar !== undefined
               ? payload.avatar || undefined
               : user.avatar,
-        })
-        setIsEditing(false)
-        navigate(`/${nextUsername}`, { replace: true })
-        return data.message
-      },
-      error: (error: unknown) =>
-        getApiErrorMessage(error, "Failed to update profile!"),
-    })
+        });
+        setIsEditing(false);
+        navigate(`/${nextUsername}`, { replace: true });
+      })
+      .catch((error: unknown) => {
+        toast.error(getApiErrorMessage(error, "Failed to update profile!"));
+      });
 
-    promise.finally(() => setIsSaving(false))
-  }
+    promise.finally(() => setIsSaving(false));
+  };
 
   const onToggleFollow = async () => {
-    if (!viewedUser?._id || !isAuthenticated) return
+    if (!viewedUser?._id || !isAuthenticated) return;
 
-    setIsFollowUpdating(true)
+    setIsFollowUpdating(true);
 
     try {
       const response = isFollowing
         ? await deleteFollow(viewedUser._id)
-        : await createFollow(viewedUser._id)
+        : await createFollow(viewedUser._id);
 
-      setIsFollowing((prev) => !prev)
+      setIsFollowing((prev) => !prev);
       setViewedUser((prev) =>
         prev
           ? {
@@ -991,108 +989,108 @@ export default function Profile() {
                 ...prev.stats,
                 followerCount: Math.max(
                   0,
-                  (prev.stats?.followerCount ?? 0) + (isFollowing ? -1 : 1)
+                  (prev.stats?.followerCount ?? 0) + (isFollowing ? -1 : 1),
                 ),
               },
             }
-          : prev
-      )
+          : prev,
+      );
       if (user) {
         updateUser({
           stats: {
             ...user.stats,
             followingCount: Math.max(
               0,
-              (user.stats?.followingCount ?? 0) + (isFollowing ? -1 : 1)
+              (user.stats?.followingCount ?? 0) + (isFollowing ? -1 : 1),
             ),
           },
-        })
+        });
       }
 
       toast.success(
         response?.message ||
           (isFollowing
             ? "User unfollowed successfully."
-            : "User followed successfully.")
-      )
+            : "User followed successfully."),
+      );
     } catch (error) {
-      toast.error(getApiErrorMessage(error, "Failed to update follow status"))
+      toast.error(getApiErrorMessage(error, "Failed to update follow status"));
     } finally {
-      setIsFollowUpdating(false)
+      setIsFollowUpdating(false);
     }
-  }
+  };
 
   const onCopyProfileLink = async (usernameOverride?: string) => {
-    const username = usernameOverride || viewedUser?.username || routeUsername
-    if (!username || typeof window === "undefined") return
+    const username = usernameOverride || viewedUser?.username || routeUsername;
+    if (!username || typeof window === "undefined") return;
 
     try {
       await navigator.clipboard.writeText(
-        `${window.location.origin}/${username}`
-      )
-      toast.success("Profile link copied.")
+        `${window.location.origin}/${username}`,
+      );
+      toast.success("Profile link copied.");
     } catch (error) {
-      toast.error(getApiErrorMessage(error, "Failed to copy profile link"))
+      toast.error(getApiErrorMessage(error, "Failed to copy profile link"));
     }
-  }
+  };
 
   const onCopyAbsoluteLink = async (path: string) => {
-    if (typeof window === "undefined") return
+    if (typeof window === "undefined") return;
 
     try {
-      await navigator.clipboard.writeText(`${window.location.origin}${path}`)
-      toast.success("Link copied.")
+      await navigator.clipboard.writeText(`${window.location.origin}${path}`);
+      toast.success("Link copied.");
     } catch (error) {
-      toast.error(getApiErrorMessage(error, "Failed to copy link"))
+      toast.error(getApiErrorMessage(error, "Failed to copy link"));
     }
-  }
+  };
 
   const onToggleProfileStrategyBookmark = async (strategyId: string) => {
-    const response = await toggleStrategyBookmark(strategyId)
-    if (!response) return
+    const response = await toggleStrategyBookmark(strategyId);
+    if (!response) return;
 
     if (response.status === "success") {
-      toast.success(response.message)
-      return
+      toast.success(response.message);
+      return;
     }
 
-    toast.error(response.message)
-  }
+    toast.error(response.message);
+  };
 
   const onToggleProfileBacktestBookmark = async (backtestId: string) => {
-    const response = await toggleBacktestBookmark(backtestId)
-    if (!response) return
+    const response = await toggleBacktestBookmark(backtestId);
+    if (!response) return;
 
     if (response.status === "success") {
-      toast.success(response.message)
-      return
+      toast.success(response.message);
+      return;
     }
 
-    toast.error(response.message)
-  }
+    toast.error(response.message);
+  };
 
   const onToggleFollowListUser = async (targetUser: ProfileFollowListItem) => {
     if (!isAuthenticated || !targetUser._id || targetUser._id === user?._id) {
-      return
+      return;
     }
 
-    const isCurrentlyFollowing = Boolean(followListStatusById[targetUser._id])
+    const isCurrentlyFollowing = Boolean(followListStatusById[targetUser._id]);
 
     setFollowListUpdatingIds((prev) => {
-      const next = new Set(prev)
-      next.add(targetUser._id)
-      return next
-    })
+      const next = new Set(prev);
+      next.add(targetUser._id);
+      return next;
+    });
 
     try {
       const response = isCurrentlyFollowing
         ? await deleteFollow(targetUser._id)
-        : await createFollow(targetUser._id)
+        : await createFollow(targetUser._id);
 
       setFollowListStatusById((prev) => ({
         ...prev,
         [targetUser._id]: !isCurrentlyFollowing,
-      }))
+      }));
 
       if (
         canEditProfile &&
@@ -1103,7 +1101,7 @@ export default function Profile() {
           ...state,
           items: state.items.filter((item) => item._id !== targetUser._id),
           total: Math.max(0, state.total - 1),
-        }))
+        }));
       }
 
       if (user) {
@@ -1113,67 +1111,67 @@ export default function Profile() {
             followingCount: Math.max(
               0,
               (user.stats?.followingCount ?? 0) +
-                (isCurrentlyFollowing ? -1 : 1)
+                (isCurrentlyFollowing ? -1 : 1),
             ),
           },
-        })
+        });
       }
 
       toast.success(
         response?.message ||
           (isCurrentlyFollowing
             ? "User unfollowed successfully."
-            : "User followed successfully.")
-      )
+            : "User followed successfully."),
+      );
     } catch (error) {
-      toast.error(getApiErrorMessage(error, "Failed to update follow status"))
+      toast.error(getApiErrorMessage(error, "Failed to update follow status"));
     } finally {
       setFollowListUpdatingIds((prev) => {
-        const next = new Set(prev)
-        next.delete(targetUser._id)
-        return next
-      })
+        const next = new Set(prev);
+        next.delete(targetUser._id);
+        return next;
+      });
     }
-  }
+  };
 
   const onFollowListActionClick = (targetUser: ProfileFollowListItem) => {
     if (followListStatusById[targetUser._id]) {
-      setPendingFollowListUnfollowUser(targetUser)
-      return
+      setPendingFollowListUnfollowUser(targetUser);
+      return;
     }
 
-    void onToggleFollowListUser(targetUser)
-  }
+    void onToggleFollowListUser(targetUser);
+  };
 
   const onFollowButtonClick = () => {
     if (isFollowing) {
-      setIsUnfollowDialogOpen(true)
-      return
+      setIsUnfollowDialogOpen(true);
+      return;
     }
 
-    void onToggleFollow()
-  }
+    void onToggleFollow();
+  };
 
   const openProfileTab = (tab: ProfileDialogTab) => {
-    const nextParams = new URLSearchParams(searchParams)
-    nextParams.set("dialog", "profile")
-    nextParams.set("tab", tab)
-    setSearchParams(nextParams, { replace: false })
-  }
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set("dialog", "profile");
+    nextParams.set("tab", tab);
+    setSearchParams(nextParams, { replace: false });
+  };
 
   const updateProfileListState = (
     tab: ProfileDialogTab,
-    updater: (state: ProfileListState) => ProfileListState
+    updater: (state: ProfileListState) => ProfileListState,
   ) => {
     setProfileLists((prev) => ({
       ...prev,
       [tab]: updater(prev[tab]),
-    }))
-  }
+    }));
+  };
 
   const profileStats = canEditProfile
     ? (user?.stats ?? viewedUser?.stats)
-    : (viewedUser?.stats ?? user?.stats)
+    : (viewedUser?.stats ?? user?.stats);
   const statItems = [
     {
       tab: "followers" as const,
@@ -1199,7 +1197,7 @@ export default function Profile() {
       value: profileStats?.backtestCount,
       icon: CandlestickChart,
     },
-  ]
+  ];
 
   const activeSortOptions =
     activeProfileTab === "followers" || activeProfileTab === "following"
@@ -1220,11 +1218,11 @@ export default function Profile() {
             { value: "profitFactor", label: "Profit Factor" },
             { value: "roi", label: "ROI" },
             { value: "winRate", label: "Win Rate" },
-          ]
+          ];
 
-    return (
-      <>
-        <div className="mx-auto w-full max-w-4xl">
+  return (
+    <>
+      <div className="mx-auto w-full max-w-4xl">
         <Button
           variant="outline"
           className="theme-glass-button mb-3 w-fit"
@@ -1247,7 +1245,7 @@ export default function Profile() {
             "mt-6 grid items-start gap-6",
             canEditProfile
               ? "md:grid-cols-[280px_1fr]"
-              : "md:grid-cols-[minmax(0,1fr)]"
+              : "md:grid-cols-[minmax(0,1fr)]",
           )}
         >
           <Card className="self-start">
@@ -1301,7 +1299,7 @@ export default function Profile() {
                           "font-semibold text-foreground",
                           typeof value === "number" &&
                             value > 0 &&
-                            "text-primary"
+                            "text-primary",
                         )}
                       >
                         {typeof value === "number"
@@ -1318,7 +1316,7 @@ export default function Profile() {
                 Member since{" "}
                 {new Date(
                   (canEditProfile ? user?.createdAt : viewedUser?.createdAt) ||
-                    Date.now()
+                    Date.now(),
                 ).toLocaleDateString()}
               </div>
 
@@ -1384,11 +1382,11 @@ export default function Profile() {
                         }
                         onClick={() => {
                           if (isFollowing) {
-                            setIsUnfollowDialogOpen(true)
-                            return
+                            setIsUnfollowDialogOpen(true);
+                            return;
                           }
 
-                          void onToggleFollow()
+                          void onToggleFollow();
                         }}
                       >
                         {isFollowing ? (
@@ -1472,9 +1470,9 @@ export default function Profile() {
                 </div>
 
                 <div className="space-y-2">
-                    <div className="flex items-center gap-1.5">
-                      <Label htmlFor="name">Name</Label>
-                    </div>
+                  <div className="flex items-center gap-1.5">
+                    <Label htmlFor="name">Name</Label>
+                  </div>
                   <Input
                     id="name"
                     value={form.name}
@@ -1489,9 +1487,9 @@ export default function Profile() {
                 </div>
 
                 <div className="space-y-2">
-                    <div className="flex items-center gap-1.5">
-                      <Label htmlFor="username">Username</Label>
-                    </div>
+                  <div className="flex items-center gap-1.5">
+                    <Label htmlFor="username">Username</Label>
+                  </div>
                   <Input
                     id="username"
                     value={form.username}
@@ -1554,19 +1552,19 @@ export default function Profile() {
         open={isProfileListsOpen}
         onOpenChange={(open) => {
           if (open) {
-            setIsProfileListsOpen(true)
-            const nextParams = new URLSearchParams(searchParams)
-            nextParams.set("dialog", "profile")
-            nextParams.set("tab", activeProfileTab)
-            setSearchParams(nextParams, { replace: true })
-            return
+            setIsProfileListsOpen(true);
+            const nextParams = new URLSearchParams(searchParams);
+            nextParams.set("dialog", "profile");
+            nextParams.set("tab", activeProfileTab);
+            setSearchParams(nextParams, { replace: true });
+            return;
           }
 
-          setIsProfileListsOpen(false)
-          const nextParams = new URLSearchParams(searchParams)
-          nextParams.delete("dialog")
-          nextParams.delete("tab")
-          setSearchParams(nextParams, { replace: true })
+          setIsProfileListsOpen(false);
+          const nextParams = new URLSearchParams(searchParams);
+          nextParams.delete("dialog");
+          nextParams.delete("tab");
+          setSearchParams(nextParams, { replace: true });
         }}
       >
         <DialogContent className="top-[8vh] max-h-[calc(100vh-4rem)] -translate-y-0 gap-0 overflow-hidden p-0 sm:top-[10vh] sm:max-w-2xl">
@@ -1591,7 +1589,7 @@ export default function Profile() {
                     <TabsTrigger key={tab} value={tab}>
                       {dialogTabLabels[tab]}
                     </TabsTrigger>
-                  )
+                  ),
                 )}
               </TabsList>
             </div>
@@ -1635,7 +1633,7 @@ export default function Profile() {
                                 ...state,
                                 sortBy: option.value,
                                 page: 1,
-                              })
+                              }),
                             )
                           }
                         >
@@ -1655,7 +1653,7 @@ export default function Profile() {
                                 ...state,
                                 order: value,
                                 page: 1,
-                              })
+                              }),
                             )
                           }
                         >
@@ -1671,7 +1669,7 @@ export default function Profile() {
 
             {(Object.keys(dialogTabLabels) as Array<ProfileDialogTab>).map(
               (tab) => {
-                const tabState = profileLists[tab]
+                const tabState = profileLists[tab];
 
                 return (
                   <TabsContent
@@ -1756,21 +1754,21 @@ export default function Profile() {
                                           disabled={
                                             !isAuthenticated ||
                                             followListUpdatingIds.has(
-                                              item._id
+                                              item._id,
                                             ) ||
                                             followListStatusLoadingIds.has(
-                                              item._id
+                                              item._id,
                                             )
                                           }
                                           onClick={() => {
-                                            onFollowListActionClick(item)
+                                            onFollowListActionClick(item);
                                           }}
                                         >
                                           {followListUpdatingIds.has(
-                                            item._id
+                                            item._id,
                                           ) ||
                                           followListStatusLoadingIds.has(
-                                            item._id
+                                            item._id,
                                           ) ? (
                                             <Loader2 className="h-4 w-4 animate-spin" />
                                           ) : followListStatusById[item._id] ? (
@@ -1813,7 +1811,7 @@ export default function Profile() {
                                             <DropdownMenuItem
                                               onClick={() =>
                                                 void onCopyProfileLink(
-                                                  item.username
+                                                  item.username,
                                                 )
                                               }
                                             >
@@ -1825,14 +1823,14 @@ export default function Profile() {
                                               disabled={
                                                 !isAuthenticated ||
                                                 followListUpdatingIds.has(
-                                                  item._id
+                                                  item._id,
                                                 ) ||
                                                 followListStatusLoadingIds.has(
-                                                  item._id
+                                                  item._id,
                                                 )
                                               }
                                               onClick={() => {
-                                                onFollowListActionClick(item)
+                                                onFollowListActionClick(item);
                                               }}
                                             >
                                               {followListStatusById[
@@ -1854,7 +1852,7 @@ export default function Profile() {
                                       </ButtonGroup>
                                     ) : null}
                                   </div>
-                                )
+                                ),
                               )
                             : tab === "strategies"
                               ? (
@@ -1913,18 +1911,18 @@ export default function Profile() {
                                         }
                                         className="rounded-r-none"
                                         disabled={updatingStrategyIds.has(
-                                          item._id
+                                          item._id,
                                         )}
                                         onClick={() => {
                                           void onToggleProfileStrategyBookmark(
-                                            item._id
-                                          )
+                                            item._id,
+                                          );
                                         }}
                                       >
                                         {updatingStrategyIds.has(item._id) ? (
                                           <Loader2 className="h-4 w-4 animate-spin" />
                                         ) : bookmarkedStrategyIds.has(
-                                            item._id
+                                            item._id,
                                           ) ? (
                                           <>
                                             <BookmarkCheck className="h-4 w-4" />
@@ -1948,7 +1946,7 @@ export default function Profile() {
                                             size="icon-sm"
                                             variant={
                                               bookmarkedStrategyIds.has(
-                                                item._id
+                                                item._id,
                                               )
                                                 ? "outline"
                                                 : "default"
@@ -1967,7 +1965,7 @@ export default function Profile() {
                                           <DropdownMenuItem
                                             onClick={() =>
                                               void onCopyAbsoluteLink(
-                                                `/strategy/${item._id}`
+                                                `/strategy/${item._id}`,
                                               )
                                             }
                                           >
@@ -1977,16 +1975,16 @@ export default function Profile() {
                                           <DropdownMenuSeparator />
                                           <DropdownMenuItem
                                             disabled={updatingStrategyIds.has(
-                                              item._id
+                                              item._id,
                                             )}
                                             onClick={() => {
                                               void onToggleProfileStrategyBookmark(
-                                                item._id
-                                              )
+                                                item._id,
+                                              );
                                             }}
                                           >
                                             {bookmarkedStrategyIds.has(
-                                              item._id
+                                              item._id,
                                             ) ? (
                                               <>
                                                 <BookmarkCheck className="h-4 w-4" />
@@ -2010,8 +2008,8 @@ export default function Profile() {
                                   const primaryMetric =
                                     getProfileBacktestMetric(
                                       item,
-                                      tabState.sortBy
-                                    )
+                                      tabState.sortBy,
+                                    );
 
                                   return (
                                     <div
@@ -2040,7 +2038,7 @@ export default function Profile() {
                                             <p
                                               className={cn(
                                                 "font-medium",
-                                                primaryMetric.valueClassName
+                                                primaryMetric.valueClassName,
                                               )}
                                             >
                                               {primaryMetric.value}
@@ -2062,18 +2060,18 @@ export default function Profile() {
                                           }
                                           className="rounded-r-none"
                                           disabled={updatingBacktestIds.has(
-                                            item._id
+                                            item._id,
                                           )}
                                           onClick={() => {
                                             void onToggleProfileBacktestBookmark(
-                                              item._id
-                                            )
+                                              item._id,
+                                            );
                                           }}
                                         >
                                           {updatingBacktestIds.has(item._id) ? (
                                             <Loader2 className="h-4 w-4 animate-spin" />
                                           ) : bookmarkedBacktestIds.has(
-                                              item._id
+                                              item._id,
                                             ) ? (
                                             <>
                                               <BookmarkCheck className="h-4 w-4" />
@@ -2097,7 +2095,7 @@ export default function Profile() {
                                               size="icon-sm"
                                               variant={
                                                 bookmarkedBacktestIds.has(
-                                                  item._id
+                                                  item._id,
                                                 )
                                                   ? "outline"
                                                   : "default"
@@ -2116,7 +2114,7 @@ export default function Profile() {
                                             <DropdownMenuItem
                                               onClick={() =>
                                                 void onCopyAbsoluteLink(
-                                                  `/backtest/${item._id}`
+                                                  `/backtest/${item._id}`,
                                                 )
                                               }
                                             >
@@ -2126,16 +2124,16 @@ export default function Profile() {
                                             <DropdownMenuSeparator />
                                             <DropdownMenuItem
                                               disabled={updatingBacktestIds.has(
-                                                item._id
+                                                item._id,
                                               )}
                                               onClick={() => {
                                                 void onToggleProfileBacktestBookmark(
-                                                  item._id
-                                                )
+                                                  item._id,
+                                                );
                                               }}
                                             >
                                               {bookmarkedBacktestIds.has(
-                                                item._id
+                                                item._id,
                                               ) ? (
                                                 <>
                                                   <BookmarkCheck className="h-4 w-4" />
@@ -2152,7 +2150,7 @@ export default function Profile() {
                                         </DropdownMenu>
                                       </ButtonGroup>
                                     </div>
-                                  )
+                                  );
                                 })}
 
                           {tabState.hasNextPage ? (
@@ -2178,8 +2176,8 @@ export default function Profile() {
                       )}
                     </div>
                   </TabsContent>
-                )
-              }
+                );
+              },
             )}
           </Tabs>
         </DialogContent>
@@ -2202,10 +2200,10 @@ export default function Profile() {
             <AlertDialogAction
               disabled={isFollowUpdating}
               onClick={(event) => {
-                event.preventDefault()
+                event.preventDefault();
                 void onToggleFollow().finally(() => {
-                  setIsUnfollowDialogOpen(false)
-                })
+                  setIsUnfollowDialogOpen(false);
+                });
               }}
             >
               {isFollowUpdating ? (
@@ -2224,7 +2222,7 @@ export default function Profile() {
         open={Boolean(pendingFollowListUnfollowUser)}
         onOpenChange={(open) => {
           if (!open) {
-            setPendingFollowListUnfollowUser(null)
+            setPendingFollowListUnfollowUser(null);
           }
         }}
       >
@@ -2252,15 +2250,15 @@ export default function Profile() {
                   : false
               }
               onClick={(event) => {
-                event.preventDefault()
+                event.preventDefault();
 
-                if (!pendingFollowListUnfollowUser) return
+                if (!pendingFollowListUnfollowUser) return;
 
                 void onToggleFollowListUser(
-                  pendingFollowListUnfollowUser
+                  pendingFollowListUnfollowUser,
                 ).finally(() => {
-                  setPendingFollowListUnfollowUser(null)
-                })
+                  setPendingFollowListUnfollowUser(null);
+                });
               }}
             >
               {pendingFollowListUnfollowUser &&
@@ -2275,7 +2273,7 @@ export default function Profile() {
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
-        </AlertDialog>
-      </>
-    )
-  }
+      </AlertDialog>
+    </>
+  );
+}
