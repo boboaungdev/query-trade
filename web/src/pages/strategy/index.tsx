@@ -423,16 +423,16 @@ export default function StrategyPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-6xl min-w-0 space-y-4 overflow-x-hidden sm:space-y-6">
+    <div className="mx-auto w-full max-w-6xl min-w-0 space-y-4 overflow-x-hidden md:space-y-6">
       <Card>
-        <CardContent className="flex flex-col gap-3 p-4 sm:p-6">
+        <CardContent className="flex flex-col gap-3 p-4 md:p-6">
           <p className="inline-flex w-fit items-center gap-1.5 rounded-full border bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground uppercase">
             <Sparkles className="h-3.5 w-3.5 text-primary" />
             Strategy Studio
           </p>
 
-          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight sm:text-4xl">
-            <Target className="h-6 w-6 text-primary sm:h-8 sm:w-8" />
+          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight md:text-4xl">
+            <Target className="h-6 w-6 text-primary md:h-8 md:w-8" />
             Build And Manage Strategies
           </h1>
 
@@ -461,11 +461,11 @@ export default function StrategyPage() {
               <CardTitle className="text-xl">Strategy Catalog</CardTitle>
               <CardDescription className="flex flex-wrap items-center gap-2">
                 Search by strategy name or creator.
-                <span className="hidden items-center gap-1 rounded-full border bg-muted/30 px-2 py-0.5 text-[11px] font-medium text-foreground sm:inline-flex">
+                <span className="hidden items-center gap-1 rounded-full border bg-muted/30 px-2 py-0.5 text-[11px] font-medium text-foreground md:inline-flex">
                   {totalCount} strategies
                 </span>
               </CardDescription>
-              <div className="pt-1 sm:hidden">
+              <div className="pt-1 md:hidden">
                 <span className="inline-flex items-center gap-1 rounded-full border bg-muted/30 px-2 py-0.5 text-[11px] font-medium text-foreground">
                   {totalCount} strategies
                 </span>
@@ -880,7 +880,7 @@ export default function StrategyPage() {
       >
         <SheetContent
           side="right"
-          className="flex h-full w-full flex-col p-0 sm:max-w-[92vw]"
+          className="flex h-full w-full flex-col p-0 md:max-w-[92vw]"
         >
           <SheetHeader className="border-b px-6 py-5">
             <SheetTitle>Create Strategy</SheetTitle>
@@ -907,7 +907,7 @@ export default function StrategyPage() {
             <Button
               onClick={() => createSheetControls?.onSubmit()}
               disabled={createSheetControls?.submitDisabled ?? true}
-              className="w-full sm:w-auto"
+              className="w-full md:w-auto"
             >
               {createSheetControls?.submitLabel ?? "Create Strategy"}
             </Button>
@@ -920,7 +920,7 @@ export default function StrategyPage() {
                 }
               }}
               variant="outline"
-              className="w-full sm:w-auto"
+              className="w-full md:w-auto"
             >
               Cancel
             </Button>
@@ -2042,8 +2042,8 @@ function OperandEditor({
     indicatorFieldOptions[0]?.value !== EMPTY_INDICATOR_OPTION_VALUE;
 
   return (
-    <div className="space-y-2 sm:grid sm:grid-cols-2 sm:gap-2 sm:space-y-0">
-      <div className="grid grid-cols-[96px_minmax(0,1fr)] items-center gap-2 sm:block sm:space-y-2">
+    <div className="space-y-2 md:grid md:grid-cols-2 md:gap-2 md:space-y-0">
+      <div className="grid grid-cols-[96px_minmax(0,1fr)] items-center gap-2 md:block md:space-y-2">
         <Label>{label} Type</Label>
         <DropdownField
           value={value.mode}
@@ -2070,7 +2070,7 @@ function OperandEditor({
         />
       </div>
 
-      <div className="grid grid-cols-[96px_minmax(0,1fr)] items-center gap-2 sm:block sm:space-y-2">
+      <div className="grid grid-cols-[96px_minmax(0,1fr)] items-center gap-2 md:block md:space-y-2">
         <Label>{label} Value</Label>
         {value.mode === "candle" ? (
           <DropdownField
@@ -2264,7 +2264,7 @@ function ConditionEditor({
         indicatorFieldOptions={indicatorFieldOptions}
       />
 
-      <div className="grid grid-cols-[96px_minmax(0,1fr)] items-center gap-2 sm:block sm:space-y-2">
+      <div className="grid grid-cols-[96px_minmax(0,1fr)] items-center gap-2 md:block md:space-y-2">
         <Label>Operator</Label>
         <DropdownField
           value={node.operator}
@@ -2700,7 +2700,7 @@ function LogicBlockEditor({
   return (
     <section
       className={cn(
-        "relative overflow-hidden rounded-[28px] border p-4 sm:p-5",
+        "relative overflow-hidden rounded-[28px] border p-4 md:p-5",
         isBuy ? "theme-rule-panel-buy" : "theme-rule-panel-sell",
       )}
     >
@@ -2751,7 +2751,7 @@ function LogicBlockEditor({
               <DialogContent
                 onOpenAutoFocus={(event) => event.preventDefault()}
                 className={cn(
-                  "top-[8vh] max-h-[calc(100vh-4rem)] -translate-y-0 gap-0 overflow-hidden p-0 sm:top-[10vh] sm:max-w-[560px]",
+                  "top-[8vh] max-h-[calc(100vh-4rem)] -translate-y-0 gap-0 overflow-hidden p-0 md:top-[10vh] md:max-w-[560px]",
                   shouldScrollEntryEditor && "overflow-hidden p-0",
                   !shouldScrollEntryEditor && "p-0",
                 )}
@@ -2961,7 +2961,7 @@ function LogicBlockEditor({
           </div>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 md:grid-cols-2">
           <DraftRiskTile
             label="Stop Loss"
             value={summarizeStopLossDraft(draft.riskManagement.stopLoss)}
@@ -2981,7 +2981,7 @@ function LogicBlockEditor({
                 </DialogTrigger>
                 <DialogContent
                   onOpenAutoFocus={(event) => event.preventDefault()}
-                  className="top-[8vh] max-h-[calc(100vh-4rem)] -translate-y-0 gap-0 overflow-hidden p-0 sm:top-[10vh] sm:max-w-[420px]"
+                  className="top-[8vh] max-h-[calc(100vh-4rem)] -translate-y-0 gap-0 overflow-hidden p-0 md:top-[10vh] md:max-w-[420px]"
                 >
                   <DialogHeader className="border-b px-4 pt-4 pb-3">
                     <DialogTitle>{sideLabel} Stop Loss</DialogTitle>
@@ -3028,7 +3028,7 @@ function LogicBlockEditor({
                 </DialogTrigger>
                 <DialogContent
                   onOpenAutoFocus={(event) => event.preventDefault()}
-                  className="top-[8vh] max-h-[calc(100vh-4rem)] -translate-y-0 gap-0 overflow-hidden p-0 sm:top-[10vh] sm:max-w-[420px]"
+                  className="top-[8vh] max-h-[calc(100vh-4rem)] -translate-y-0 gap-0 overflow-hidden p-0 md:top-[10vh] md:max-w-[420px]"
                 >
                   <DialogHeader className="border-b px-4 pt-4 pb-3">
                     <DialogTitle>{sideLabel} Take Profit</DialogTitle>
@@ -3588,13 +3588,13 @@ export function StrategyBuilder({
   return (
     <div
       className={cn(
-        "w-full space-y-4 sm:space-y-6",
-        embedded ? "p-4 sm:p-6" : "mx-auto max-w-6xl",
+        "w-full space-y-4 md:space-y-6",
+        embedded ? "p-4 md:p-6" : "mx-auto max-w-6xl",
       )}
     >
       {!embedded ? (
         <Card>
-          <CardContent className="flex flex-col gap-3 p-4 sm:p-6">
+          <CardContent className="flex flex-col gap-3 p-4 md:p-6">
             <Button
               type="button"
               variant="outline"
@@ -3619,14 +3619,14 @@ export function StrategyBuilder({
                 <Settings2 className="h-3.5 w-3.5" />
                 Strategy Builder
               </p>
-              <h1 className="mt-3 text-2xl font-semibold tracking-tight sm:text-4xl">
+              <h1 className="mt-3 text-2xl font-semibold tracking-tight md:text-4xl">
                 {isEditing
                   ? "Edit Strategy"
                   : isDuplicating
                     ? "Clone Strategy"
                     : "Create Strategy"}
               </h1>
-              <p className="mt-2 max-w-3xl text-sm text-muted-foreground sm:text-base">
+              <p className="mt-2 max-w-3xl text-sm text-muted-foreground md:text-base">
                 {isEditing
                   ? "Update your strategy with friendly form controls for indicators, nested conditions, stop loss, and take profit."
                   : isDuplicating
@@ -3638,7 +3638,7 @@ export function StrategyBuilder({
         </Card>
       ) : null}
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
         <div className="space-y-4">
           <div className="space-y-4">
             <div className="space-y-2">
@@ -3735,7 +3735,7 @@ export function StrategyBuilder({
                   </DialogTrigger>
 
                   <DialogContent
-                    className="top-[8vh] max-h-[calc(100vh-4rem)] -translate-y-0 gap-0 overflow-hidden p-0 sm:top-[10vh] sm:max-w-2xl"
+                    className="top-[8vh] max-h-[calc(100vh-4rem)] -translate-y-0 gap-0 overflow-hidden p-0 md:top-[10vh] md:max-w-2xl"
                     onOpenAutoFocus={(event) => {
                       event.preventDefault();
                     }}
@@ -3933,9 +3933,9 @@ export function StrategyBuilder({
                   return (
                     <div
                       key={draft.id}
-                      className="rounded-xl border border-border/60 p-3 sm:p-4"
+                      className="rounded-xl border border-border/60 p-3 md:p-4"
                     >
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                         <div className="min-w-0 flex-1 space-y-2">
                           <p className="text-sm font-medium break-words">
                             {index + 1}.{" "}
@@ -3956,7 +3956,7 @@ export function StrategyBuilder({
                           )}
                         </div>
 
-                        <div className="flex w-full gap-2 self-start sm:w-auto sm:self-center">
+                        <div className="flex w-full gap-2 self-start md:w-auto md:self-center">
                           <Dialog>
                             <DialogTrigger asChild>
                               <Button
@@ -3973,7 +3973,7 @@ export function StrategyBuilder({
                               onOpenAutoFocus={(event) =>
                                 event.preventDefault()
                               }
-                              className="top-[8vh] max-h-[calc(100vh-4rem)] -translate-y-0 gap-0 overflow-hidden p-0 sm:top-[10vh] sm:max-w-[420px]"
+                              className="top-[8vh] max-h-[calc(100vh-4rem)] -translate-y-0 gap-0 overflow-hidden p-0 md:top-[10vh] md:max-w-[420px]"
                             >
                               <DialogHeader className="border-b px-4 pt-4 pb-3">
                                 <DialogTitle>
@@ -3985,11 +3985,11 @@ export function StrategyBuilder({
                                 </DialogDescription>
                               </DialogHeader>
                               <div className="space-y-4 p-4">
-                                <div className="grid items-center gap-2 sm:grid-cols-[72px_minmax(0,1fr)] sm:gap-3">
+                                <div className="grid items-center gap-2 md:grid-cols-[72px_minmax(0,1fr)] md:gap-3">
                                   <div>
                                     <Label>source</Label>
                                   </div>
-                                  <div className="sm:max-w-[180px]">
+                                  <div className="md:max-w-[180px]">
                                     <DropdownField
                                       value={draft.source}
                                       onChange={(nextSource) =>
@@ -4022,10 +4022,10 @@ export function StrategyBuilder({
                                             <div
                                               key={param.id}
                                               className={cn(
-                                                "grid items-center gap-1.5 sm:gap-2",
+                                                "grid items-center gap-1.5 md:gap-2",
                                                 param.type === "boolean"
                                                   ? "grid-cols-[minmax(0,1fr)_auto]"
-                                                  : "sm:grid-cols-[minmax(0,1fr)_minmax(120px,160px)]",
+                                                  : "md:grid-cols-[minmax(0,1fr)_minmax(120px,160px)]",
                                               )}
                                             >
                                               <div>
@@ -4044,7 +4044,7 @@ export function StrategyBuilder({
                                                 className={
                                                   param.type === "boolean"
                                                     ? "w-fit"
-                                                    : "sm:max-w-[160px]"
+                                                    : "md:max-w-[160px]"
                                                 }
                                               >
                                                 {param.type === "boolean" ? (

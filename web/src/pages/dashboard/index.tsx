@@ -233,9 +233,9 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-4 sm:space-y-6">
+    <div className="mx-auto w-full max-w-6xl space-y-4 md:space-y-6">
       <Card>
-        <CardContent className="grid gap-4 p-4 sm:p-6 lg:grid-cols-[1.2fr_0.9fr] lg:items-end">
+        <CardContent className="grid gap-4 p-4 md:p-6 lg:grid-cols-[1.2fr_0.9fr] lg:items-end">
           <div className="space-y-4">
             <p className="inline-flex w-fit items-center gap-1.5 rounded-full border bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground uppercase">
               <Sparkles className="h-3.5 w-3.5 text-primary" />
@@ -243,8 +243,8 @@ export default function Dashboard() {
             </p>
 
             <div className="space-y-3">
-              <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight sm:text-4xl">
-                <ChartNoAxesCombined className="h-6 w-6 text-primary sm:h-8 sm:w-8" />
+              <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight md:text-4xl">
+                <ChartNoAxesCombined className="h-6 w-6 text-primary md:h-8 md:w-8" />
                 Welcome Back, {user?.name || "Trader"}
               </h1>
 
@@ -275,7 +275,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="rounded-xl border bg-muted/30 p-4 sm:p-5">
+          <div className="rounded-xl border bg-muted/30 p-4 md:p-5">
             <p className="text-xs text-muted-foreground uppercase">
               Workspace Pulse
             </p>
@@ -320,14 +320,14 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-2">
               <Target className="h-4 w-4 text-primary" />
               My Strategies
             </CardDescription>
-            <CardTitle className="text-xl sm:text-2xl">
+            <CardTitle className="text-xl md:text-2xl">
               {isLoading ? "..." : myStrategiesTotal}
             </CardTitle>
           </CardHeader>
@@ -342,7 +342,7 @@ export default function Dashboard() {
               <Bookmark className="h-4 w-4 text-primary" />
               Strategy Bookmarks
             </CardDescription>
-            <CardTitle className="text-xl sm:text-2xl">
+            <CardTitle className="text-xl md:text-2xl">
               {isLoading ? "..." : bookmarkedStrategiesTotal}
             </CardTitle>
           </CardHeader>
@@ -357,7 +357,7 @@ export default function Dashboard() {
               <CandlestickChart className="h-4 w-4 text-primary" />
               Backtest Bookmarks
             </CardDescription>
-            <CardTitle className="text-xl sm:text-2xl">
+            <CardTitle className="text-xl md:text-2xl">
               {isLoading ? "..." : bookmarkedBacktestsTotal}
             </CardTitle>
           </CardHeader>
@@ -372,7 +372,7 @@ export default function Dashboard() {
               <TrendingUp className="h-4 w-4 text-primary" />
               Symbols x Timeframes
             </CardDescription>
-            <CardTitle className="text-xl sm:text-2xl">
+            <CardTitle className="text-xl md:text-2xl">
               {isLoading ? "..." : `${symbolsCount} x ${timeframesCount}`}
             </CardTitle>
           </CardHeader>
@@ -629,7 +629,7 @@ export default function Dashboard() {
               iterating.
             </div>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
               {recentMyStrategies.map((item) => (
                 <article
                   key={item._id}

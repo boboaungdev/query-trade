@@ -343,16 +343,16 @@ export default function LeaderboardPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-6xl min-w-0 space-y-4 overflow-x-hidden sm:space-y-6">
+    <div className="mx-auto w-full max-w-6xl min-w-0 space-y-4 overflow-x-hidden md:space-y-6">
       <Card>
-        <CardContent className="flex flex-col gap-3 p-4 sm:p-6">
+        <CardContent className="flex flex-col gap-3 p-4 md:p-6">
           <p className="inline-flex w-fit items-center gap-1.5 rounded-full border bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground uppercase">
             <Sparkles className="h-3.5 w-3.5 text-primary" />
             Performance Arena
           </p>
 
-          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight sm:text-4xl">
-            <Trophy className="h-6 w-6 text-primary sm:h-8 sm:w-8" />
+          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight md:text-4xl">
+            <Trophy className="h-6 w-6 text-primary md:h-8 md:w-8" />
             Backtest Leaderboard
           </h1>
 
@@ -382,11 +382,11 @@ export default function LeaderboardPage() {
               <CardTitle className="text-xl">Leaderboard Results</CardTitle>
               <CardDescription className="flex flex-wrap items-center gap-2">
                 Search by symbol, strategy, trader, or timeframe.
-                <span className="hidden items-center gap-1 rounded-full border bg-muted/30 px-2 py-0.5 text-[11px] font-medium text-foreground sm:inline-flex">
+                <span className="hidden items-center gap-1 rounded-full border bg-muted/30 px-2 py-0.5 text-[11px] font-medium text-foreground md:inline-flex">
                   {totalCount} results
                 </span>
               </CardDescription>
-              <div className="pt-1 sm:hidden">
+              <div className="pt-1 md:hidden">
                 <span className="inline-flex items-center gap-1 rounded-full border bg-muted/30 px-2 py-0.5 text-[11px] font-medium text-foreground">
                   {totalCount} results
                 </span>
@@ -521,7 +521,7 @@ export default function LeaderboardPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {backtests.map((backtest, index) => {
             const isMine =
               Boolean(user?._id) && backtest.user?._id === user?._id;
@@ -542,7 +542,7 @@ export default function LeaderboardPage() {
                       </CardTitle>
                       <CardDescription className="flex min-w-0 flex-wrap items-center gap-2">
                         <span>{backtest.timeframe}</span>
-                        <span className="text-muted-foreground/60">•</span>
+                        <span className="text-muted-foreground/60">-</span>
                         <span className="inline-flex min-w-0 items-center">
                           <span className="max-w-[180px] truncate">
                             {backtest.strategy?.name || "Strategy"}
@@ -771,7 +771,7 @@ export default function LeaderboardPage() {
                     type="button"
                     variant="outline"
                     asChild
-                    className="w-full sm:w-auto"
+                    className="w-full md:w-auto"
                   >
                     <Link
                       to={`/backtest/${backtest._id}`}

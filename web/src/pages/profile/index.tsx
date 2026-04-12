@@ -1305,12 +1305,12 @@ export default function Profile() {
                     ) : isFollowing ? (
                       <>
                         <UserCheck className="h-4 w-4" />
-                        <span className="hidden sm:inline">Following</span>
+                        <span className="hidden md:inline">Following</span>
                       </>
                     ) : (
                       <>
                         <UserPlus className="h-4 w-4" />
-                        <span className="hidden sm:inline">Follow</span>
+                        <span className="hidden md:inline">Follow</span>
                       </>
                     )}
                   </Button>
@@ -1381,7 +1381,7 @@ export default function Profile() {
             }
           }}
         >
-          <SheetContent side="right" className="w-full sm:max-w-md">
+          <SheetContent side="right" className="w-full md:max-w-md">
             <SheetHeader className="border-b px-6 py-5">
               <SheetTitle>Edit Profile</SheetTitle>
               <SheetDescription>
@@ -1409,7 +1409,7 @@ export default function Profile() {
                       className="hidden"
                       onChange={onAvatarSelect}
                     />
-                    <div className="relative w-full sm:max-w-[12rem]">
+                    <div className="relative w-full md:max-w-[12rem]">
                       <ImagePlus className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
                         readOnly
@@ -1480,7 +1480,7 @@ export default function Profile() {
                 disabled={
                   !hasChanged || isSaving || !isFormValid || isUsernameInvalid
                 }
-                className="w-full sm:w-auto"
+                className="w-full md:w-auto"
               >
                 {isSaving ? <Loader2 className="animate-spin" /> : "Save"}
               </Button>
@@ -1488,7 +1488,7 @@ export default function Profile() {
                 onClick={onCancel}
                 disabled={isSaving}
                 variant="outline"
-                className="w-full sm:w-auto"
+                className="w-full md:w-auto"
               >
                 Cancel
               </Button>
@@ -1515,7 +1515,7 @@ export default function Profile() {
           setSearchParams(nextParams, { replace: true });
         }}
       >
-        <DialogContent className="top-[8vh] max-h-[calc(100vh-4rem)] -translate-y-0 gap-0 overflow-hidden p-0 sm:top-[10vh] sm:max-w-2xl">
+        <DialogContent className="top-[8vh] max-h-[calc(100vh-4rem)] -translate-y-0 gap-0 overflow-hidden p-0 md:top-[10vh] md:max-w-2xl">
           <DialogHeader className="border-b px-4 pt-4 pb-3">
             <DialogTitle>{dialogTabLabels[activeProfileTab]}</DialogTitle>
             <DialogDescription>
@@ -1586,7 +1586,7 @@ export default function Profile() {
                           }
                         >
                           {option.label}
-                          {activeListState.sortBy === option.value ? " ✓" : ""}
+                          {activeListState.sortBy === option.value ? " (selected)" : ""}
                         </DropdownMenuItem>
                       ))}
                       <DropdownMenuSeparator />
@@ -1606,7 +1606,7 @@ export default function Profile() {
                           }
                         >
                           {value === "asc" ? "Asc" : "Desc"}
-                          {activeListState.order === value ? " ✓" : ""}
+                          {activeListState.order === value ? " (selected)" : ""}
                         </DropdownMenuItem>
                       ))}
                     </DropdownMenuContent>
@@ -1723,14 +1723,14 @@ export default function Profile() {
                                           ) : followListStatusById[item._id] ? (
                                             <>
                                               <UserCheck className="h-4 w-4" />
-                                              <span className="hidden sm:inline">
+                                              <span className="hidden md:inline">
                                                 Following
                                               </span>
                                             </>
                                           ) : (
                                             <>
                                               <UserPlus className="h-4 w-4" />
-                                              <span className="hidden sm:inline">
+                                              <span className="hidden md:inline">
                                                 Follow
                                               </span>
                                             </>
@@ -1876,14 +1876,14 @@ export default function Profile() {
                                           ) ? (
                                           <>
                                             <BookmarkCheck className="h-4 w-4" />
-                                            <span className="hidden sm:inline">
+                                            <span className="hidden md:inline">
                                               Bookmarked
                                             </span>
                                           </>
                                         ) : (
                                           <>
                                             <Bookmark className="h-4 w-4" />
-                                            <span className="hidden sm:inline">
+                                            <span className="hidden md:inline">
                                               Bookmark
                                             </span>
                                           </>
@@ -1973,7 +1973,7 @@ export default function Profile() {
                                         <div className="flex items-start justify-between gap-3">
                                           <div className="min-w-0">
                                             <p className="truncate font-medium">
-                                              {item.symbol || "-"} ·{" "}
+                                              {item.symbol || "-"} /{" "}
                                               {item.timeframe || "-"}
                                             </p>
                                             <p className="truncate text-sm text-muted-foreground">
@@ -2026,14 +2026,14 @@ export default function Profile() {
                                             ) ? (
                                             <>
                                               <BookmarkCheck className="h-4 w-4" />
-                                              <span className="hidden sm:inline">
+                                              <span className="hidden md:inline">
                                                 Bookmarked
                                               </span>
                                             </>
                                           ) : (
                                             <>
                                               <Bookmark className="h-4 w-4" />
-                                              <span className="hidden sm:inline">
+                                              <span className="hidden md:inline">
                                                 Bookmark
                                               </span>
                                             </>

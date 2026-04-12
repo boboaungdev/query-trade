@@ -383,16 +383,16 @@ export default function BookmarkPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-6xl min-w-0 space-y-4 overflow-x-hidden sm:space-y-6">
+    <div className="mx-auto w-full max-w-6xl min-w-0 space-y-4 overflow-x-hidden md:space-y-6">
       <Card>
-        <CardContent className="flex flex-col gap-3 p-4 sm:p-6">
+        <CardContent className="flex flex-col gap-3 p-4 md:p-6">
           <p className="inline-flex w-fit items-center gap-1.5 rounded-full border bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground uppercase">
             <Sparkles className="h-3.5 w-3.5 text-primary" />
             Bookmark Hub
           </p>
 
-          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight sm:text-4xl">
-            <Bookmark className="h-6 w-6 text-primary sm:h-8 sm:w-8" />
+          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight md:text-4xl">
+            <Bookmark className="h-6 w-6 text-primary md:h-8 md:w-8" />
             Bookmarks
           </h1>
 
@@ -421,11 +421,11 @@ export default function BookmarkPage() {
               <CardTitle className="text-xl">Bookmarks</CardTitle>
               <CardDescription className="flex flex-wrap items-center gap-2">
                 Browse, filter, and manage your bookmarks.
-                <span className="hidden items-center gap-1 rounded-full border bg-muted/30 px-2 py-0.5 text-[11px] font-medium text-foreground sm:inline-flex">
+                <span className="hidden items-center gap-1 rounded-full border bg-muted/30 px-2 py-0.5 text-[11px] font-medium text-foreground md:inline-flex">
                   {totalCount} bookmarks
                 </span>
               </CardDescription>
-              <div className="pt-1 sm:hidden">
+              <div className="pt-1 md:hidden">
                 <span className="inline-flex items-center gap-1 rounded-full border bg-muted/30 px-2 py-0.5 text-[11px] font-medium text-foreground">
                   {totalCount} bookmarks
                 </span>
@@ -538,7 +538,7 @@ export default function BookmarkPage() {
                     : "";
                 const isMine = Boolean(user?._id) && targetUserId === user?._id;
                 const title = isBacktest
-                  ? `${target?.symbol || "Backtest"}${target?.timeframe ? ` • ${target.timeframe}` : ""}`
+                  ? `${target?.symbol || "Backtest"}${target?.timeframe ? ` - ${target.timeframe}` : ""}`
                   : target?.name || "Untitled target";
                 const description = isBacktest
                   ? `Backtest period: ${toPrettyDate(target?.startDate)} - ${toPrettyDate(target?.endDate)}`
@@ -807,7 +807,7 @@ export default function BookmarkPage() {
               <span className="font-medium text-foreground">
                 {bookmarkPendingRemove?.target?.name ||
                   (bookmarkPendingRemove?.targetType === "backtest"
-                    ? `${bookmarkPendingRemove?.target?.symbol || "Backtest"}${bookmarkPendingRemove?.target?.timeframe ? ` • ${bookmarkPendingRemove.target.timeframe}` : ""}`
+                    ? `${bookmarkPendingRemove?.target?.symbol || "Backtest"}${bookmarkPendingRemove?.target?.timeframe ? ` - ${bookmarkPendingRemove.target.timeframe}` : ""}`
                     : "this item")}
               </span>{" "}
               from your bookmarks.

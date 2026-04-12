@@ -328,7 +328,7 @@ function RiskTile({
   return (
     <div
       className={cn(
-        "w-full rounded-xl border px-2.5 py-2 sm:w-auto sm:max-w-[14rem] sm:min-w-[11rem]",
+        "w-full rounded-xl border px-2.5 py-2 md:w-auto md:max-w-[14rem] md:min-w-[11rem]",
         variant === "stopLoss"
           ? "border-destructive/20 bg-destructive/8"
           : "border-info/20 bg-info/8",
@@ -360,7 +360,7 @@ function RulePanel({
   return (
     <section
       className={cn(
-        "relative overflow-hidden rounded-[28px] border p-4 sm:p-5",
+        "relative overflow-hidden rounded-[28px] border p-4 md:p-5",
         isBuy ? "theme-rule-panel-buy" : "theme-rule-panel-sell",
       )}
     >
@@ -742,7 +742,7 @@ export default function StrategyDetailPage() {
   return (
     <div className="mx-auto w-full max-w-7xl space-y-5">
       <Card className="text-foreground">
-        <CardContent className="space-y-5 p-4 sm:p-5 lg:p-6">
+        <CardContent className="space-y-5 p-4 md:p-5 lg:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <Button
               type="button"
@@ -910,14 +910,14 @@ export default function StrategyDetailPage() {
               </div>
 
               <div>
-                <h1 className="max-w-4xl text-2xl font-semibold tracking-tight text-foreground sm:text-4xl">
+                <h1 className="max-w-4xl text-2xl font-semibold tracking-tight text-foreground md:text-4xl">
                   {strategy.name}
                 </h1>
-                <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground sm:text-base">
+                <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground md:text-base">
                   {strategy.description?.trim() ||
                     "A polished breakdown of the setup, its signal stack, and the risk controls used on both sides of the strategy."}
                 </p>
-                <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                <div className="mt-3 flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center md:justify-between">
                   <p className="text-xs text-muted-foreground">
                     Last updated{" "}
                     <span className="font-medium text-foreground">
@@ -934,7 +934,7 @@ export default function StrategyDetailPage() {
       {!isLoading && strategy ? (
         <div className="space-y-5">
           <Card className="theme-creator-card overflow-hidden rounded-[24px] border shadow-sm">
-            <CardContent className="space-y-4 px-4 py-3 sm:px-5 sm:py-4">
+            <CardContent className="space-y-4 px-4 py-3 md:px-5 md:py-4">
               <CardTitle className="flex items-center gap-2 text-base">
                 <UserRound className="h-4 w-4 text-primary" />
                 Creator
@@ -1122,9 +1122,9 @@ export default function StrategyDetailPage() {
             tone="sell"
           />
 
-          <div className="grid gap-5 xl:grid-cols-3 xl:items-start">
-            <Card className="theme-primary-card overflow-hidden rounded-[24px] shadow-sm xl:col-span-3">
-              <CardHeader className="theme-primary-card-header space-y-2 px-4 pt-2 pb-1.5 sm:px-5 sm:pt-3 sm:pb-2">
+          <div className="grid gap-5 lg:grid-cols-3 lg:items-start">
+            <Card className="theme-primary-card overflow-hidden rounded-[24px] shadow-sm lg:col-span-3">
+              <CardHeader className="theme-primary-card-header space-y-2 px-4 pt-2 pb-1.5 md:px-5 md:pt-3 md:pb-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="theme-primary-card-badge inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium tracking-[0.16em] uppercase">
                     <Radar className="h-3 w-3" />
@@ -1141,9 +1141,9 @@ export default function StrategyDetailPage() {
                   Signal inputs used in this setup.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="px-4 pt-1.5 pb-3 sm:px-5 sm:pt-2 sm:pb-4">
+              <CardContent className="px-4 pt-1.5 pb-3 md:px-5 md:pt-2 md:pb-4">
                 {strategy.indicators?.length ? (
-                  <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-5">
+                  <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-5">
                     {strategy.indicators.map((indicator, index) => {
                       const params = formatIndicatorParams(
                         indicator.params,
@@ -1197,7 +1197,7 @@ export default function StrategyDetailPage() {
           </div>
 
           <Card className="overflow-hidden rounded-[24px] border shadow-sm">
-            <CardContent className="flex flex-col gap-4 p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
+            <CardContent className="flex flex-col gap-4 p-4 md:p-5 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-start gap-3 text-sm text-muted-foreground">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border bg-muted/30 text-primary">
                   <AlertTriangle className="h-4 w-4" />
@@ -1213,11 +1213,11 @@ export default function StrategyDetailPage() {
                   </p>
                 </div>
               </div>
-              <div className="ml-auto flex w-full flex-wrap gap-2 sm:w-auto">
+              <div className="ml-auto flex w-full flex-wrap gap-2 md:w-auto">
                 <Button
                   type="button"
                   asChild
-                  className="w-full min-w-[132px] sm:w-auto"
+                  className="w-full min-w-[132px] md:w-auto"
                 >
                   <Link
                     to="/backtest"

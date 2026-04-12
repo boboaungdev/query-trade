@@ -816,15 +816,15 @@ export default function BacktestPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-6xl min-w-0 space-y-4 overflow-x-hidden sm:space-y-6">
+    <div className="mx-auto w-full max-w-6xl min-w-0 space-y-4 overflow-x-hidden md:space-y-6">
       <Card>
-        <CardContent className="flex flex-col gap-3 p-4 sm:p-6">
+        <CardContent className="flex flex-col gap-3 p-4 md:p-6">
           <p className="inline-flex w-fit items-center gap-1.5 rounded-md border bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground uppercase">
             <Sparkles className="h-3.5 w-3.5 text-primary" />
             {isEditing ? "Backtest Editor" : "Strategy Lab"}
           </p>
-          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight sm:text-4xl">
-            <CandlestickChart className="h-6 w-6 text-primary sm:h-8 sm:w-8" />
+          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight md:text-4xl">
+            <CandlestickChart className="h-6 w-6 text-primary md:h-8 md:w-8" />
             {isEditing ? "Edit Backtest" : "Strategy Backtesting"}
           </h1>
           <p className="max-w-3xl text-muted-foreground">
@@ -846,7 +846,7 @@ export default function BacktestPage() {
       </Card>
       <div className="min-w-0">
         <Card className="min-w-0 py-0 text-sm">
-          <CardHeader className="gap-4 px-5 pt-5 pb-0 sm:px-6 sm:pt-6">
+          <CardHeader className="gap-4 px-5 pt-5 pb-0 md:px-6 md:pt-6">
             <div className="space-y-3">
               <span className="inline-flex w-fit items-center gap-2 rounded-md border bg-muted px-3 py-1 text-[11px] font-semibold text-muted-foreground uppercase">
                 <Sparkles className="h-3.5 w-3.5 text-primary" />
@@ -887,13 +887,13 @@ export default function BacktestPage() {
             </div>
           </CardHeader>
 
-          <CardContent className="relative min-w-0 px-5 pt-5 pb-5 sm:px-6 sm:pb-6">
+          <CardContent className="relative min-w-0 px-5 pt-5 pb-5 md:px-6 md:pb-6">
             <form onSubmit={onSubmit}>
               <fieldset
                 disabled={isRunning || isLoadingBacktest}
                 className="min-w-0 space-y-4 border-0 p-0"
               >
-                <div className="rounded-xl border bg-card p-4 xl:p-5">
+                <div className="rounded-xl border bg-card p-4 lg:p-5">
                   <div className="mb-4">
                     <div>
                       <p className="text-base font-semibold text-foreground">
@@ -946,7 +946,7 @@ export default function BacktestPage() {
                         </DialogTrigger>
 
                         <DialogContent
-                          className="top-[8vh] max-h-[calc(100vh-4rem)] -translate-y-0 gap-0 overflow-hidden p-0 sm:top-[10vh] sm:max-w-2xl"
+                          className="top-[8vh] max-h-[calc(100vh-4rem)] -translate-y-0 gap-0 overflow-hidden p-0 md:top-[10vh] md:max-w-2xl"
                           onOpenAutoFocus={(event) => {
                             event.preventDefault();
                           }}
@@ -1106,7 +1106,7 @@ export default function BacktestPage() {
                       </DropdownMenu>
                     </div>
 
-                    <div className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-1">
+                    <div className="grid min-w-0 gap-4 md:grid-cols-2 lg:grid-cols-1">
                       <div className="space-y-2">
                         <Label className="inline-flex items-center gap-1.5 text-[13px] font-medium">
                           <CalendarIcon className="h-3.5 w-3.5 text-primary" />
@@ -1221,7 +1221,7 @@ export default function BacktestPage() {
                               variant="outline"
                               className={cn(
                                 "relative w-full justify-start overflow-hidden text-left",
-                                strategyId ? "pr-28 sm:pr-36" : "pr-10",
+                                strategyId ? "pr-28 md:pr-36" : "pr-10",
                                 !isLoadingStrategies &&
                                   !selectedStrategy?.name &&
                                   !selectedStrategyName &&
@@ -1241,7 +1241,7 @@ export default function BacktestPage() {
                           </DialogTrigger>
 
                           <DialogContent
-                            className="top-[8vh] max-h-[calc(100vh-4rem)] -translate-y-0 gap-0 overflow-hidden p-0 sm:top-[10vh] sm:max-w-2xl"
+                            className="top-[8vh] max-h-[calc(100vh-4rem)] -translate-y-0 gap-0 overflow-hidden p-0 md:top-[10vh] md:max-w-2xl"
                             onOpenAutoFocus={(event) => {
                               event.preventDefault();
                             }}
@@ -1491,7 +1491,7 @@ export default function BacktestPage() {
                                           setIsStrategyMenuOpen(false);
                                         }}
                                       >
-                                        <div className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-2 text-[11px] text-muted-foreground sm:items-center">
+                                        <div className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-2 text-[11px] text-muted-foreground md:items-center">
                                           <span className="min-w-0 overflow-hidden">
                                             <span className="block w-full truncate text-sm font-medium whitespace-nowrap text-foreground">
                                               {item.name}
@@ -1501,7 +1501,7 @@ export default function BacktestPage() {
                                               {item.user?.username || "unknown"}
                                             </span>
                                           </span>
-                                          <span className="inline-flex shrink-0 flex-col items-end gap-1 pr-2 pl-2 sm:flex-row sm:items-center sm:gap-2 sm:pr-3">
+                                          <span className="inline-flex shrink-0 flex-col items-end gap-1 pr-2 pl-2 md:flex-row md:items-center md:gap-2 md:pr-3">
                                             <span className="inline-flex items-center gap-1">
                                               <TrendingUp className="h-3 w-3" />
                                               {item.stats?.viewCount ?? 0}
@@ -1620,7 +1620,7 @@ export default function BacktestPage() {
                   </div>
                 </div>
 
-                <div className="min-w-0 overflow-hidden rounded-xl border bg-card p-4 xl:p-5">
+                <div className="min-w-0 overflow-hidden rounded-xl border bg-card p-4 lg:p-5">
                   <div className="mb-4">
                     <p className="text-base font-semibold text-foreground">
                       Capital plan
@@ -1630,7 +1630,7 @@ export default function BacktestPage() {
                     </p>
                   </div>
 
-                  <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label
                         htmlFor="initialBalance"
@@ -1676,7 +1676,7 @@ export default function BacktestPage() {
                     </div>
                   </div>
 
-                  <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                  <div className="mt-4 grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label
                         htmlFor="entryFeeRate"
@@ -1723,7 +1723,7 @@ export default function BacktestPage() {
                   </div>
                 </div>
 
-                <div className="rounded-xl border bg-card p-4 xl:p-5">
+                <div className="rounded-xl border bg-card p-4 lg:p-5">
                   <div className="space-y-3">
                     <div className="flex items-start justify-between gap-4">
                       <div>

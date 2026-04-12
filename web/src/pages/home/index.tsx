@@ -31,7 +31,6 @@ export default function Home() {
     ? "Open your workspace, build or pick a strategy, and backtest it with confidence."
     : "Use Query Trade for free to explore thousands of strategies, build your own, and backtest faster.";
   const copyrightYear = 2026;
-
   const stats = [
     { label: "Price", value: "Free" },
     { label: "Strategy Library", value: "1000+" },
@@ -136,18 +135,18 @@ export default function Home() {
 
   return (
     <div className="-m-6 bg-background">
-      <section className="relative mx-auto max-w-7xl px-6 pt-20 pb-10 sm:px-8 lg:px-12">
+      <section className="relative mx-auto max-w-7xl px-6 pt-20 pb-10 md:px-8 lg:px-12">
         <div className="home-reveal-up">
           <div className="inline-flex w-fit items-center gap-2 rounded-full border bg-muted px-4 py-1.5 text-sm font-medium text-foreground">
             <CandlestickChart className="h-4 w-4" />
             Free Crypto Trading Workspace
           </div>
 
-          <h1 className="mt-6 max-w-4xl text-4xl leading-tight font-black tracking-tight text-balance sm:text-6xl lg:text-7xl">
+          <h1 className="mt-6 max-w-4xl text-4xl leading-tight font-black tracking-tight text-balance md:text-6xl lg:text-7xl">
             Explore thousands of strategies, build your own, and backtest fast.
           </h1>
 
-          <p className="mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+          <p className="mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground md:text-lg">
             Query Trade is a free crypto trading app where you can discover
             strategy ideas, create your own setup, and validate it with
             backtests before making your next move.
@@ -168,7 +167,7 @@ export default function Home() {
             </Link>
           </div>
 
-          <div className="mt-12 grid gap-4 sm:grid-cols-3">
+          <div className="mt-12 grid gap-4 md:grid-cols-3">
             {stats.map((item, index) => (
               <div
                 key={item.label}
@@ -187,13 +186,13 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="relative mx-auto max-w-7xl px-6 py-10 sm:px-8 lg:px-12">
+      <section className="relative mx-auto max-w-7xl px-6 py-10 md:px-8 lg:px-12">
         <div className="home-reveal-up mb-6 flex items-center gap-2 text-sm font-semibold text-primary">
           <Workflow className="h-4 w-4" />
           Built To Convert Ideas Into Results
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {features.map(({ title, description, icon: Icon }, index) => (
             <article
               key={title}
@@ -212,8 +211,8 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-6 py-6 sm:px-8 lg:px-12">
-        <div className="grid gap-3 rounded-xl border bg-card p-4 sm:grid-cols-3">
+      <section className="mx-auto max-w-7xl px-6 py-6 md:px-8 lg:px-12">
+        <div className="grid gap-3 rounded-xl border bg-card p-4 md:grid-cols-3">
           <div
             className="home-reveal-up rounded-xl border bg-muted/30 p-4 transition-transform duration-300 hover:-translate-y-1"
             style={{ animationDelay: "80ms" }}
@@ -250,7 +249,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-6 py-10 sm:px-8 lg:px-12">
+      <section className="mx-auto max-w-7xl px-6 py-10 md:px-8 lg:px-12">
         <div className="grid gap-4 lg:grid-cols-3">
           <div className="home-reveal-up rounded-xl border bg-card p-6 transition-transform duration-300 hover:-translate-y-1">
             <Clock3 className="h-5 w-5 text-primary" />
@@ -287,9 +286,9 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-6 py-10 sm:px-8 lg:px-12">
-        <div className="home-reveal-up rounded-xl border bg-card p-6 sm:p-8">
-          <h2 className="text-2xl font-black tracking-tight sm:text-3xl">
+      <section className="mx-auto max-w-7xl px-6 py-10 md:px-8 lg:px-12">
+        <div className="home-reveal-up rounded-xl border bg-card p-6 md:p-8">
+          <h2 className="text-2xl font-black tracking-tight md:text-3xl">
             Frequently Asked Questions
           </h2>
           <div className="mt-6 grid gap-4 lg:grid-cols-3">
@@ -311,12 +310,12 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-6 pt-8 pb-20 sm:px-8 lg:px-12">
-        <div className="home-reveal-up rounded-xl border bg-card p-8 sm:p-12">
-          <h2 className="max-w-2xl text-3xl font-black tracking-tight sm:text-4xl">
+      <section className="mx-auto max-w-7xl px-6 pt-8 pb-20 md:px-8 lg:px-12">
+        <div className="home-reveal-up rounded-xl border bg-card p-8 md:p-12">
+          <h2 className="max-w-2xl text-3xl font-black tracking-tight md:text-4xl">
             {footerTitle}
           </h2>
-          <p className="mt-4 max-w-2xl text-sm text-muted-foreground sm:text-base">
+          <p className="mt-4 max-w-2xl text-sm text-muted-foreground md:text-base">
             {footerDescription}
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
@@ -343,10 +342,10 @@ export default function Home() {
         </div>
       </section>
 
-      <footer className="mx-auto max-w-7xl px-6 pb-10 sm:px-8 lg:px-12">
-        <div className="rounded-xl border bg-card px-4 py-4 text-sm text-foreground sm:flex sm:items-center sm:justify-between">
+      <footer className="mx-auto max-w-7xl px-6 pb-10 text-sm text-foreground md:px-8 lg:px-12">
+        <div className="py-2 md:flex md:items-center md:justify-between">
           <p>
-            © {copyrightYear}{" "}
+            Copyright {copyrightYear}{" "}
             <Link
               to="/"
               className="font-medium text-primary transition-colors hover:text-primary/80"

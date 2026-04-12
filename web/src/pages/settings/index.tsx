@@ -291,7 +291,7 @@ export default function Settings() {
       </div>
 
       <Card className="min-w-0 overflow-visible">
-        <CardContent className="grid min-w-0 gap-6 px-3 py-3 sm:px-4 sm:py-4 lg:grid-cols-[260px_minmax(0,1fr)]">
+        <CardContent className="grid min-w-0 gap-6 px-3 py-3 md:px-4 md:py-4 lg:grid-cols-[260px_minmax(0,1fr)]">
           <div className="min-w-0 space-y-4">
             <div className="space-y-2 lg:hidden">
               <Label>Settings Category</Label>
@@ -404,7 +404,7 @@ export default function Settings() {
 
           <div className="min-w-0 space-y-4">
             <Card className="min-w-0 border border-border/70 shadow-none">
-              <CardHeader className="px-4 pb-0 sm:px-6">
+              <CardHeader className="px-4 pb-0 md:px-6">
                 <div className="flex items-start gap-3">
                   <span className="rounded-xl bg-muted p-2">
                     <currentSection.icon className="size-5" />
@@ -418,7 +418,7 @@ export default function Settings() {
                 </div>
               </CardHeader>
 
-              <CardContent className="min-w-0 space-y-6 overflow-x-hidden px-4 pt-6 sm:px-6">
+              <CardContent className="min-w-0 space-y-6 overflow-x-hidden px-4 pt-6 md:px-6">
                 {activeSection === "account" && (
                   <AccountSection
                     emailChangeStep={emailChangeStep}

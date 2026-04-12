@@ -74,7 +74,7 @@ function PaginationPrevious({
       {...props}
     >
       <RiArrowLeftSLine data-icon="inline-start" />
-      <span className="hidden sm:block">{text}</span>
+      <span className="hidden md:block">{text}</span>
     </PaginationLink>
   )
 }
@@ -91,7 +91,7 @@ function PaginationNext({
       className={cn("pr-1.5!", className)}
       {...props}
     >
-      <span className="hidden sm:block">{text}</span>
+      <span className="hidden md:block">{text}</span>
       <RiArrowRightSLine data-icon="inline-end" />
     </PaginationLink>
   )

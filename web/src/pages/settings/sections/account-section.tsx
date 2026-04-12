@@ -195,7 +195,7 @@ export function AccountSection({
     ? "Update your password."
     : "Add a password.";
   const passwordStatusLabel = hasServerProvider
-    ? "••••••••••••"
+    ? "************"
     : "No password set yet";
   const passwordStatusHint = hasServerProvider
     ? formatPasswordChangedHint(user.passwordChangedAt)
@@ -428,7 +428,7 @@ export function AccountSection({
                 </div>
               </div>
             </div>
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-3 md:grid-cols-3">
               {securityOverviewItems.map((item) => (
                 <div
                   key={item.label}
@@ -456,7 +456,7 @@ export function AccountSection({
       </div>
 
       <div className="space-y-4">
-        <section className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-5">
+        <section className="rounded-xl border border-border bg-card p-4 shadow-sm md:p-5">
           <div className="flex items-start gap-3">
             <span className="rounded-xl bg-muted p-2.5 text-foreground">
               <Mail className="size-4" />
@@ -469,7 +469,7 @@ export function AccountSection({
             </div>
           </div>
           {emailChangeStep === "idle" ? (
-            <div className="mt-5 flex flex-col gap-3 rounded-xl border border-border bg-muted/40 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="mt-5 flex flex-col gap-3 rounded-xl border border-border bg-muted/40 px-4 py-4 md:flex-row md:items-center md:justify-between">
               <div className="min-w-0">
                 <p className="font-medium break-all">{maskedEmail}</p>
                 <p className="mt-1 text-sm text-muted-foreground">
@@ -480,7 +480,7 @@ export function AccountSection({
               </div>
               <Button
                 variant="outline"
-                className="w-full sm:w-auto"
+                className="w-full md:w-auto"
                 disabled={!hasServerProvider}
                 onClick={() => {
                   resetAllActionStates("email");
@@ -598,11 +598,11 @@ export function AccountSection({
               </div>
             </div>
           )}
-          <div className="mt-4 grid gap-2 sm:flex sm:flex-wrap">
+          <div className="mt-4 grid gap-2 md:flex md:flex-wrap">
             {emailChangeStep === "verify" ? (
               <>
                 <Button
-                  className="w-full sm:w-auto"
+                  className="w-full md:w-auto"
                   onClick={saveEmailChange}
                   disabled={!isNewCodeValid || isEmailChangeBusy}
                 >
@@ -610,7 +610,7 @@ export function AccountSection({
                 </Button>
                 <Button
                   variant="outline"
-                  className="w-full sm:w-auto"
+                  className="w-full md:w-auto"
                   onClick={cancelEmailChange}
                   disabled={isEmailChangeBusy}
                 >
@@ -620,7 +620,7 @@ export function AccountSection({
             ) : emailChangeStep === "draft" ? (
               <>
                 <Button
-                  className="w-full sm:w-auto"
+                  className="w-full md:w-auto"
                   onClick={verifyEmailChange}
                   disabled={
                     !normalizedEmailDraft ||
@@ -634,7 +634,7 @@ export function AccountSection({
                 </Button>
                 <Button
                   variant="outline"
-                  className="w-full sm:w-auto"
+                  className="w-full md:w-auto"
                   onClick={cancelEmailChange}
                   disabled={isEmailChangeBusy}
                 >
@@ -645,7 +645,7 @@ export function AccountSection({
           </div>
         </section>
 
-        <section className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-5">
+        <section className="rounded-xl border border-border bg-card p-4 shadow-sm md:p-5">
           <div className="flex items-start gap-3">
             <span className="rounded-xl bg-muted p-2.5 text-foreground">
               <LockKeyhole className="size-4" />
@@ -660,7 +660,7 @@ export function AccountSection({
             </div>
           </div>
           {!isPasswordFormOpen ? (
-            <div className="mt-5 flex flex-col gap-3 rounded-xl border border-border bg-muted/40 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="mt-5 flex flex-col gap-3 rounded-xl border border-border bg-muted/40 px-4 py-4 md:flex-row md:items-center md:justify-between">
               <div className="min-w-0">
                 <p className="font-medium">{passwordStatusLabel}</p>
                 <p className="mt-1 text-sm text-muted-foreground">
@@ -669,7 +669,7 @@ export function AccountSection({
               </div>
               <Button
                 variant={hasServerProvider ? "outline" : "default"}
-                className="w-full sm:w-auto"
+                className="w-full md:w-auto"
                 onClick={beginPasswordFlow}
               >
                 {passwordActionLabel}
@@ -783,9 +783,9 @@ export function AccountSection({
                   Passwords do not match.
                 </p>
               ) : null}
-              <div className="grid gap-2 sm:flex sm:flex-wrap">
+              <div className="grid gap-2 md:flex md:flex-wrap">
                 <Button
-                  className="w-full sm:w-auto"
+                  className="w-full md:w-auto"
                   onClick={savePasswordFlow}
                   disabled={!canSavePassword || isSavingPassword}
                 >
@@ -793,7 +793,7 @@ export function AccountSection({
                 </Button>
                 <Button
                   variant="outline"
-                  className="w-full sm:w-auto"
+                  className="w-full md:w-auto"
                   onClick={resetPasswordFlow}
                   disabled={isSavingPassword}
                 >
@@ -808,7 +808,7 @@ export function AccountSection({
       <Separator />
 
       <div className="space-y-4">
-        <section className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-5">
+        <section className="rounded-xl border border-border bg-card p-4 shadow-sm md:p-5">
           <div className="flex items-start gap-3">
             <span className="rounded-xl bg-muted p-2.5 text-foreground">
               <Smartphone className="size-4" />
@@ -866,7 +866,7 @@ export function AccountSection({
           </div>
         </section>
 
-        <section className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-5">
+        <section className="rounded-xl border border-border bg-card p-4 shadow-sm md:p-5">
           <div className="flex items-start gap-3">
             <span className="rounded-xl bg-muted p-2.5 text-destructive">
               <TriangleAlert className="size-4" />

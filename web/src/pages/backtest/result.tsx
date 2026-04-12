@@ -278,7 +278,7 @@ function EquityCurve({
           : "shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-destructive)_12%,transparent)]"
       )}
     >
-      <div className="flex items-center justify-between border-b border-border/60 px-4 py-3 sm:px-5">
+      <div className="flex items-center justify-between border-b border-border/60 px-4 py-3 md:px-5">
         <div>
           <p className="text-[11px] tracking-[0.18em] text-muted-foreground uppercase">
             Equity Trend
@@ -297,8 +297,8 @@ function EquityCurve({
         </span>
       </div>
 
-      <div className="px-2 py-3 sm:px-3 sm:py-4">
-        <ChartContainer config={chartConfig} className="h-64 sm:h-80">
+      <div className="px-2 py-3 md:px-3 md:py-4">
+        <ChartContainer config={chartConfig} className="h-64 md:h-80">
           <RechartsAreaChart
             data={chartData}
             margin={{ left: 4, right: 4, top: 8, bottom: 0 }}
@@ -550,9 +550,9 @@ export default function BacktestResultPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl min-w-0 space-y-4 overflow-x-hidden sm:space-y-6">
+    <div className="mx-auto w-full max-w-6xl min-w-0 space-y-4 overflow-x-hidden md:space-y-6">
       <Card>
-        <CardContent className="flex flex-col gap-3 p-4 sm:p-6">
+        <CardContent className="flex flex-col gap-3 p-4 md:p-6">
           <div className="flex items-center justify-between gap-3">
             <Button
               type="button"
@@ -664,11 +664,11 @@ export default function BacktestResultPage() {
               Backtest Result
             </p>
 
-            <h1 className="mt-3 flex items-center gap-2 text-2xl font-semibold tracking-tight sm:text-4xl">
-              <CandlestickChart className="h-6 w-6 text-primary sm:h-8 sm:w-8" />
+            <h1 className="mt-3 flex items-center gap-2 text-2xl font-semibold tracking-tight md:text-4xl">
+              <CandlestickChart className="h-6 w-6 text-primary md:h-8 md:w-8" />
               {backtest.symbol} Backtest Result
             </h1>
-            <p className="mt-2 max-w-3xl text-sm text-muted-foreground sm:text-base">
+            <p className="mt-2 max-w-3xl text-sm text-muted-foreground md:text-base">
               Review the full result on its own page with performance metrics,
               equity movement, and detailed trade history.
             </p>
@@ -728,7 +728,7 @@ export default function BacktestResultPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-3">
         <Card className="border-border/70 bg-background/95 dark:bg-background/80">
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-2">
@@ -737,7 +737,7 @@ export default function BacktestResultPage() {
             </CardDescription>
             <CardTitle
               className={cn(
-                "text-xl sm:text-2xl",
+                "text-xl md:text-2xl",
                 result.roi >= 0 ? "text-success" : "text-destructive"
               )}
             >
@@ -772,7 +772,7 @@ export default function BacktestResultPage() {
               <Percent className="h-4 w-4" />
               Win Rate
             </CardDescription>
-            <CardTitle className="text-xl sm:text-2xl">
+            <CardTitle className="text-xl md:text-2xl">
               {ratio.format(result.winRate)}%
             </CardTitle>
           </CardHeader>
@@ -792,7 +792,7 @@ export default function BacktestResultPage() {
               <ShieldAlert className="h-4 w-4" />
               Max Drawdown
             </CardDescription>
-            <CardTitle className="text-xl text-destructive sm:text-2xl">
+            <CardTitle className="text-xl text-destructive md:text-2xl">
               -{ratio.format(Math.abs(result.maxDrawdownPercent))}%
             </CardTitle>
           </CardHeader>
@@ -810,7 +810,7 @@ export default function BacktestResultPage() {
               <Target className="h-4 w-4" />
               Profit Factor
             </CardDescription>
-            <CardTitle className="text-xl sm:text-2xl">
+            <CardTitle className="text-xl md:text-2xl">
               {ratio.format(result.profitFactor)}
             </CardTitle>
           </CardHeader>
@@ -828,7 +828,7 @@ export default function BacktestResultPage() {
               <CircleDollarSign className="h-4 w-4" />
               Fees
             </CardDescription>
-            <CardTitle className="text-xl sm:text-2xl">
+            <CardTitle className="text-xl md:text-2xl">
               {money.format(result.totalFees)}
             </CardTitle>
           </CardHeader>
@@ -849,7 +849,7 @@ export default function BacktestResultPage() {
               <TrendingUp className="h-4 w-4" />
               Win / Loss Streak
             </CardDescription>
-            <CardTitle className="text-xl sm:text-2xl">
+            <CardTitle className="text-xl md:text-2xl">
               <span className="text-success">{result.maxWinStreak ?? 0}</span>
               <span className="text-muted-foreground"> / </span>
               <span className="text-destructive">
@@ -874,7 +874,7 @@ export default function BacktestResultPage() {
               <CalendarClock className="h-4 w-4" />
               Date Window
             </CardDescription>
-            <CardTitle className="text-xl sm:text-2xl">
+            <CardTitle className="text-xl md:text-2xl">
               {formatDuration(result.duration)}
             </CardTitle>
           </CardHeader>
@@ -885,7 +885,7 @@ export default function BacktestResultPage() {
                 {format(new Date(backtest.endDate), "PPP")}
               </p>
               <p>
-                Market: {backtest.symbol} · {backtest.timeframe}
+                Market: {backtest.symbol} Â· {backtest.timeframe}
               </p>
             </div>
           </CardContent>
@@ -897,7 +897,7 @@ export default function BacktestResultPage() {
               <Clock3 className="h-4 w-4" />
               Position Duration
             </CardDescription>
-            <CardTitle className="text-xl sm:text-2xl">
+            <CardTitle className="text-xl md:text-2xl">
               {formatDuration(result.averageTradeDuration ?? 0)}
               <span className="ml-1 text-xs font-medium text-muted-foreground">
                 avg
@@ -922,7 +922,7 @@ export default function BacktestResultPage() {
               <SlidersHorizontal className="h-4 w-4" />
               Trade Setup
             </CardDescription>
-            <CardTitle className="text-xl sm:text-2xl">
+            <CardTitle className="text-xl md:text-2xl">
               {backtest.hedgeMode ? "Hedge" : "One-way"}
             </CardTitle>
           </CardHeader>
@@ -945,7 +945,7 @@ export default function BacktestResultPage() {
             Breakdown and edge quality metrics from this backtest.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <CardContent className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-xl border bg-muted/20 p-4">
             <p className="text-[11px] tracking-[0.16em] text-muted-foreground uppercase">
               Gross Profit / Loss
@@ -1085,7 +1085,7 @@ export default function BacktestResultPage() {
             The strategy is the core of this backtest result.
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <CardContent className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex min-w-0 items-center gap-3">
             <div className="min-w-0 space-y-2">
               <p className="truncate text-lg font-semibold tracking-tight text-foreground">
@@ -1111,23 +1111,23 @@ export default function BacktestResultPage() {
                 <span className="inline-flex items-center gap-1 rounded-full border bg-muted/40 px-2.5 py-1 text-xs text-muted-foreground">
                   <TrendingUp className="h-3.5 w-3.5" />
                   <span>{backtest.strategy?.stats?.viewCount ?? "-"}</span>
-                  <span className="hidden sm:inline">views</span>
+                  <span className="hidden md:inline">views</span>
                 </span>
                 <span className="inline-flex items-center gap-1 rounded-full border bg-muted/40 px-2.5 py-1 text-xs text-muted-foreground">
                   <Bookmark className="h-3.5 w-3.5" />
                   <span>{backtest.strategy?.stats?.bookmarkCount ?? "-"}</span>
-                  <span className="hidden sm:inline">bookmarks</span>
+                  <span className="hidden md:inline">bookmarks</span>
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="flex w-full min-w-0 flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
+          <div className="flex w-full min-w-0 flex-col gap-2 md:w-auto md:flex-row md:flex-wrap md:items-center">
             {canOpenStrategy && backtest.strategy?._id ? (
-              <ButtonGroup className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] sm:inline-flex sm:w-auto">
+              <ButtonGroup className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] md:inline-flex md:w-auto">
                 <Button
                   type="button"
-                  className="min-w-0 w-full rounded-r-none sm:w-auto sm:flex-none"
+                  className="min-w-0 w-full rounded-r-none md:w-auto md:flex-none"
                   asChild
                 >
                   <Link
@@ -1196,7 +1196,7 @@ export default function BacktestResultPage() {
               <Button
                 type="button"
                 variant="outline"
-                className="w-full sm:w-auto sm:flex-none"
+                className="w-full md:w-auto md:flex-none"
                 asChild
               >
                 <Link
@@ -1208,7 +1208,7 @@ export default function BacktestResultPage() {
                 </Link>
               </Button>
             ) : (
-              <span className="inline-flex w-full items-center justify-center gap-1 rounded-md border bg-muted px-3 py-2 text-sm text-muted-foreground sm:w-auto sm:flex-none">
+              <span className="inline-flex w-full items-center justify-center gap-1 rounded-md border bg-muted px-3 py-2 text-sm text-muted-foreground md:w-auto md:flex-none">
                 <Lock className="h-4 w-4" />
                 Locked
               </span>

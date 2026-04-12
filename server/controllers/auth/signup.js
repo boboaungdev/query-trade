@@ -66,11 +66,25 @@ export const signup = async (req, res, next) => {
     });
 
     // Send Email
-    await sendEmail({
+    const emailResult = await sendEmail({
       to: email,
       subject: `[${APP_NAME}] Verify Your Email`,
       html: htmlFile,
     });
+
+    if (!emailResult.status) {
+      if (emailResult.type === "recipient") {
+        throw resError(
+          400,
+          "Invalid email address. Please check it and try again.",
+        );
+      }
+
+      throw resError(
+        503,
+        "Server email service is temporarily unavailable. Please try again later.",
+      );
+    }
 
     return resJson(
       res,

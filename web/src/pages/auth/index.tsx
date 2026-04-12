@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ComponentProps,
+  type KeyboardEvent,
+} from "react";
 import { useNavigate } from "react-router-dom";
 
 import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
@@ -29,7 +35,17 @@ import {
 } from "@/api/auth";
 import { getApiErrorMessage } from "@/api/axios";
 import { APP_NAME } from "@/constants";
-import { ChevronLeft, Loader2 } from "lucide-react";
+import {
+  AtSign,
+  ChevronLeft,
+  Eye,
+  EyeOff,
+  KeyRound,
+  Loader2,
+  LockKeyhole,
+  Mail,
+  UserRound,
+} from "lucide-react";
 import { toast } from "sonner";
 
 const NAME_REGEX = /^[A-Za-z0-9 ]{1,20}$/;
@@ -49,6 +65,52 @@ type AuthFieldKey =
   | "newPassword"
   | "confirmNewPassword";
 
+type AuthInputProps = ComponentProps<typeof Input> & {
+  icon: typeof Mail;
+  isPasswordToggle?: boolean;
+  isPasswordVisible?: boolean;
+  showPasswordToggle?: boolean;
+  onTogglePasswordVisibility?: () => void;
+};
+
+function AuthInput({
+  icon: Icon,
+  className,
+  isPasswordToggle = false,
+  isPasswordVisible = false,
+  showPasswordToggle = false,
+  onTogglePasswordVisibility,
+  disabled,
+  ...props
+}: AuthInputProps) {
+  const ToggleIcon = isPasswordVisible ? EyeOff : Eye;
+
+  return (
+    <div className="relative">
+      <Icon
+        className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+        aria-hidden="true"
+      />
+      <Input
+        className={`pl-9 ${showPasswordToggle ? "pr-10" : ""} ${className ?? ""}`.trim()}
+        disabled={disabled}
+        {...props}
+      />
+      {isPasswordToggle && showPasswordToggle && onTogglePasswordVisibility ? (
+        <button
+          type="button"
+          onClick={onTogglePasswordVisibility}
+          disabled={disabled}
+          className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+          aria-label={isPasswordVisible ? "Hide password" : "Show password"}
+        >
+          <ToggleIcon className="h-4 w-4" />
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 export default function Auth() {
   const navigate = useNavigate();
   const passwordInputRef = useRef<HTMLInputElement | null>(null);
@@ -61,6 +123,11 @@ export default function Auth() {
   const [username, setUsername] = useState("");
 
   const [showPassword, setShowPassword] = useState(false);
+  const [isSigninPasswordVisible, setIsSigninPasswordVisible] = useState(false);
+  const [isSignupPasswordVisible, setIsSignupPasswordVisible] = useState(false);
+  const [isNewPasswordVisible, setIsNewPasswordVisible] = useState(false);
+  const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] =
+    useState(false);
   const [isSignup, setIsSignup] = useState(false);
 
   const [verifyStep, setVerifyStep] = useState(false);
@@ -202,7 +269,14 @@ export default function Auth() {
       return;
     }
 
-    markCurrentStepInvalid();
+    if (
+      (response?.status === 409 && message.includes("email already exists")) ||
+      response?.status === 400 ||
+      response?.status === 503 ||
+      message.includes("email")
+    ) {
+      setInvalidFieldState("email");
+    }
   };
 
   useEffect(() => {
@@ -230,6 +304,12 @@ export default function Auth() {
 
     return () => window.cancelAnimationFrame(frame);
   }, [showPassword, forgotStep, resetStep, isSignup]);
+
+  useEffect(() => {
+    if (verifyStep) {
+      setIsSignupPasswordVisible(false);
+    }
+  }, [verifyStep]);
 
   const handleSubmitKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== "Enter") return;
@@ -544,6 +624,8 @@ export default function Auth() {
       setCode("");
       setNewPassword("");
       setConfirmNewPassword("");
+      setIsNewPasswordVisible(false);
+      setIsConfirmPasswordVisible(false);
       return;
     }
 
@@ -569,12 +651,14 @@ export default function Auth() {
       setName("");
       setUsername("");
       setPassword("");
+      setIsSignupPasswordVisible(false);
       return;
     }
 
     if (showPassword) {
       setShowPassword(false);
       setPassword("");
+      setIsSigninPasswordVisible(false);
       return;
     }
 
@@ -619,13 +703,29 @@ export default function Auth() {
       });
   };
 
-  const title = showPassword ? "Sign in" : isSignup ? "Sign up" : "Welcome";
+  const title = resetStep
+    ? "Reset password"
+    : forgotStep
+      ? "Verify your email"
+      : verifyStep
+        ? "Verify your email"
+        : showPassword
+          ? "Sign in"
+          : isSignup
+            ? "Sign up"
+            : "Welcome";
 
-  const description = showPassword
-    ? "Enter your password to sign in"
-    : isSignup
-      ? "Create your account"
-      : "Enter your email or continue with OAuth";
+  const description = resetStep
+    ? "Create a new password for your account"
+    : forgotStep
+      ? "Enter the verification code sent to your email"
+      : verifyStep
+        ? "Enter the verification code to finish creating your account"
+        : showPassword
+          ? "Enter your password to sign in"
+          : isSignup
+            ? "Create your account"
+            : "Enter your email or continue with OAuth";
 
   return (
     <div className="flex min-h-[80vh] items-center justify-center p-6">
@@ -704,9 +804,11 @@ export default function Auth() {
           {/* EMAIL */}
           <div className="space-y-2">
             <Label>Email</Label>
-            <Input
+            <AuthInput
+              icon={Mail}
               type="email"
               placeholder="you@example.com"
+              aria-label="Email"
               value={email}
               aria-invalid={invalidFields.email}
               disabled={showPassword || isSignup || loading}
@@ -724,10 +826,18 @@ export default function Auth() {
               <div className="flex items-center gap-1.5">
                 <Label>Password</Label>
               </div>
-
-              <Input
+              <AuthInput
+                icon={LockKeyhole}
                 ref={passwordInputRef}
-                type="password"
+                type={isSigninPasswordVisible ? "text" : "password"}
+                placeholder="Enter your password"
+                aria-label="Password"
+                isPasswordToggle
+                isPasswordVisible={isSigninPasswordVisible}
+                showPasswordToggle={password.length > 0}
+                onTogglePasswordVisibility={() =>
+                  setIsSigninPasswordVisible((prev) => !prev)
+                }
                 value={password}
                 aria-invalid={invalidFields.password}
                 disabled={loading}
@@ -762,9 +872,10 @@ export default function Auth() {
               <div className="flex items-center gap-1.5">
                 <Label>Email verification code</Label>
               </div>
-
-              <Input
+              <AuthInput
+                icon={KeyRound}
                 placeholder="Enter 6 digit code"
+                aria-label="Email verification code"
                 value={code}
                 maxLength={6}
                 aria-invalid={invalidFields.code}
@@ -805,8 +916,17 @@ export default function Auth() {
             <>
               <div className="space-y-2">
                 <Label>New password</Label>
-                <Input
-                  type="password"
+                <AuthInput
+                  icon={LockKeyhole}
+                  type={isNewPasswordVisible ? "text" : "password"}
+                  placeholder="New password"
+                  aria-label="New password"
+                  isPasswordToggle
+                  isPasswordVisible={isNewPasswordVisible}
+                  showPasswordToggle={newPassword.length > 0}
+                  onTogglePasswordVisibility={() =>
+                    setIsNewPasswordVisible((prev) => !prev)
+                  }
                   value={newPassword}
                   aria-invalid={invalidFields.newPassword}
                   disabled={loading}
@@ -819,8 +939,17 @@ export default function Auth() {
 
               <div className="space-y-2">
                 <Label>Confirm new password</Label>
-                <Input
-                  type="password"
+                <AuthInput
+                  icon={LockKeyhole}
+                  type={isConfirmPasswordVisible ? "text" : "password"}
+                  placeholder="Confirm new password"
+                  aria-label="Confirm new password"
+                  isPasswordToggle
+                  isPasswordVisible={isConfirmPasswordVisible}
+                  showPasswordToggle={confirmNewPassword.length > 0}
+                  onTogglePasswordVisibility={() =>
+                    setIsConfirmPasswordVisible((prev) => !prev)
+                  }
                   value={confirmNewPassword}
                   aria-invalid={invalidFields.confirmNewPassword}
                   disabled={loading}
@@ -840,7 +969,10 @@ export default function Auth() {
                 <div className="flex items-center gap-1.5">
                   <Label>Name</Label>
                 </div>
-                <Input
+                <AuthInput
+                  icon={UserRound}
+                  placeholder="Full name"
+                  aria-label="Name"
                   value={name}
                   maxLength={20}
                   aria-invalid={invalidFields.name}
@@ -856,7 +988,10 @@ export default function Auth() {
                 <div className="flex items-center gap-1.5">
                   <Label>Username</Label>
                 </div>
-                <Input
+                <AuthInput
+                  icon={AtSign}
+                  placeholder="Username"
+                  aria-label="Username"
                   value={username}
                   maxLength={20}
                   aria-invalid={invalidFields.username}
@@ -874,8 +1009,17 @@ export default function Auth() {
                 <div className="flex items-center gap-1.5">
                   <Label>Password</Label>
                 </div>
-                <Input
-                  type="password"
+                <AuthInput
+                  icon={LockKeyhole}
+                  type={isSignupPasswordVisible ? "text" : "password"}
+                  placeholder="Create a password"
+                  aria-label="Password"
+                  isPasswordToggle
+                  isPasswordVisible={isSignupPasswordVisible}
+                  showPasswordToggle={password.length > 0}
+                  onTogglePasswordVisibility={() =>
+                    setIsSignupPasswordVisible((prev) => !prev)
+                  }
                   value={password}
                   aria-invalid={invalidFields.password}
                   onChange={(e) => {
@@ -894,9 +1038,10 @@ export default function Auth() {
               <div className="flex items-center gap-1.5">
                 <Label>Email verification code</Label>
               </div>
-
-              <Input
+              <AuthInput
+                icon={KeyRound}
                 placeholder="Enter 6 digit code"
+                aria-label="Email verification code"
                 value={code}
                 maxLength={6}
                 aria-invalid={invalidFields.code}
