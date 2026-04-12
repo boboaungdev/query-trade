@@ -402,7 +402,7 @@ export default function Auth() {
     setLoading(true);
     setLoadingSource("submit");
 
-    // STEP 1 — check email
+    // STEP 1 â€” check email
     if (!showPassword && !isSignup) {
       const promise = checkUserExist({ email: normalizedEmail });
 
@@ -427,7 +427,7 @@ export default function Auth() {
       });
     }
 
-    // STEP 2 — sign in
+    // STEP 2 â€” sign in
     else if (showPassword && !forgotStep) {
       const promise = signin({ email: normalizedEmail, password });
 
@@ -501,7 +501,7 @@ export default function Auth() {
       });
     }
 
-    // STEP 3 — signup
+    // STEP 3 â€” signup
     else if (isSignup && !verifyStep) {
       const promise = signup({
         email: normalizedEmail,
@@ -527,7 +527,7 @@ export default function Auth() {
       });
     }
 
-    // STEP 4 — verify email
+    // STEP 4 â€” verify email
     else if (verifyStep) {
       const promise = signupVerify({ email: normalizedEmail, code });
 
@@ -726,388 +726,474 @@ export default function Auth() {
           : isSignup
             ? "Create your account"
             : "Enter your email or continue with OAuth";
+  const isWelcomeState =
+    !showPassword && !isSignup && !forgotStep && !resetStep && !verifyStep;
 
   return (
-    <div className="flex min-h-[80vh] items-center justify-center p-6">
-      <Card className="w-full max-w-sm">
-        <CardHeader className="px-6 pt-4 pb-4">
-          <div className="mb-1 flex items-center justify-start">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="text-muted-foreground hover:text-foreground"
-              onClick={handleStepBack}
-              disabled={loading}
-              aria-label="Go back one step"
-              title="Go back one step"
+    <div className="min-h-[80vh] p-6">
+      <div className="mx-auto flex min-h-[80vh] max-w-6xl items-center justify-center">
+        <div
+          className={`w-full ${
+            isWelcomeState
+              ? "md:overflow-hidden md:rounded-[28px] md:border md:bg-card"
+              : ""
+          }`}
+        >
+          <div
+            className={`grid w-full gap-6 ${
+              isWelcomeState
+                ? "md:grid-cols-[minmax(0,1.05fr)_1px_24rem] md:gap-0"
+                : ""
+            }`}
+          >
+            {isWelcomeState ? (
+              <section className="relative hidden overflow-hidden rounded-[28px] border bg-gradient-to-br from-primary/12 via-background to-primary/5 p-8 md:block md:rounded-none md:border-0 md:p-10">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.55),transparent_32%),radial-gradient(circle_at_bottom_left,rgba(59,130,246,0.12),transparent_28%)]" />
+                <div className="relative flex h-full items-center">
+                  <div className="max-w-md space-y-5 text-left">
+                    <div className="flex items-center gap-3">
+                      <img
+                        src="/query-trade.svg"
+                        alt={`${APP_NAME} logo`}
+                        className="h-12 w-12 shrink-0"
+                      />
+                      <div className="inline-flex items-center rounded-full border bg-background/80 px-3 py-1 text-xs font-medium tracking-[0.18em] text-primary uppercase backdrop-blur">
+                        {APP_NAME}
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <h2 className="text-4xl font-black tracking-tight text-foreground">
+                        Discipline over emotion
+                      </h2>
+                      <p className="text-sm leading-6 text-muted-foreground">
+                        Sign in or create your account to explore strategies,
+                        build your setup, and run backtests in one place.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            ) : null}
+
+            {isWelcomeState ? (
+              <div className="hidden bg-border md:block" aria-hidden="true" />
+            ) : null}
+
+            <Card
+              className={`w-full max-w-sm justify-self-center ${
+                isWelcomeState
+                  ? "md:max-w-none md:rounded-none md:border-0 md:shadow-none"
+                  : ""
+              }`}
             >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-          </div>
-          <div className="mb-4 flex flex-col items-center gap-2 text-center">
-            <img
-              src="/query-trade.svg"
-              alt={`${APP_NAME} logo`}
-              className="h-10 w-10 shrink-0"
-            />
-            <p className="text-lg font-semibold tracking-tight text-primary">
-              {APP_NAME}
-            </p>
-          </div>
-          <CardTitle>{title}</CardTitle>
-          <CardDescription>{description}</CardDescription>
-        </CardHeader>
-
-        <CardContent className="space-y-4 px-6 pt-0 pb-6">
-          {!showPassword && !isSignup && (
-            <>
-              <div className="relative w-full">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  disabled={loading}
-                >
-                  {isGoogleLoading ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <FcGoogle className="mr-2" />
-                  )}
-                  Continue with Google
-                </Button>
-
+              <CardHeader
+                className={`px-6 pb-4 ${isWelcomeState ? "pt-4" : "pt-4"}`}
+              >
                 <div
-                  className={`absolute inset-0 overflow-hidden rounded-md opacity-0 ${
-                    loading ? "pointer-events-none" : ""
+                  className={`flex items-center justify-start ${
+                    isWelcomeState ? "mb-0 min-h-0" : "mb-1 min-h-9"
                   }`}
-                  aria-hidden="true"
                 >
-                  <GoogleLogin
-                    onSuccess={handleGoogleSuccess}
-                    onError={handleGoogleError}
-                    text="continue_with"
-                    shape="rectangular"
-                    width="400"
+                  {!isWelcomeState ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground hover:text-foreground"
+                      onClick={handleStepBack}
+                      disabled={loading}
+                      aria-label="Go back one step"
+                      title="Go back one step"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                  ) : null}
+                </div>
+                {isWelcomeState ? (
+                  <div className="mb-4 flex flex-col items-center gap-2 text-center">
+                    <img
+                      src="/query-trade.svg"
+                      alt={`${APP_NAME} logo`}
+                      className="h-12 w-12 shrink-0"
+                    />
+                    <p className="text-lg font-semibold tracking-tight text-primary">
+                      {APP_NAME}
+                    </p>
+                  </div>
+                ) : null}
+
+                {!isWelcomeState ? (
+                  <div className="mb-4 flex flex-col items-center gap-2 text-center">
+                    <img
+                      src="/query-trade.svg"
+                      alt={`${APP_NAME} logo`}
+                      className="h-12 w-12 shrink-0"
+                    />
+                    <p className="text-lg font-semibold tracking-tight text-primary">
+                      {APP_NAME}
+                    </p>
+                  </div>
+                ) : null}
+                <CardTitle>{title}</CardTitle>
+                <CardDescription>{description}</CardDescription>
+              </CardHeader>
+
+              <CardContent
+                className={`space-y-4 px-6 pt-0 ${isWelcomeState ? "pb-6" : "pb-6"}`}
+              >
+                {!showPassword && !isSignup && (
+                  <>
+                    <div className="relative w-full">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full"
+                        disabled={loading}
+                      >
+                        {isGoogleLoading ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <FcGoogle className="mr-2" />
+                        )}
+                        Continue with Google
+                      </Button>
+
+                      <div
+                        className={`absolute inset-0 overflow-hidden rounded-md opacity-0 ${
+                          loading ? "pointer-events-none" : ""
+                        }`}
+                        aria-hidden="true"
+                      >
+                        <GoogleLogin
+                          onSuccess={handleGoogleSuccess}
+                          onError={handleGoogleError}
+                          text="continue_with"
+                          shape="rectangular"
+                          width="400"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <div className="h-px flex-1 bg-border"></div>
+                      <span className="text-xs text-muted-foreground">OR</span>
+                      <div className="h-px flex-1 bg-border"></div>
+                    </div>
+                  </>
+                )}
+
+                {/* EMAIL */}
+                <div className="space-y-2">
+                  <Label>Email</Label>
+                  <AuthInput
+                    icon={Mail}
+                    type="email"
+                    placeholder="you@example.com"
+                    aria-label="Email"
+                    value={email}
+                    aria-invalid={invalidFields.email}
+                    disabled={showPassword || isSignup || loading}
+                    onChange={(e) => {
+                      clearInvalidField("email");
+                      setEmail(e.target.value.toLowerCase());
+                    }}
+                    onKeyDown={handleSubmitKeyDown}
                   />
                 </div>
-              </div>
 
-              <div className="flex items-center gap-2">
-                <div className="h-px flex-1 bg-border"></div>
-                <span className="text-xs text-muted-foreground">OR</span>
-                <div className="h-px flex-1 bg-border"></div>
-              </div>
-            </>
-          )}
+                {/* SIGNIN PASSWORD */}
+                {showPassword && !forgotStep && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-1.5">
+                      <Label>Password</Label>
+                    </div>
+                    <AuthInput
+                      icon={LockKeyhole}
+                      ref={passwordInputRef}
+                      type={isSigninPasswordVisible ? "text" : "password"}
+                      placeholder="Enter your password"
+                      aria-label="Password"
+                      isPasswordToggle
+                      isPasswordVisible={isSigninPasswordVisible}
+                      showPasswordToggle={password.length > 0}
+                      onTogglePasswordVisibility={() =>
+                        setIsSigninPasswordVisible((prev) => !prev)
+                      }
+                      value={password}
+                      aria-invalid={invalidFields.password}
+                      disabled={loading}
+                      onChange={(e) => {
+                        clearInvalidField("password");
+                        setPassword(e.target.value);
+                      }}
+                      onKeyDown={handleSubmitKeyDown}
+                    />
 
-          {/* EMAIL */}
-          <div className="space-y-2">
-            <Label>Email</Label>
-            <AuthInput
-              icon={Mail}
-              type="email"
-              placeholder="you@example.com"
-              aria-label="Email"
-              value={email}
-              aria-invalid={invalidFields.email}
-              disabled={showPassword || isSignup || loading}
-              onChange={(e) => {
-                clearInvalidField("email");
-                setEmail(e.target.value.toLowerCase());
-              }}
-              onKeyDown={handleSubmitKeyDown}
-            />
-          </div>
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        disabled={loading}
+                        onClick={handleForgotPassword}
+                        className={`text-xs ${
+                          loading && loadingSource === "forgot"
+                            ? "text-muted-foreground"
+                            : "text-primary hover:text-primary/80"
+                        }`}
+                      >
+                        {loading && loadingSource === "forgot"
+                          ? "Sending email code..."
+                          : "Forgot password?"}
+                      </button>
+                    </div>
+                  </div>
+                )}
 
-          {/* SIGNIN PASSWORD */}
-          {showPassword && !forgotStep && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-1.5">
-                <Label>Password</Label>
-              </div>
-              <AuthInput
-                icon={LockKeyhole}
-                ref={passwordInputRef}
-                type={isSigninPasswordVisible ? "text" : "password"}
-                placeholder="Enter your password"
-                aria-label="Password"
-                isPasswordToggle
-                isPasswordVisible={isSigninPasswordVisible}
-                showPasswordToggle={password.length > 0}
-                onTogglePasswordVisibility={() =>
-                  setIsSigninPasswordVisible((prev) => !prev)
-                }
-                value={password}
-                aria-invalid={invalidFields.password}
-                disabled={loading}
-                onChange={(e) => {
-                  clearInvalidField("password");
-                  setPassword(e.target.value);
-                }}
-                onKeyDown={handleSubmitKeyDown}
-              />
+                {forgotStep && !resetStep && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-1.5">
+                      <Label>Email verification code</Label>
+                    </div>
+                    <AuthInput
+                      icon={KeyRound}
+                      placeholder="Enter 6 digit code"
+                      aria-label="Email verification code"
+                      value={code}
+                      maxLength={6}
+                      aria-invalid={invalidFields.code}
+                      disabled={loading}
+                      onChange={(e) => {
+                        clearInvalidField("code");
+                        setCode(e.target.value.replace(/[^0-9]/g, ""));
+                      }}
+                      onKeyDown={handleSubmitKeyDown}
+                    />
 
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  disabled={loading}
-                  onClick={handleForgotPassword}
-                  className={`text-xs ${
-                    loading && loadingSource === "forgot"
-                      ? "text-muted-foreground"
-                      : "text-primary hover:text-primary/80"
-                  }`}
+                    <div className="flex justify-end">
+                      {canResend ? (
+                        <button
+                          type="button"
+                          disabled={loading || !canResend}
+                          onClick={handleResendCode}
+                          className={`text-xs ${
+                            loading && loadingSource === "resend"
+                              ? "text-muted-foreground"
+                              : "text-primary hover:text-primary/80"
+                          }`}
+                        >
+                          {loading && loadingSource === "resend"
+                            ? "Resending code..."
+                            : "Resend code"}
+                        </button>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">
+                          Resend in {resendTimer}s
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {resetStep && (
+                  <>
+                    <div className="space-y-2">
+                      <Label>New password</Label>
+                      <AuthInput
+                        icon={LockKeyhole}
+                        type={isNewPasswordVisible ? "text" : "password"}
+                        placeholder="New password"
+                        aria-label="New password"
+                        isPasswordToggle
+                        isPasswordVisible={isNewPasswordVisible}
+                        showPasswordToggle={newPassword.length > 0}
+                        onTogglePasswordVisibility={() =>
+                          setIsNewPasswordVisible((prev) => !prev)
+                        }
+                        value={newPassword}
+                        aria-invalid={invalidFields.newPassword}
+                        disabled={loading}
+                        onChange={(e) => {
+                          clearInvalidField("newPassword");
+                          setNewPassword(e.target.value);
+                        }}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Confirm new password</Label>
+                      <AuthInput
+                        icon={LockKeyhole}
+                        type={isConfirmPasswordVisible ? "text" : "password"}
+                        placeholder="Confirm new password"
+                        aria-label="Confirm new password"
+                        isPasswordToggle
+                        isPasswordVisible={isConfirmPasswordVisible}
+                        showPasswordToggle={confirmNewPassword.length > 0}
+                        onTogglePasswordVisibility={() =>
+                          setIsConfirmPasswordVisible((prev) => !prev)
+                        }
+                        value={confirmNewPassword}
+                        aria-invalid={invalidFields.confirmNewPassword}
+                        disabled={loading}
+                        onChange={(e) => {
+                          clearInvalidField("confirmNewPassword");
+                          setConfirmNewPassword(e.target.value);
+                        }}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* SIGNUP FIELDS */}
+                {isSignup && (
+                  <>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-1.5">
+                        <Label>Name</Label>
+                      </div>
+                      <AuthInput
+                        icon={UserRound}
+                        placeholder="Full name"
+                        aria-label="Name"
+                        value={name}
+                        maxLength={20}
+                        aria-invalid={invalidFields.name}
+                        disabled={loading || verifyStep}
+                        onChange={(e) => {
+                          clearInvalidField("name");
+                          setName(e.target.value);
+                        }}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-1.5">
+                        <Label>Username</Label>
+                      </div>
+                      <AuthInput
+                        icon={AtSign}
+                        placeholder="Username"
+                        aria-label="Username"
+                        value={username}
+                        maxLength={20}
+                        aria-invalid={invalidFields.username}
+                        disabled={loading || verifyStep}
+                        onChange={(e) => {
+                          clearInvalidField("username");
+                          setUsername(
+                            e.target.value
+                              .toLowerCase()
+                              .replace(/[^a-z0-9]/g, ""),
+                          );
+                        }}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-1.5">
+                        <Label>Password</Label>
+                      </div>
+                      <AuthInput
+                        icon={LockKeyhole}
+                        type={isSignupPasswordVisible ? "text" : "password"}
+                        placeholder="Create a password"
+                        aria-label="Password"
+                        isPasswordToggle
+                        isPasswordVisible={isSignupPasswordVisible}
+                        showPasswordToggle={password.length > 0}
+                        onTogglePasswordVisibility={() =>
+                          setIsSignupPasswordVisible((prev) => !prev)
+                        }
+                        value={password}
+                        aria-invalid={invalidFields.password}
+                        onChange={(e) => {
+                          clearInvalidField("password");
+                          setPassword(e.target.value);
+                        }}
+                        disabled={loading || verifyStep}
+                        onKeyDown={handleSubmitKeyDown}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {verifyStep && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-1.5">
+                      <Label>Email verification code</Label>
+                    </div>
+                    <AuthInput
+                      icon={KeyRound}
+                      placeholder="Enter 6 digit code"
+                      aria-label="Email verification code"
+                      value={code}
+                      maxLength={6}
+                      aria-invalid={invalidFields.code}
+                      disabled={loading}
+                      onChange={(e) => {
+                        clearInvalidField("code");
+                        setCode(e.target.value.replace(/[^0-9]/g, ""));
+                      }}
+                      onKeyDown={handleSubmitKeyDown}
+                    />
+
+                    <div className="flex justify-end">
+                      {canResend ? (
+                        <button
+                          type="button"
+                          disabled={loading || !canResend}
+                          onClick={handleResendVerification}
+                          className={`text-xs ${
+                            loading && loadingSource === "resend"
+                              ? "text-muted-foreground"
+                              : "text-primary hover:text-primary/80"
+                          }`}
+                        >
+                          {loading && loadingSource === "resend"
+                            ? "Resending code..."
+                            : "Resend code"}
+                        </button>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">
+                          Resend in {resendTimer}s
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <Button
+                  className="w-full"
+                  onClick={handleContinue}
+                  disabled={isSubmitDisabled}
                 >
-                  {loading && loadingSource === "forgot"
-                    ? "Sending email code..."
-                    : "Forgot password?"}
-                </button>
-              </div>
-            </div>
-          )}
+                  {shouldShowContinueSpinner ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : resetStep ? (
+                    "Reset password"
+                  ) : forgotStep ? (
+                    "Verify"
+                  ) : showPassword ? (
+                    "Sign in"
+                  ) : isSignup && !verifyStep ? (
+                    "Next"
+                  ) : verifyStep ? (
+                    "Sign up"
+                  ) : (
+                    "Continue"
+                  )}
+                </Button>
 
-          {forgotStep && !resetStep && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-1.5">
-                <Label>Email verification code</Label>
-              </div>
-              <AuthInput
-                icon={KeyRound}
-                placeholder="Enter 6 digit code"
-                aria-label="Email verification code"
-                value={code}
-                maxLength={6}
-                aria-invalid={invalidFields.code}
-                disabled={loading}
-                onChange={(e) => {
-                  clearInvalidField("code");
-                  setCode(e.target.value.replace(/[^0-9]/g, ""));
-                }}
-                onKeyDown={handleSubmitKeyDown}
-              />
-
-              <div className="flex justify-end">
-                {canResend ? (
-                  <button
-                    type="button"
-                    disabled={loading || !canResend}
-                    onClick={handleResendCode}
-                    className={`text-xs ${
-                      loading && loadingSource === "resend"
-                        ? "text-muted-foreground"
-                        : "text-primary hover:text-primary/80"
-                    }`}
-                  >
-                    {loading && loadingSource === "resend"
-                      ? "Resending code..."
-                      : "Resend code"}
-                  </button>
-                ) : (
-                  <span className="text-xs text-muted-foreground">
-                    Resend in {resendTimer}s
-                  </span>
+                {!showPassword && !isSignup && !forgotStep && !resetStep && (
+                  <p className="text-center text-xs leading-5 text-muted-foreground">
+                    By clicking Continue, you agree to our Terms of Service and
+                    Privacy Policy.
+                  </p>
                 )}
-              </div>
-            </div>
-          )}
-
-          {resetStep && (
-            <>
-              <div className="space-y-2">
-                <Label>New password</Label>
-                <AuthInput
-                  icon={LockKeyhole}
-                  type={isNewPasswordVisible ? "text" : "password"}
-                  placeholder="New password"
-                  aria-label="New password"
-                  isPasswordToggle
-                  isPasswordVisible={isNewPasswordVisible}
-                  showPasswordToggle={newPassword.length > 0}
-                  onTogglePasswordVisibility={() =>
-                    setIsNewPasswordVisible((prev) => !prev)
-                  }
-                  value={newPassword}
-                  aria-invalid={invalidFields.newPassword}
-                  disabled={loading}
-                  onChange={(e) => {
-                    clearInvalidField("newPassword");
-                    setNewPassword(e.target.value);
-                  }}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Confirm new password</Label>
-                <AuthInput
-                  icon={LockKeyhole}
-                  type={isConfirmPasswordVisible ? "text" : "password"}
-                  placeholder="Confirm new password"
-                  aria-label="Confirm new password"
-                  isPasswordToggle
-                  isPasswordVisible={isConfirmPasswordVisible}
-                  showPasswordToggle={confirmNewPassword.length > 0}
-                  onTogglePasswordVisibility={() =>
-                    setIsConfirmPasswordVisible((prev) => !prev)
-                  }
-                  value={confirmNewPassword}
-                  aria-invalid={invalidFields.confirmNewPassword}
-                  disabled={loading}
-                  onChange={(e) => {
-                    clearInvalidField("confirmNewPassword");
-                    setConfirmNewPassword(e.target.value);
-                  }}
-                />
-              </div>
-            </>
-          )}
-
-          {/* SIGNUP FIELDS */}
-          {isSignup && (
-            <>
-              <div className="space-y-2">
-                <div className="flex items-center gap-1.5">
-                  <Label>Name</Label>
-                </div>
-                <AuthInput
-                  icon={UserRound}
-                  placeholder="Full name"
-                  aria-label="Name"
-                  value={name}
-                  maxLength={20}
-                  aria-invalid={invalidFields.name}
-                  disabled={loading || verifyStep}
-                  onChange={(e) => {
-                    clearInvalidField("name");
-                    setName(e.target.value);
-                  }}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center gap-1.5">
-                  <Label>Username</Label>
-                </div>
-                <AuthInput
-                  icon={AtSign}
-                  placeholder="Username"
-                  aria-label="Username"
-                  value={username}
-                  maxLength={20}
-                  aria-invalid={invalidFields.username}
-                  disabled={loading || verifyStep}
-                  onChange={(e) => {
-                    clearInvalidField("username");
-                    setUsername(
-                      e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ""),
-                    );
-                  }}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center gap-1.5">
-                  <Label>Password</Label>
-                </div>
-                <AuthInput
-                  icon={LockKeyhole}
-                  type={isSignupPasswordVisible ? "text" : "password"}
-                  placeholder="Create a password"
-                  aria-label="Password"
-                  isPasswordToggle
-                  isPasswordVisible={isSignupPasswordVisible}
-                  showPasswordToggle={password.length > 0}
-                  onTogglePasswordVisibility={() =>
-                    setIsSignupPasswordVisible((prev) => !prev)
-                  }
-                  value={password}
-                  aria-invalid={invalidFields.password}
-                  onChange={(e) => {
-                    clearInvalidField("password");
-                    setPassword(e.target.value);
-                  }}
-                  disabled={loading || verifyStep}
-                  onKeyDown={handleSubmitKeyDown}
-                />
-              </div>
-            </>
-          )}
-
-          {verifyStep && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-1.5">
-                <Label>Email verification code</Label>
-              </div>
-              <AuthInput
-                icon={KeyRound}
-                placeholder="Enter 6 digit code"
-                aria-label="Email verification code"
-                value={code}
-                maxLength={6}
-                aria-invalid={invalidFields.code}
-                disabled={loading}
-                onChange={(e) => {
-                  clearInvalidField("code");
-                  setCode(e.target.value.replace(/[^0-9]/g, ""));
-                }}
-                onKeyDown={handleSubmitKeyDown}
-              />
-
-              <div className="flex justify-end">
-                {canResend ? (
-                  <button
-                    type="button"
-                    disabled={loading || !canResend}
-                    onClick={handleResendVerification}
-                    className={`text-xs ${
-                      loading && loadingSource === "resend"
-                        ? "text-muted-foreground"
-                        : "text-primary hover:text-primary/80"
-                    }`}
-                  >
-                    {loading && loadingSource === "resend"
-                      ? "Resending code..."
-                      : "Resend code"}
-                  </button>
-                ) : (
-                  <span className="text-xs text-muted-foreground">
-                    Resend in {resendTimer}s
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-
-          <Button
-            className="w-full"
-            onClick={handleContinue}
-            disabled={isSubmitDisabled}
-          >
-            {shouldShowContinueSpinner ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : resetStep ? (
-              "Reset password"
-            ) : forgotStep ? (
-              "Verify"
-            ) : showPassword ? (
-              "Sign in"
-            ) : isSignup && !verifyStep ? (
-              "Next"
-            ) : verifyStep ? (
-              "Sign up"
-            ) : (
-              "Continue"
-            )}
-          </Button>
-
-          {!showPassword && !isSignup && !forgotStep && !resetStep && (
-            <p className="text-center text-xs leading-5 text-muted-foreground">
-              By clicking Continue, you agree to our Terms of Service and
-              Privacy Policy.
-            </p>
-          )}
-        </CardContent>
-      </Card>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
