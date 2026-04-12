@@ -56,6 +56,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth";
 import { useBookmarkIds } from "@/hooks/use-bookmark-ids";
@@ -402,25 +403,9 @@ export default function LeaderboardPage() {
                 setPage(1);
               }}
               placeholder="Search"
-              className="pr-10 pl-9 sm:pr-[19rem]"
+              className="pr-10 pl-9"
             />
             <div className="absolute top-1/2 right-1.5 flex -translate-y-1/2 items-center gap-1">
-              <div className="hidden items-center gap-1 sm:flex">
-                {durationFilterOptions.map((option) => (
-                  <Button
-                    key={option.value}
-                    type="button"
-                    variant={duration === option.value ? "secondary" : "ghost"}
-                    className="h-7 min-w-10 justify-center px-2 text-center text-[11px] uppercase"
-                    onClick={() => {
-                      setDuration(option.value);
-                      setPage(1);
-                    }}
-                  >
-                    {option.label}
-                  </Button>
-                ))}
-              </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -487,61 +472,48 @@ export default function LeaderboardPage() {
             </div>
           </div>
 
-          <div className="flex gap-1 sm:hidden">
-            {durationFilterOptions.map((option) => (
-              <Button
-                key={option.value}
-                type="button"
-                variant={duration === option.value ? "secondary" : "outline"}
-                className="h-8 min-w-0 flex-1 justify-center px-1 text-center text-[10px] uppercase"
-                onClick={() => {
-                  setDuration(option.value);
-                  setPage(1);
-                }}
-              >
-                {option.label}
-              </Button>
-            ))}
-          </div>
+          <Tabs
+            value={duration}
+            onValueChange={(value) => {
+              setDuration(value as BacktestDurationFilter);
+              setPage(1);
+            }}
+          >
+            <TabsList className="w-full">
+              {durationFilterOptions.map((option) => (
+                <TabsTrigger key={option.value} value={option.value}>
+                  {option.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
 
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              type="button"
-              variant={source === "all" ? "default" : "outline"}
-              className="gap-2"
-              onClick={() => {
-                setSource("all");
-                setPage(1);
-              }}
-            >
-              <Compass className="h-4 w-4" />
-              Explore
-            </Button>
-            <Button
-              type="button"
-              variant={source === "me" ? "default" : "outline"}
-              className="gap-2"
-              onClick={() => {
-                setSource("me");
-                setPage(1);
-              }}
-            >
-              <UserRound className="h-4 w-4" />
-              Me
-            </Button>
-          </div>
+          <Tabs
+            value={source}
+            onValueChange={(value) => {
+              setSource(value as "all" | "me");
+              setPage(1);
+            }}
+          >
+            <TabsList className="w-full">
+              <TabsTrigger value="all">
+                <Compass className="h-4 w-4" />
+                Explore
+              </TabsTrigger>
+              <TabsTrigger value="me">
+                <UserRound className="h-4 w-4" />
+                Me
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </CardHeader>
       </Card>
 
       {isLoading ? (
-        <Card className="border-dashed">
-          <CardContent className="flex min-h-[220px] items-center justify-center text-sm text-muted-foreground">
-            <span className="inline-flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Loading leaderboard...
-            </span>
-          </CardContent>
-        </Card>
+        <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Loading leaderboard...</span>
+        </div>
       ) : backtests.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="flex min-h-[220px] items-center justify-center text-sm text-muted-foreground">

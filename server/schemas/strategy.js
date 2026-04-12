@@ -30,23 +30,14 @@ const conditionSchema = Joi.alternatives()
   )
   .id("condition");
 
-const legacyCandleRuleSchema = Joi.object({
-  type: Joi.string().valid("candle").required(),
-  reference: Joi.string().valid("previous", "current").required(),
-  price: Joi.string().valid("open", "high", "low", "close").required(),
-});
-
 const candleStopLossWindowSchema = Joi.object({
   type: Joi.string().valid("candle").required(),
   previousCandles: Joi.number().integer().min(0).required(),
-  aggregation: Joi.string()
-    .valid("single", "min", "max", "average")
-    .required(),
+  aggregation: Joi.string().valid("single", "min", "max", "average").required(),
 });
 
 const stopLossSchema = Joi.alternatives()
   .try(
-    legacyCandleRuleSchema,
     candleStopLossWindowSchema,
     Joi.object({
       type: Joi.string().valid("indicator").required(),
@@ -65,9 +56,7 @@ const stopLossSchema = Joi.alternatives()
   .required();
 
 const takeProfitSchema = Joi.object({
-  type: Joi.string()
-    .valid("riskReward", "percent", "indicator", "candle")
-    .required(),
+  type: Joi.string().valid("riskReward", "percent", "indicator").required(),
 
   ratio: Joi.when("type", {
     is: "riskReward",
@@ -84,18 +73,6 @@ const takeProfitSchema = Joi.object({
   indicator: Joi.when("type", {
     is: "indicator",
     then: Joi.string().required(),
-    otherwise: Joi.forbidden(),
-  }),
-
-  reference: Joi.when("type", {
-    is: "candle",
-    then: Joi.string().valid("previous", "current").required(),
-    otherwise: Joi.forbidden(),
-  }),
-
-  price: Joi.when("type", {
-    is: "candle",
-    then: Joi.string().valid("open", "high", "low", "close").required(),
     otherwise: Joi.forbidden(),
   }),
 }).required();

@@ -59,6 +59,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuthStore } from "@/store/auth";
 
 type BookmarkFilter = "all" | BookmarkTargetType;
@@ -432,78 +433,6 @@ export default function BookmarkPage() {
             </div>
           </div>
 
-          <div className="flex w-full gap-1 pb-1 sm:hidden">
-            <Button
-              type="button"
-              variant={filter === "all" ? "default" : "outline"}
-              className="h-8 min-w-0 flex-1 justify-center px-1 text-center text-[10px] tracking-[0.12em] uppercase"
-              onClick={() => {
-                setFilter("all");
-                setPage(1);
-              }}
-            >
-              All
-            </Button>
-            <Button
-              type="button"
-              variant={filter === "backtest" ? "default" : "outline"}
-              className="h-8 min-w-0 flex-1 justify-center px-1 text-center text-[10px] tracking-[0.12em] uppercase"
-              onClick={() => {
-                setFilter("backtest");
-                setPage(1);
-              }}
-            >
-              Backtests
-            </Button>
-            <Button
-              type="button"
-              variant={filter === "strategy" ? "default" : "outline"}
-              className="h-8 min-w-0 flex-1 justify-center px-1 text-center text-[10px] tracking-[0.12em] uppercase"
-              onClick={() => {
-                setFilter("strategy");
-                setPage(1);
-              }}
-            >
-              Strategies
-            </Button>
-          </div>
-
-          <div className="hidden w-full items-center gap-1 sm:flex">
-            <Button
-              type="button"
-              variant={filter === "all" ? "default" : "ghost"}
-              className="h-7 min-w-0 flex-1 justify-center px-2 text-center text-[11px] tracking-[0.14em] uppercase"
-              onClick={() => {
-                setFilter("all");
-                setPage(1);
-              }}
-            >
-              All
-            </Button>
-            <Button
-              type="button"
-              variant={filter === "backtest" ? "default" : "ghost"}
-              className="h-7 min-w-0 flex-1 justify-center px-2 text-center text-[11px] tracking-[0.14em] uppercase"
-              onClick={() => {
-                setFilter("backtest");
-                setPage(1);
-              }}
-            >
-              Backtests
-            </Button>
-            <Button
-              type="button"
-              variant={filter === "strategy" ? "default" : "ghost"}
-              className="h-7 min-w-0 flex-1 justify-center px-2 text-center text-[11px] tracking-[0.14em] uppercase"
-              onClick={() => {
-                setFilter("strategy");
-                setPage(1);
-              }}
-            >
-              Strategies
-            </Button>
-          </div>
-
           <div className="relative">
             <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -564,6 +493,20 @@ export default function BookmarkPage() {
               </DropdownMenu>
             </div>
           </div>
+
+          <Tabs
+            value={filter}
+            onValueChange={(value) => {
+              setFilter(value as BookmarkFilter);
+              setPage(1);
+            }}
+          >
+            <TabsList className="w-full">
+              <TabsTrigger value="all">All</TabsTrigger>
+              <TabsTrigger value="backtest">Backtests</TabsTrigger>
+              <TabsTrigger value="strategy">Strategies</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </CardHeader>
 
         <CardContent className="space-y-3">

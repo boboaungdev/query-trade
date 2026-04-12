@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useState } from "react"
-import { Link } from "react-router-dom"
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   Area,
   AreaChart,
   CartesianGrid,
   ResponsiveContainer,
   XAxis,
-} from "recharts"
+} from "recharts";
 import {
   ArrowRight,
   ArrowUpRight,
@@ -20,95 +20,97 @@ import {
   SquareArrowOutUpRight,
   Target,
   TrendingUp,
-} from "lucide-react"
-import { toast } from "sonner"
+} from "lucide-react";
+import { toast } from "sonner";
 
-import { getApiErrorMessage } from "@/api/axios"
-import { fetchExchangeData } from "@/api/backtest"
-import { fetchBookmarks } from "@/api/bookmark"
-import { fetchStrategies } from "@/api/strategy"
-import { Button } from "@/components/ui/button"
+import { getApiErrorMessage } from "@/api/axios";
+import { fetchExchangeData } from "@/api/backtest";
+import { fetchBookmarks } from "@/api/bookmark";
+import { fetchStrategies } from "@/api/strategy";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { useAuthStore } from "@/store/auth"
+} from "@/components/ui/card";
+import { useAuthStore } from "@/store/auth";
 
 type StrategyItem = {
-  _id: string
-  name: string
-  isPublic?: boolean
-  createdAt?: string
-  updatedAt?: string
+  _id: string;
+  name: string;
+  isPublic?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
   user?: {
-    username?: string
-  }
+    username?: string;
+  };
   stats?: {
-    viewCount?: number
-    bookmarkCount?: number
-  }
-}
+    viewCount?: number;
+    bookmarkCount?: number;
+  };
+};
 
 type StrategyResponse = {
   result?: {
-    total?: number
-    strategies?: StrategyItem[]
-  }
-}
+    total?: number;
+    strategies?: StrategyItem[];
+  };
+};
 
 type BookmarkResponse = {
   result?: {
-    total?: number
-  }
-}
+    total?: number;
+  };
+};
 
 type ExchangeDataResponse = {
   result?: {
     data?: {
-      symbols?: string[]
-      timeframes?: Record<string, string>
-    }
-  }
-}
+      symbols?: string[];
+      timeframes?: Record<string, string>;
+    };
+  };
+};
 
 function toPrettyDate(value?: string) {
-  if (!value) return "-"
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return "-"
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
   return date.toLocaleDateString("en-US", {
     month: "short",
     day: "2-digit",
     year: "numeric",
-  })
+  });
 }
 
 export default function Dashboard() {
-  const user = useAuthStore((state) => state.user)
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const user = useAuthStore((state) => state.user);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
-  const [isLoading, setIsLoading] = useState(true)
-  const [myStrategiesTotal, setMyStrategiesTotal] = useState(0)
-  const [bookmarkedStrategiesTotal, setBookmarkedStrategiesTotal] = useState(0)
-  const [bookmarkedBacktestsTotal, setBookmarkedBacktestsTotal] = useState(0)
-  const [symbolsCount, setSymbolsCount] = useState(0)
-  const [timeframesCount, setTimeframesCount] = useState(0)
+  const [isLoading, setIsLoading] = useState(true);
+  const [myStrategiesTotal, setMyStrategiesTotal] = useState(0);
+  const [bookmarkedStrategiesTotal, setBookmarkedStrategiesTotal] = useState(0);
+  const [bookmarkedBacktestsTotal, setBookmarkedBacktestsTotal] = useState(0);
+  const [symbolsCount, setSymbolsCount] = useState(0);
+  const [timeframesCount, setTimeframesCount] = useState(0);
   const [recentMyStrategies, setRecentMyStrategies] = useState<StrategyItem[]>(
-    []
-  )
-  const [popularStrategies, setPopularStrategies] = useState<StrategyItem[]>([])
-  const [activitySource, setActivitySource] = useState<StrategyItem[]>([])
+    [],
+  );
+  const [popularStrategies, setPopularStrategies] = useState<StrategyItem[]>(
+    [],
+  );
+  const [activitySource, setActivitySource] = useState<StrategyItem[]>([]);
 
   useEffect(() => {
     if (!isAuthenticated) {
-      setIsLoading(false)
-      return
+      setIsLoading(false);
+      return;
     }
 
     const loadDashboard = async () => {
-      setIsLoading(true)
+      setIsLoading(true);
 
       try {
         const [
@@ -156,49 +158,49 @@ export default function Dashboard() {
           BookmarkResponse,
           BookmarkResponse,
           ExchangeDataResponse,
-        ]
+        ];
 
-        const mine = myStrategiesRes?.result?.strategies ?? []
-        const popular = popularStrategiesRes?.result?.strategies ?? []
-        const symbols = exchangeRes?.result?.data?.symbols ?? []
-        const timeframesMap = exchangeRes?.result?.data?.timeframes ?? {}
+        const mine = myStrategiesRes?.result?.strategies ?? [];
+        const popular = popularStrategiesRes?.result?.strategies ?? [];
+        const symbols = exchangeRes?.result?.data?.symbols ?? [];
+        const timeframesMap = exchangeRes?.result?.data?.timeframes ?? {};
 
-        setMyStrategiesTotal(myStrategiesRes?.result?.total ?? 0)
-        setBookmarkedStrategiesTotal(strategyBookmarksRes?.result?.total ?? 0)
-        setBookmarkedBacktestsTotal(backtestBookmarksRes?.result?.total ?? 0)
-        setSymbolsCount(symbols.length)
-        setTimeframesCount(Object.keys(timeframesMap).length)
-        setRecentMyStrategies(mine.slice(0, 6))
-        setActivitySource(mine)
-        setPopularStrategies(popular)
+        setMyStrategiesTotal(myStrategiesRes?.result?.total ?? 0);
+        setBookmarkedStrategiesTotal(strategyBookmarksRes?.result?.total ?? 0);
+        setBookmarkedBacktestsTotal(backtestBookmarksRes?.result?.total ?? 0);
+        setSymbolsCount(symbols.length);
+        setTimeframesCount(Object.keys(timeframesMap).length);
+        setRecentMyStrategies(mine.slice(0, 6));
+        setActivitySource(mine);
+        setPopularStrategies(popular);
       } catch (error) {
-        toast.error(getApiErrorMessage(error, "Failed to load dashboard"))
+        toast.error(getApiErrorMessage(error, "Failed to load dashboard"));
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    }
+    };
 
-    void loadDashboard()
-  }, [isAuthenticated])
+    void loadDashboard();
+  }, [isAuthenticated]);
 
   const activityData = useMemo(() => {
-    const today = new Date()
-    const map = new Map<string, number>()
+    const today = new Date();
+    const map = new Map<string, number>();
 
     for (let i = 13; i >= 0; i -= 1) {
-      const date = new Date(today)
-      date.setDate(today.getDate() - i)
-      const key = date.toISOString().slice(0, 10)
-      map.set(key, 0)
+      const date = new Date(today);
+      date.setDate(today.getDate() - i);
+      const key = date.toISOString().slice(0, 10);
+      map.set(key, 0);
     }
 
     activitySource.forEach((item) => {
-      if (!item.createdAt) return
-      const key = new Date(item.createdAt).toISOString().slice(0, 10)
+      if (!item.createdAt) return;
+      const key = new Date(item.createdAt).toISOString().slice(0, 10);
       if (map.has(key)) {
-        map.set(key, (map.get(key) ?? 0) + 1)
+        map.set(key, (map.get(key) ?? 0) + 1);
       }
-    })
+    });
 
     return Array.from(map.entries()).map(([date, count]) => ({
       date,
@@ -207,8 +209,8 @@ export default function Dashboard() {
         day: "2-digit",
       }),
       count,
-    }))
-  }, [activitySource])
+    }));
+  }, [activitySource]);
 
   if (!isAuthenticated) {
     return (
@@ -227,7 +229,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
   return (
@@ -455,7 +457,8 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent className="grid gap-2">
               <Link
-                to="/strategy/create"
+                to="/strategy"
+                state={{ openStrategyBuilder: true }}
                 className="group rounded-xl border p-3 transition-colors hover:border-primary/30 hover:bg-primary/[0.04]"
               >
                 <div className="flex items-center justify-between gap-3">
@@ -685,5 +688,5 @@ export default function Dashboard() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

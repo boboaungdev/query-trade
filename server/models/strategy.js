@@ -60,7 +60,7 @@ const riskManagementSchema = new Schema(
       required: true,
     },
     takeProfit: {
-      type: Schema.Types.Mixed, // riskReward | percent | indicator | candle | price
+      type: Schema.Types.Mixed, // riskReward | percent | indicator | price
       required: true,
     },
   },

@@ -192,8 +192,6 @@ function formatTakeProfit(takeProfit?: Record<string, unknown>) {
       return `${String(takeProfit.value ?? "")}%`;
     case "indicator":
       return `Indicator ${String(takeProfit.indicator ?? "")}`.trim();
-    case "candle":
-      return `Candle ${String(takeProfit.reference ?? "")} ${String(takeProfit.price ?? "")}`.trim();
     default:
       return String(takeProfit.type);
   }
@@ -639,8 +637,9 @@ export default function StrategyDetailPage() {
   const onCloneStrategy = () => {
     if (!strategy) return;
 
-    navigate("/strategy/create", {
+    navigate("/strategy", {
       state: {
+        openStrategyBuilder: true,
         duplicateStrategyId: strategy._id,
         duplicateStrategyName: strategy.name,
       },

@@ -17,13 +17,11 @@ import {
   Play,
   Bookmark,
   BookmarkCheck,
-  CopyPlus,
   RefreshCcw,
   Search,
   ShieldAlert,
   ListFilter,
   Sparkles,
-  Settings2,
   ArrowLeftRight,
   Target,
   TrendingUp,
@@ -39,7 +37,6 @@ import {
   updateBacktest,
 } from "@/api/backtest";
 import {
-  fetchStrategyById,
   fetchStrategies,
   type StrategySource,
 } from "@/api/strategy";
@@ -289,11 +286,6 @@ export default function BacktestPage() {
   const [isLoadingStrategies, setIsLoadingStrategies] = useState(true);
   const [isLoadingBacktest, setIsLoadingBacktest] = useState(isEditing);
   const [isRunning, setIsRunning] = useState(false);
-  const [isPreparingStrategyEditor, setIsPreparingStrategyEditor] =
-    useState(false);
-  const [canEditSelectedStrategy, setCanEditSelectedStrategy] = useState<
-    boolean | null
-  >(null);
   const [exchangeRefreshTick, setExchangeRefreshTick] = useState(0);
   const [strategyRefreshTick, setStrategyRefreshTick] = useState(0);
   const [hasExchangeData, setHasExchangeData] = useState(false);
@@ -582,60 +574,6 @@ export default function BacktestPage() {
     () => strategies.find((item) => item._id === strategyId),
     [strategies, strategyId],
   );
-  useEffect(() => {
-    if (!strategyId) {
-      setCanEditSelectedStrategy(null);
-      return;
-    }
-
-    if (selectedStrategy?.user?._id) {
-      setCanEditSelectedStrategy(
-        Boolean(user?._id) && selectedStrategy.user._id === user?._id,
-      );
-      return;
-    }
-
-    let isActive = true;
-
-    const resolveStrategyOwnership = async () => {
-      try {
-        const response = (await fetchStrategyById(strategyId)) as {
-          result?: {
-            strategy?: {
-              user?: {
-                _id?: string;
-              };
-            };
-          };
-        };
-
-        if (!isActive) return;
-
-        setCanEditSelectedStrategy(
-          Boolean(user?._id) &&
-            response?.result?.strategy?.user?._id === user?._id,
-        );
-      } catch {
-        if (!isActive) return;
-        setCanEditSelectedStrategy(null);
-      }
-    };
-
-    void resolveStrategyOwnership();
-
-    return () => {
-      isActive = false;
-    };
-  }, [selectedStrategy?.user?._id, strategyId, user?._id]);
-
-  const strategyEditorActionLabel =
-    canEditSelectedStrategy === true
-      ? "Edit"
-      : canEditSelectedStrategy === false
-        ? "Clone"
-        : "Modify";
-  const StrategyEditorActionIcon =
-    canEditSelectedStrategy === false ? CopyPlus : Settings2;
   const selectedStrategyLabel =
     selectedStrategy?.name || selectedStrategyName || "No strategy selected";
   const currentStartDateIso = startDate ? toUtcStartOfDayIso(startDate) : "";
@@ -776,60 +714,6 @@ export default function BacktestPage() {
         next.delete(strategyIdToToggle);
         return next;
       });
-    }
-  };
-
-  const onOpenStrategyEditor = async () => {
-    if (!strategyId) return;
-
-    if (canEditSelectedStrategy === true) {
-      navigate(`/strategy/${strategyId}/edit`);
-      return;
-    }
-
-    if (canEditSelectedStrategy === false) {
-      navigate("/strategy/create", {
-        state: {
-          duplicateStrategyId: strategyId,
-          duplicateStrategyName: selectedStrategy?.name ?? selectedStrategyName,
-        },
-      });
-      return;
-    }
-
-    setIsPreparingStrategyEditor(true);
-
-    try {
-      const response = (await fetchStrategyById(strategyId)) as {
-        result?: {
-          strategy?: {
-            _id?: string;
-            name?: string;
-            user?: {
-              _id?: string;
-            };
-          };
-        };
-      };
-
-      const strategy = response?.result?.strategy;
-      const isOwner = Boolean(user?._id) && strategy?.user?._id === user?._id;
-
-      if (isOwner) {
-        navigate(`/strategy/${strategyId}/edit`);
-        return;
-      }
-
-      navigate("/strategy/create", {
-        state: {
-          duplicateStrategyId: strategyId,
-          duplicateStrategyName: strategy?.name ?? selectedStrategyName,
-        },
-      });
-    } catch (error) {
-      toast.error(getApiErrorMessage(error, "Failed to open strategy editor"));
-    } finally {
-      setIsPreparingStrategyEditor(false);
     }
   };
 
@@ -1317,30 +1201,6 @@ export default function BacktestPage() {
                         Strategy
                       </Label>
                       <div className="relative">
-                        {strategyId ? (
-                          <button
-                            type="button"
-                            title={`${strategyEditorActionLabel} strategy`}
-                            aria-label={`${strategyEditorActionLabel} strategy`}
-                            className="absolute top-1/2 right-9 z-10 inline-flex shrink-0 -translate-y-1/2 items-center gap-1 rounded-md border border-transparent px-1.5 py-1 text-[10px] text-muted-foreground transition-colors hover:border-border hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-50 sm:px-2 sm:text-[11px]"
-                            disabled={
-                              isPreparingStrategyEditor || isLoadingStrategies
-                            }
-                            onClick={() => {
-                              void onOpenStrategyEditor();
-                            }}
-                          >
-                            {isPreparingStrategyEditor ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <StrategyEditorActionIcon className="h-3.5 w-3.5" />
-                            )}
-                            <span className="whitespace-nowrap">
-                              {strategyEditorActionLabel}
-                            </span>
-                          </button>
-                        ) : null}
-
                         <Dialog
                           open={isStrategyMenuOpen}
                           onOpenChange={(open) => {
@@ -1718,25 +1578,17 @@ export default function BacktestPage() {
                           variant="outline"
                           className="w-full"
                           disabled={isRunning}
-                          asChild
+                          onClick={() => {
+                            if (isRunning) return;
+                            navigate("/strategy", {
+                              state: {
+                                openStrategyBuilder: true,
+                              },
+                            });
+                          }}
                         >
-                          <a
-                            href="/strategy/create"
-                            aria-disabled={isRunning}
-                            tabIndex={isRunning ? -1 : undefined}
-                            onClick={(event) => {
-                              if (isRunning) {
-                                event.preventDefault();
-                              }
-                            }}
-                            className={cn(
-                              "inline-flex items-center justify-center gap-1.5",
-                              isRunning && "pointer-events-none opacity-60",
-                            )}
-                          >
-                            <Plus className="h-3.5 w-3.5" />
-                            Create
-                          </a>
+                          <Plus className="h-3.5 w-3.5" />
+                          Create
                         </Button>
                         <Button
                           type="button"

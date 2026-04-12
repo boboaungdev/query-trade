@@ -144,10 +144,6 @@ const resolveTakeProfitPrice = ({
     return resolveIndicatorValue(rule.indicator, context);
   }
 
-  if (rule.type === "candle") {
-    return resolveCandlePrice({ rule, context, previousContext });
-  }
-
   return null;
 };
 
