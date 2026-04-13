@@ -48,6 +48,7 @@ export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const profileHref = user?.username ? `/${user.username}` : "/profile";
 
   const handleSignout = async () => {
     try {
@@ -166,7 +167,7 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
               <SidebarMenuButton asChild>
-                <Link to="/profile" onClick={handleMenuNavigation}>
+                <Link to={profileHref} onClick={handleMenuNavigation}>
                   <Avatar className="h-6 w-6">
                     <AvatarImage src={user?.avatar} />
                     <AvatarFallback>{initials}</AvatarFallback>
@@ -187,10 +188,10 @@ export function AppSidebar() {
                 </SidebarMenuAction>
               </DropdownMenuTrigger>
 
-              <DropdownMenuContent side="right" align="end" className="w-44">
+                <DropdownMenuContent side="right" align="end" className="w-44">
                 <DropdownMenuItem asChild>
                   <Link
-                    to="/profile"
+                    to={profileHref}
                     className="flex items-center gap-2"
                     onClick={handleMenuNavigation}
                   >

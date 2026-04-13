@@ -23,7 +23,7 @@ const bookmarkSchema = new Schema(
       refPath: "targetType",
       index: true,
     },
-    
+
     user: {
       type: Schema.Types.ObjectId,
       ref: "user",

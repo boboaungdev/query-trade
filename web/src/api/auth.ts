@@ -112,15 +112,18 @@ export async function editProfile({
   name,
   username,
   avatar,
+  bio,
 }: {
   name?: string;
   username?: string;
   avatar?: string;
+  bio?: string;
 }) {
   const { data } = await api.patch("/auth", {
     name,
     username,
     avatar,
+    bio,
   });
 
   return data;

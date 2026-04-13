@@ -4,7 +4,6 @@ import {
   Bookmark,
   BookmarkCheck,
   CandlestickChart,
-  ChevronDown,
   ChevronLeft,
   ChevronsUpDown,
   CirclePlus,
@@ -16,19 +15,16 @@ import {
   Save,
   Pencil,
   SquareArrowOutUpRight,
-  Layers3,
   Loader2,
   Lock,
   ListFilter,
   Plus,
   Search,
   Settings2,
-  ShieldCheck,
-  Sparkles,
-  Target,
   Trash2,
   X,
   Minus,
+  MoreHorizontal,
   TrendingDown,
   TrendingUp,
   UserRound,
@@ -59,6 +55,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import {
@@ -122,6 +119,7 @@ type StrategyItem = {
   };
   user?: {
     _id?: string;
+    avatar?: string;
     username?: string;
   };
   createdAt?: string;
@@ -145,19 +143,6 @@ function mergeStrategyPages(prev: StrategyItem[], nextItems: StrategyItem[]) {
   return Array.from(
     new Map([...prev, ...nextItems].map((item) => [item._id, item])).values(),
   );
-}
-
-function toPrettyDate(date?: string) {
-  if (!date) return "-";
-
-  const value = new Date(date);
-  if (Number.isNaN(value.getTime())) return "-";
-
-  return value.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-  });
 }
 
 export default function StrategyPage() {
@@ -424,43 +409,18 @@ export default function StrategyPage() {
 
   return (
     <div className="mx-auto w-full max-w-6xl min-w-0 space-y-4 overflow-x-hidden md:space-y-6">
-      <Card>
-        <CardContent className="flex flex-col gap-3 p-4 md:p-6">
-          <p className="inline-flex w-fit items-center gap-1.5 rounded-full border bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground uppercase">
-            <Sparkles className="h-3.5 w-3.5 text-primary" />
-            Strategy Studio
-          </p>
-
-          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight md:text-4xl">
-            <Target className="h-6 w-6 text-primary md:h-8 md:w-8" />
-            Build And Manage Strategies
-          </h1>
-
-          <p className="max-w-3xl text-muted-foreground">
-            Explore all strategies, inspect ownership and indicators, and jump
-            directly into creation or backtest workflows.
-          </p>
-
-          <div className="flex flex-wrap gap-2 pt-1">
-            <span className="inline-flex items-center gap-1 rounded-md border bg-muted px-2 py-1 text-[11px] text-muted-foreground">
-              <Layers3 className="h-3.5 w-3.5 text-primary" />
-              Strategy inventory
-            </span>
-            <span className="inline-flex items-center gap-1 rounded-md border bg-muted px-2 py-1 text-[11px] text-muted-foreground">
-              <TrendingUp className="h-3.5 w-3.5 text-primary" />
-              Backtest ready flow
-            </span>
-          </div>
-        </CardContent>
-      </Card>
-
       <Card className="min-w-0 border-border/70">
-        <CardHeader className="space-y-3">
+        <CardHeader>
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <CardTitle className="text-xl">Strategy Catalog</CardTitle>
-              <CardDescription className="flex flex-wrap items-center gap-2">
-                Search by strategy name or creator.
+            <div className="space-y-1">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/8 px-2.5 py-1 text-[11px] font-medium tracking-[0.16em] text-primary uppercase">
+                Strategy Hub
+              </span>
+              <CardTitle className="text-xl tracking-tight">
+                Strategy Library
+              </CardTitle>
+              <CardDescription className="flex flex-wrap items-center gap-2 text-sm leading-6">
+                Discover strategies by name or creator.
                 <span className="hidden items-center gap-1 rounded-full border bg-muted/30 px-2 py-0.5 text-[11px] font-medium text-foreground md:inline-flex">
                   {totalCount} strategies
                 </span>
@@ -475,7 +435,6 @@ export default function StrategyPage() {
             <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
-                variant="outline"
                 className="inline-flex items-center gap-1.5"
                 onClick={() => setIsCreateSheetOpen(true)}
               >
@@ -487,86 +446,6 @@ export default function StrategyPage() {
 
           <div className="grid gap-3">
             <div className="space-y-3">
-              <div className="relative">
-                <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  value={search}
-                  onChange={(event) => {
-                    setSearch(event.target.value);
-                    setPage(1);
-                  }}
-                  placeholder="Search"
-                  className="pr-10 pl-9"
-                />
-                <div className="absolute top-1/2 right-1.5 -translate-y-1/2">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        className="h-7 w-7"
-                      >
-                        <ListFilter className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-52">
-                      <DropdownMenuLabel>Sort by</DropdownMenuLabel>
-                      <DropdownMenuRadioGroup
-                        value={sortBy}
-                        onValueChange={(value) => {
-                          const nextSortBy = value as StrategySortBy;
-                          setSortBy(nextSortBy);
-                          if (nextSortBy === "popular") {
-                            setOrder("desc");
-                          }
-                          if (nextSortBy === "name") {
-                            setOrder("asc");
-                          }
-                          if (
-                            nextSortBy === "createdAt" ||
-                            nextSortBy === "updatedAt"
-                          ) {
-                            setOrder("desc");
-                          }
-                          setPage(1);
-                        }}
-                      >
-                        <DropdownMenuRadioItem value="popular">
-                          Popular
-                        </DropdownMenuRadioItem>
-                        <DropdownMenuRadioItem value="name">
-                          Name
-                        </DropdownMenuRadioItem>
-                        <DropdownMenuRadioItem value="createdAt">
-                          Newest
-                        </DropdownMenuRadioItem>
-                        <DropdownMenuRadioItem value="updatedAt">
-                          Last updated
-                        </DropdownMenuRadioItem>
-                      </DropdownMenuRadioGroup>
-
-                      <DropdownMenuSeparator />
-                      <DropdownMenuLabel>Order</DropdownMenuLabel>
-                      <DropdownMenuRadioGroup
-                        value={order}
-                        onValueChange={(value) => {
-                          setOrder(value as "asc" | "desc");
-                          setPage(1);
-                        }}
-                      >
-                        <DropdownMenuRadioItem value="asc">
-                          Ascending
-                        </DropdownMenuRadioItem>
-                        <DropdownMenuRadioItem value="desc">
-                          Descending
-                        </DropdownMenuRadioItem>
-                      </DropdownMenuRadioGroup>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
-
               <Tabs
                 value={source}
                 onValueChange={(value) => {
@@ -574,121 +453,194 @@ export default function StrategyPage() {
                   setPage(1);
                 }}
               >
-                <TabsList className="w-full">
-                  <TabsTrigger value="all">
-                    <Compass className="h-4 w-4" />
-                    Explore
-                  </TabsTrigger>
-                  <TabsTrigger value="mine">
-                    <UserRound className="h-4 w-4" />
-                    Me
-                  </TabsTrigger>
-                </TabsList>
+                <div className="flex flex-col gap-3 pt-1 md:flex-row md:items-center md:justify-between">
+                  <TabsList
+                    variant="line"
+                    className="w-full justify-start md:w-auto"
+                  >
+                    <TabsTrigger
+                      value="all"
+                      className="data-[state=active]:text-primary data-[state=active]:after:bg-primary dark:data-[state=active]:text-primary dark:data-[state=active]:after:bg-primary"
+                    >
+                      <Compass className="h-4 w-4" />
+                      Explore
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="mine"
+                      className="data-[state=active]:text-primary data-[state=active]:after:bg-primary dark:data-[state=active]:text-primary dark:data-[state=active]:after:bg-primary"
+                    >
+                      <UserRound className="h-4 w-4" />
+                      Me
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <div className="relative min-w-0 w-full md:max-w-[320px] md:flex-1">
+                    <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      value={search}
+                      onChange={(event) => {
+                        setSearch(event.target.value);
+                        setPage(1);
+                      }}
+                      placeholder="Search"
+                      className="rounded-md border-0 border-b-2 border-foreground/15 bg-muted/60 pr-10 pl-9 focus-visible:border-primary focus-visible:ring-0 dark:bg-input/30"
+                    />
+                    <div className="absolute top-1/2 right-1.5 -translate-y-1/2">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            className="h-7 w-7"
+                          >
+                            <ListFilter className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-52">
+                          <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+                          <DropdownMenuRadioGroup
+                            value={sortBy}
+                            onValueChange={(value) => {
+                              const nextSortBy = value as StrategySortBy;
+                              setSortBy(nextSortBy);
+                              if (nextSortBy === "popular") {
+                                setOrder("desc");
+                              }
+                              if (nextSortBy === "name") {
+                                setOrder("asc");
+                              }
+                              if (
+                                nextSortBy === "createdAt" ||
+                                nextSortBy === "updatedAt"
+                              ) {
+                                setOrder("desc");
+                              }
+                              setPage(1);
+                            }}
+                          >
+                            <DropdownMenuRadioItem value="popular">
+                              Popular
+                            </DropdownMenuRadioItem>
+                            <DropdownMenuRadioItem value="name">
+                              Name
+                            </DropdownMenuRadioItem>
+                            <DropdownMenuRadioItem value="createdAt">
+                              Newest
+                            </DropdownMenuRadioItem>
+                            <DropdownMenuRadioItem value="updatedAt">
+                              Last updated
+                            </DropdownMenuRadioItem>
+                          </DropdownMenuRadioGroup>
+
+                          <DropdownMenuSeparator />
+                          <DropdownMenuLabel>Order</DropdownMenuLabel>
+                          <DropdownMenuRadioGroup
+                            value={order}
+                            onValueChange={(value) => {
+                              setOrder(value as "asc" | "desc");
+                              setPage(1);
+                            }}
+                          >
+                            <DropdownMenuRadioItem value="asc">
+                              Ascending
+                            </DropdownMenuRadioItem>
+                            <DropdownMenuRadioItem value="desc">
+                              Descending
+                            </DropdownMenuRadioItem>
+                          </DropdownMenuRadioGroup>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                </div>
               </Tabs>
             </div>
           </div>
         </CardHeader>
+      </Card>
 
-        <CardContent className="space-y-3">
-          {isLoading ? (
-            <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Loading strategies...</span>
-            </div>
-          ) : strategies.length === 0 ? (
-            <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
-              No strategies found.
-            </div>
-          ) : (
-            <div className="divide-y divide-border/60">
-              {strategies.map((item) => {
-                const isMine =
-                  Boolean(user?._id) && item.user?._id === user?._id;
-                const isBookmarked = Boolean(item.isBookmarked);
-                const description =
-                  item.description?.trim() || "No description";
+      <div className="space-y-4">
+        {isLoading ? (
+          <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Loading strategies...</span>
+          </div>
+        ) : strategies.length === 0 ? (
+          <div className="flex items-center justify-center py-6 text-center text-sm text-muted-foreground">
+            {search.trim()
+              ? "No strategies matched your search."
+              : source === "mine"
+                ? "No strategies yet. Create your first one to start building your library."
+                : "No strategies found."}
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {strategies.map((item) => {
+              const isMine = Boolean(user?._id) && item.user?._id === user?._id;
+              const isBookmarked = Boolean(item.isBookmarked);
+              const description = item.description?.trim() || "No description";
 
-                return (
-                  <article
-                    key={item._id}
-                    className="relative min-w-0 cursor-pointer px-4 py-4 pr-20 transition-colors hover:bg-muted/30"
-                    role="link"
-                    tabIndex={0}
-                    onClick={(event) => {
-                      const clickTarget = event.target as HTMLElement;
-                      if (
-                        clickTarget.closest(
-                          "button, a, input, textarea, select, [role='menuitem']",
-                        )
-                      ) {
-                        return;
-                      }
+              return (
+                <Card
+                  key={item._id}
+                  className="theme-hover-surface min-w-0 cursor-pointer border-border/70 py-0"
+                  role="link"
+                  tabIndex={0}
+                  onClick={(event) => {
+                    const clickTarget = event.target as HTMLElement;
+                    if (
+                      clickTarget.closest(
+                        "button, a, input, textarea, select, [role='menuitem']",
+                      )
+                    ) {
+                      return;
+                    }
 
-                      navigate(`/strategy/${item._id}`);
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key !== "Enter" && event.key !== " ") return;
+                    navigate(`/strategy/${item._id}`);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key !== "Enter" && event.key !== " ") return;
 
-                      event.preventDefault();
-                      navigate(`/strategy/${item._id}`);
-                    }}
-                  >
-                    <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    event.preventDefault();
+                    navigate(`/strategy/${item._id}`);
+                  }}
+                >
+                  <CardContent className="flex h-full flex-col gap-4 p-4">
+                    <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
-                        <div className="flex min-w-0 flex-wrap items-center gap-2">
-                          <h3 className="min-w-0 flex-1 truncate font-semibold">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <Avatar size="sm">
+                            <AvatarImage
+                              src={item.user?.avatar}
+                              alt={item.user?.username || "Creator"}
+                            />
+                            <AvatarFallback>
+                              {(
+                                item.user?.username?.trim()?.[0] || "U"
+                              ).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <h3 className="min-w-0 flex-1 truncate text-base font-semibold">
                             {item.name}
                           </h3>
                         </div>
 
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          by @{item.user?.username || "unknown"}
-                        </p>
-
-                        <p
-                          className="mt-2 line-clamp-2 text-sm text-muted-foreground"
-                          title={description}
-                        >
-                          {description}
-                        </p>
-
-                        <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-                          <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5">
-                            <TrendingUp className="h-3.5 w-3.5" />
-                            {item.stats?.viewCount ?? 0}
+                        <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                          <span className="truncate">
+                            @{item.user?.username || "unknown"}
                           </span>
-                          <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5">
-                            <Bookmark className="h-3.5 w-3.5" />
-                            {item.stats?.bookmarkCount ?? 0}
-                          </span>
-                          <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5">
-                            {item.isPublic ? (
-                              <Globe className="h-3.5 w-3.5" />
-                            ) : (
-                              <Lock className="h-3.5 w-3.5" />
-                            )}
-                            {isMine
-                              ? "Mine"
-                              : item.isPublic
-                                ? "Public"
-                                : "Private"}
-                          </span>
-                        </div>
-
-                        <div className="mt-3 grid gap-1 text-xs text-muted-foreground">
-                          <p>Created: {toPrettyDate(item.createdAt)}</p>
-                          <p>Updated: {toPrettyDate(item.updatedAt)}</p>
                         </div>
                       </div>
 
-                      <div className="absolute top-4 right-4 flex shrink-0 flex-col items-end gap-2">
+                      <div className="flex shrink-0 items-start gap-2">
                         <span className="sr-only">Actions</span>
                         <ButtonGroup className="shrink-0">
                           <Button
                             type="button"
                             size="icon-sm"
-                            variant={isBookmarked ? "outline" : "ghost"}
-                            className="rounded-r-none border border-border text-muted-foreground"
+                            variant="ghost"
+                            className="rounded-r-none border-transparent text-muted-foreground shadow-none"
                             aria-label={
                               isBookmarked ? "Bookmarked" : "Bookmark"
                             }
@@ -711,12 +663,12 @@ export default function StrategyPage() {
                               <Button
                                 type="button"
                                 size="icon-sm"
-                                variant={isBookmarked ? "outline" : "ghost"}
-                                className="-ml-px rounded-l-none border border-border text-muted-foreground"
+                                variant="ghost"
+                                className="-ml-px rounded-l-none border-transparent text-muted-foreground shadow-none"
                                 aria-label="More actions"
                                 title="More actions"
                               >
-                                <ChevronDown className="h-3.5 w-3.5" />
+                                <MoreHorizontal className="h-3.5 w-3.5" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent
@@ -803,25 +755,57 @@ export default function StrategyPage() {
                         </ButtonGroup>
                       </div>
                     </div>
-                  </article>
-                );
-              })}
-            </div>
-          )}
 
-          {hasNextPage && (
-            <div className="flex flex-col items-center pt-2">
-              <div ref={loadMoreRef} className="h-1 w-full" />
-              {isAppending && (
-                <div className="mt-2 inline-flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Loading more...</span>
-                </div>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                    <div className="min-w-0 flex-1">
+                      <p
+                        className="truncate text-sm text-muted-foreground"
+                        title={description}
+                      >
+                        {description}
+                      </p>
+
+                      <div className="mt-4 flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5 text-foreground">
+                          <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
+                          {item.stats?.viewCount ?? 0}
+                        </span>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5 text-foreground">
+                          <Bookmark className="h-3.5 w-3.5 text-muted-foreground" />
+                          {item.stats?.bookmarkCount ?? 0}
+                        </span>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5 text-foreground">
+                          {item.isPublic ? (
+                            <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+                          ) : (
+                            <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                          )}
+                          {isMine
+                            ? "Mine"
+                            : item.isPublic
+                              ? "Public"
+                              : "Private"}
+                        </span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+
+        {hasNextPage && (
+          <div className="flex flex-col items-center pt-2">
+            <div ref={loadMoreRef} className="h-1 w-full" />
+            {isAppending && (
+              <div className="mt-2 inline-flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Loading more...</span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       <AlertDialog
         open={Boolean(strategyIdPendingDelete)}
@@ -3692,9 +3676,6 @@ export function StrategyBuilder({
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Indicators</CardTitle>
-              <CardDescription>
-                Search indicators and click one to add it instantly.
-              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -3742,13 +3723,10 @@ export function StrategyBuilder({
                   >
                     <DialogHeader className="border-b px-4 pt-4 pb-3">
                       <DialogTitle>Select indicator</DialogTitle>
-                      <DialogDescription>
-                        Search indicators and click one to add it instantly.
-                      </DialogDescription>
                     </DialogHeader>
-                    <div className="space-y-3 px-4 py-4">
+                    <div className="space-y-3 px-4 pt-2 pb-2">
                       <div className="relative">
-                        <Search className="pointer-events-none absolute top-1/2 left-2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                        <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
                           value={indicatorSearch}
                           onChange={(event) => {
@@ -3756,7 +3734,7 @@ export function StrategyBuilder({
                             setIndicatorPage(1);
                           }}
                           placeholder="Search"
-                          className="h-9 w-full pr-10 pl-7"
+                          className="w-full pr-10 pl-9"
                         />
                         <div className="absolute top-1/2 right-1.5 flex -translate-y-1/2 items-center">
                           <DropdownMenu modal={false}>
@@ -3871,13 +3849,13 @@ export function StrategyBuilder({
                           }
                         }}
                       >
-                        <div className="space-y-1">
+                        <div className="space-y-0">
                           {indicatorOptions.map((item) => (
                             <div
                               key={item._id}
                               role="button"
                               tabIndex={0}
-                              className="rounded-lg border border-border/70 bg-muted/20 px-3.5 py-2 text-left transition-colors hover:bg-accent/40"
+                              className="border-b border-border/60 px-2 py-2 text-left transition-colors hover:bg-accent/40 last:border-b-0"
                               onClick={() => {
                                 appendIndicatorDraft(item._id);
                                 setIsIndicatorMenuOpen(false);
@@ -3933,10 +3911,10 @@ export function StrategyBuilder({
                   return (
                     <div
                       key={draft.id}
-                      className="rounded-xl border border-border/60 p-3 md:p-4"
+                      className="rounded-xl border border-border/60 p-2.5 md:p-3"
                     >
-                      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                        <div className="min-w-0 flex-1 space-y-2">
+                      <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                        <div className="min-w-0 flex-1 space-y-1.5">
                           <p className="text-sm font-medium break-words">
                             {index + 1}.{" "}
                             {draft.indicatorName || "Unknown indicator"}
@@ -4245,32 +4223,6 @@ export function StrategyBuilder({
             indicatorKeys={indicatorKeys}
             onChange={setSellDraft}
           />
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Builder Notes</CardTitle>
-              <CardDescription>
-                A few quick reminders while building your strategy.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm text-muted-foreground">
-              <p className="flex items-start gap-2">
-                <Settings2 className="mt-0.5 h-4 w-4 shrink-0" />
-                Indicator keys are generated for you and update automatically
-                when indicator params change.
-              </p>
-              <p className="flex items-start gap-2">
-                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
-                Add groups when you need nested logic. Use the help icon beside
-                logic fields to understand `and` and `or`.
-              </p>
-              <p className="flex items-start gap-2">
-                <CirclePlus className="mt-0.5 h-4 w-4 shrink-0" />
-                Add indicators when you want to reference them in entry, stop
-                loss, and take profit selections.
-              </p>
-            </CardContent>
-          </Card>
 
           {!embedded ? (
             <Card>

@@ -77,6 +77,8 @@ export const UserSchema = {
 
     avatar: Joi.string().allow("").optional(),
 
+    bio: Joi.string().trim().max(50).allow("").optional(),
+
     password: Joi.string().min(6).max(50).optional(),
   }).min(1),
 

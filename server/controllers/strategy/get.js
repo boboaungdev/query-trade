@@ -127,7 +127,7 @@ export const getStrategies = async (req, res, next) => {
                 path: "indicators.indicator",
                 select: "name description category",
               },
-              { path: "user", select: "username" },
+              { path: "user", select: "name username avatar" },
             ]),
           )
         : StrategyDB.find(filter)
@@ -135,7 +135,7 @@ export const getStrategies = async (req, res, next) => {
             .sort({ [sortBy]: sortOrder })
             .skip(skip)
             .limit(limit)
-            .populate("user", "username")
+            .populate("user", "name username avatar")
             .lean();
 
     const [strategies, total] = await Promise.all([

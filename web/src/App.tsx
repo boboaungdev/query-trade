@@ -32,6 +32,16 @@ function ProtectedRoute() {
   return <Outlet />;
 }
 
+function OwnProfileRedirect() {
+  const user = useAuthStore((state) => state.user);
+
+  if (!user?.username) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <Navigate to={`/${user.username}`} replace />;
+}
+
 export default function App() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
@@ -71,7 +81,7 @@ export default function App() {
                 path="/backtest/:backtestId"
                 element={<BacktestResult />}
               />
-              <Route path="/profile" element={<Profile />} />
+              <Route path="/profile" element={<OwnProfileRedirect />} />
               <Route path="/settings" element={<Settings />} />
             </Route>
 

@@ -6,7 +6,7 @@ export const getUserByUsername = async (req, res, next) => {
     const username = String(req.params.username || "").toLowerCase();
 
     const user = await UserDB.findOne({ username })
-      .select("name username avatar createdAt stats")
+      .select("name username avatar bio createdAt stats")
       .lean();
 
     if (!user) {

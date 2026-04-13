@@ -3,7 +3,6 @@ import { format } from "date-fns";
 import axios from "axios";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
-  AreaChart,
   ArrowRight,
   Calendar as CalendarIcon,
   CalendarClock,
@@ -817,33 +816,6 @@ export default function BacktestPage() {
 
   return (
     <div className="mx-auto w-full max-w-6xl min-w-0 space-y-4 overflow-x-hidden md:space-y-6">
-      <Card>
-        <CardContent className="flex flex-col gap-3 p-4 md:p-6">
-          <p className="inline-flex w-fit items-center gap-1.5 rounded-md border bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground uppercase">
-            <Sparkles className="h-3.5 w-3.5 text-primary" />
-            {isEditing ? "Backtest Editor" : "Strategy Lab"}
-          </p>
-          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight md:text-4xl">
-            <CandlestickChart className="h-6 w-6 text-primary md:h-8 md:w-8" />
-            {isEditing ? "Edit Backtest" : "Strategy Backtesting"}
-          </h1>
-          <p className="max-w-3xl text-muted-foreground">
-            {isEditing
-              ? "Update an existing backtest with new market inputs, capital settings, or strategy selection, then save a refreshed result."
-              : "Test your trading strategy on historical candles, review performance metrics, and inspect each trade outcome before going live."}
-          </p>
-          <div className="flex flex-wrap gap-2 pt-1">
-            <span className="inline-flex items-center gap-1 rounded-md border bg-muted px-2 py-1 text-[11px] text-muted-foreground">
-              <AreaChart className="h-3.5 w-3.5 text-primary" />
-              Equity analytics
-            </span>
-            <span className="inline-flex items-center gap-1 rounded-md border bg-muted px-2 py-1 text-[11px] text-muted-foreground">
-              <CandlestickChart className="h-3.5 w-3.5 text-primary" />
-              Strategy simulation
-            </span>
-          </div>
-        </CardContent>
-      </Card>
       <div className="min-w-0">
         <Card className="min-w-0 py-0 text-sm">
           <CardHeader className="gap-4 px-5 pt-5 pb-0 md:px-6 md:pt-6">

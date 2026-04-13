@@ -7,7 +7,7 @@ import { resError, resJson } from "../../utils/response.js";
 export const update = async (req, res, next) => {
   try {
     const currentUser = req.user;
-    const { name, username, avatar, email, password } = req.body;
+    const { name, username, avatar, bio, email, password } = req.body;
 
     const payload = {};
 
@@ -36,6 +36,10 @@ export const update = async (req, res, next) => {
         photourl: avatar,
         folder: `${appName}/users/avatars`,
       });
+    }
+
+    if ("bio" in req.body && (bio || "") !== (currentUser.bio || "")) {
+      payload.bio = bio || "";
     }
 
     if (email && email != currentUser.email) {

@@ -6,20 +6,16 @@ import {
   ArrowLeftRight,
   CalendarClock,
   CandlestickChart,
-  ChevronDown,
-  CircleDollarSign,
   Copy,
   Compass,
   ListFilter,
   Loader2,
+  MoreHorizontal,
   Pencil,
   Search,
-  Sparkles,
   SquareArrowOutUpRight,
-  Target,
   Trash2,
   TrendingUp,
-  Trophy,
   UserRound,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -36,6 +32,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import {
@@ -344,43 +341,17 @@ export default function LeaderboardPage() {
 
   return (
     <div className="mx-auto w-full max-w-6xl min-w-0 space-y-4 overflow-x-hidden md:space-y-6">
-      <Card>
-        <CardContent className="flex flex-col gap-3 p-4 md:p-6">
-          <p className="inline-flex w-fit items-center gap-1.5 rounded-full border bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground uppercase">
-            <Sparkles className="h-3.5 w-3.5 text-primary" />
-            Performance Arena
-          </p>
-
-          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight md:text-4xl">
-            <Trophy className="h-6 w-6 text-primary md:h-8 md:w-8" />
-            Backtest Leaderboard
-          </h1>
-
-          <p className="max-w-3xl text-muted-foreground">
-            Review recent simulations across symbols, strategies, and traders,
-            then open any result page to inspect the full equity curve and trade
-            history.
-          </p>
-
-          <div className="flex flex-wrap gap-2 pt-1">
-            <span className="inline-flex items-center gap-1 rounded-md border bg-muted px-2 py-1 text-[11px] text-muted-foreground">
-              <TrendingUp className="h-3.5 w-3.5 text-primary" />
-              Ranked by performance
-            </span>
-            <span className="inline-flex items-center gap-1 rounded-md border bg-muted px-2 py-1 text-[11px] text-muted-foreground">
-              <CandlestickChart className="h-3.5 w-3.5 text-primary" />
-              Result-first browsing
-            </span>
-          </div>
-        </CardContent>
-      </Card>
-
       <Card className="min-w-0 border-border/70">
-        <CardHeader className="space-y-3">
+        <CardHeader>
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <CardTitle className="text-xl">Leaderboard Results</CardTitle>
-              <CardDescription className="flex flex-wrap items-center gap-2">
+            <div className="space-y-1">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/8 px-2.5 py-1 text-[11px] font-medium tracking-[0.16em] text-primary uppercase">
+                Performance Arena
+              </span>
+              <CardTitle className="text-xl tracking-tight">
+                Leaderboard Results
+              </CardTitle>
+              <CardDescription className="flex flex-wrap items-center gap-2 text-sm leading-6">
                 Search by symbol, strategy, trader, or timeframe.
                 <span className="hidden items-center gap-1 rounded-full border bg-muted/30 px-2 py-0.5 text-[11px] font-medium text-foreground md:inline-flex">
                   {totalCount} results
@@ -394,84 +365,6 @@ export default function LeaderboardPage() {
             </div>
           </div>
 
-          <div className="relative">
-            <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(event) => {
-                setSearch(event.target.value);
-                setPage(1);
-              }}
-              placeholder="Search"
-              className="pr-10 pl-9"
-            />
-            <div className="absolute top-1/2 right-1.5 flex -translate-y-1/2 items-center gap-1">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    className="h-7 w-7"
-                  >
-                    <ListFilter className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>Sort by</DropdownMenuLabel>
-                  <DropdownMenuRadioGroup
-                    value={sortBy}
-                    onValueChange={(value) => {
-                      const nextSortBy = value as BacktestSortBy;
-                      setSortBy(nextSortBy);
-                      setOrder(
-                        nextSortBy === "roi" ||
-                          nextSortBy === "winRate" ||
-                          nextSortBy === "profitFactor" ||
-                          nextSortBy === "createdAt"
-                          ? "desc"
-                          : "asc",
-                      );
-                      setPage(1);
-                    }}
-                  >
-                    <DropdownMenuRadioItem value="roi">
-                      ROI
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="winRate">
-                      Win Rate
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="profitFactor">
-                      Profit Factor
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="maxDrawdownPercent">
-                      Max Drawdown
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="createdAt">
-                      Newest
-                    </DropdownMenuRadioItem>
-                  </DropdownMenuRadioGroup>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel>Order</DropdownMenuLabel>
-                  <DropdownMenuRadioGroup
-                    value={order}
-                    onValueChange={(value) => {
-                      setOrder(value as "asc" | "desc");
-                      setPage(1);
-                    }}
-                  >
-                    <DropdownMenuRadioItem value="desc">
-                      Desc
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="asc">
-                      Asc
-                    </DropdownMenuRadioItem>
-                  </DropdownMenuRadioGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-
           <Tabs
             value={duration}
             onValueChange={(value) => {
@@ -479,9 +372,13 @@ export default function LeaderboardPage() {
               setPage(1);
             }}
           >
-            <TabsList className="w-full">
+            <TabsList variant="line" className="w-full justify-start py-1">
               {durationFilterOptions.map((option) => (
-                <TabsTrigger key={option.value} value={option.value}>
+                <TabsTrigger
+                  key={option.value}
+                  value={option.value}
+                  className="data-[state=active]:text-primary data-[state=active]:after:bg-primary dark:data-[state=active]:text-primary dark:data-[state=active]:after:bg-primary"
+                >
                   {option.label}
                 </TabsTrigger>
               ))}
@@ -495,16 +392,102 @@ export default function LeaderboardPage() {
               setPage(1);
             }}
           >
-            <TabsList className="w-full">
-              <TabsTrigger value="all">
-                <Compass className="h-4 w-4" />
-                Explore
-              </TabsTrigger>
-              <TabsTrigger value="me">
-                <UserRound className="h-4 w-4" />
-                Me
-              </TabsTrigger>
-            </TabsList>
+            <div className="flex flex-col gap-3 py-1 md:flex-row md:items-center md:justify-between">
+              <TabsList variant="line" className="w-full justify-start md:w-auto">
+                <TabsTrigger
+                  value="all"
+                  className="data-[state=active]:text-primary data-[state=active]:after:bg-primary dark:data-[state=active]:text-primary dark:data-[state=active]:after:bg-primary"
+                >
+                  <Compass className="h-4 w-4" />
+                  Explore
+                </TabsTrigger>
+                <TabsTrigger
+                  value="me"
+                  className="data-[state=active]:text-primary data-[state=active]:after:bg-primary dark:data-[state=active]:text-primary dark:data-[state=active]:after:bg-primary"
+                >
+                  <UserRound className="h-4 w-4" />
+                  Me
+                </TabsTrigger>
+              </TabsList>
+
+              <div className="relative min-w-0 w-full md:max-w-[320px] md:flex-1">
+                <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={search}
+                  onChange={(event) => {
+                    setSearch(event.target.value);
+                    setPage(1);
+                  }}
+                  placeholder="Search"
+                  className="rounded-md border-0 border-b-2 border-foreground/15 bg-muted/60 pr-10 pl-9 focus-visible:border-primary focus-visible:ring-0 dark:bg-input/30"
+                />
+                <div className="absolute top-1/2 right-1.5 flex -translate-y-1/2 items-center gap-1">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        className="h-7 w-7"
+                      >
+                        <ListFilter className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+                      <DropdownMenuRadioGroup
+                        value={sortBy}
+                        onValueChange={(value) => {
+                          const nextSortBy = value as BacktestSortBy;
+                          setSortBy(nextSortBy);
+                          setOrder(
+                            nextSortBy === "roi" ||
+                              nextSortBy === "winRate" ||
+                              nextSortBy === "profitFactor" ||
+                              nextSortBy === "createdAt"
+                              ? "desc"
+                              : "asc",
+                          );
+                          setPage(1);
+                        }}
+                      >
+                        <DropdownMenuRadioItem value="roi">
+                          ROI
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="winRate">
+                          Win Rate
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="profitFactor">
+                          Profit Factor
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="maxDrawdownPercent">
+                          Max Drawdown
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="createdAt">
+                          Newest
+                        </DropdownMenuRadioItem>
+                      </DropdownMenuRadioGroup>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuLabel>Order</DropdownMenuLabel>
+                      <DropdownMenuRadioGroup
+                        value={order}
+                        onValueChange={(value) => {
+                          setOrder(value as "asc" | "desc");
+                          setPage(1);
+                        }}
+                      >
+                        <DropdownMenuRadioItem value="desc">
+                          Desc
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="asc">
+                          Asc
+                        </DropdownMenuRadioItem>
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+            </div>
           </Tabs>
         </CardHeader>
       </Card>
@@ -515,11 +498,9 @@ export default function LeaderboardPage() {
           <span>Loading leaderboard...</span>
         </div>
       ) : backtests.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="flex min-h-[220px] items-center justify-center text-sm text-muted-foreground">
-            No leaderboard results found.
-          </CardContent>
-        </Card>
+        <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
+          No leaderboard results found.
+        </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {backtests.map((backtest, index) => {
@@ -529,18 +510,54 @@ export default function LeaderboardPage() {
             return (
               <Card
                 key={backtest._id}
-                className={cn(
-                  "overflow-hidden transition-colors hover:border-primary/30",
-                  index === 0 && "border-primary/30",
-                )}
+                className="cursor-pointer overflow-hidden border-0 transition-colors hover:bg-primary/5"
+                role="link"
+                tabIndex={0}
+                onClick={(event) => {
+                  const clickTarget = event.target as HTMLElement;
+                  if (
+                    clickTarget.closest(
+                      "button, a, input, textarea, select, [role='menuitem']",
+                    )
+                  ) {
+                    return;
+                  }
+
+                  window.location.href = `/backtest/${backtest._id}`;
+                }}
+                onKeyDown={(event) => {
+                  if (event.key !== "Enter" && event.key !== " ") return;
+
+                  event.preventDefault();
+                  window.location.href = `/backtest/${backtest._id}`;
+                }}
               >
-                <CardHeader className="space-y-3 border-b border-border/60 pb-4">
+                <CardHeader className="space-y-2 pb-0.5">
                   <div className="flex items-start justify-between gap-3">
                     <div className="space-y-1">
-                      <CardTitle className="text-xl">
-                        {backtest.symbol}
-                      </CardTitle>
+                      <div className="flex min-w-0 items-center gap-2">
+                        <Avatar size="sm">
+                          <AvatarImage
+                            src={backtest.user?.avatar}
+                            alt={backtest.user?.username || "Trader"}
+                          />
+                          <AvatarFallback>
+                            {(
+                              backtest.user?.username?.trim()?.[0] ||
+                              backtest.user?.name?.trim()?.[0] ||
+                              "U"
+                            ).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <CardTitle className="min-w-0 truncate text-base font-semibold">
+                          {backtest.symbol}
+                        </CardTitle>
+                      </div>
                       <CardDescription className="flex min-w-0 flex-wrap items-center gap-2">
+                        <span className="truncate">
+                          @{backtest.user?.username || "unknown"}
+                        </span>
+                        <span className="text-muted-foreground/60">-</span>
                         <span>{backtest.timeframe}</span>
                         <span className="text-muted-foreground/60">-</span>
                         <span className="inline-flex min-w-0 items-center">
@@ -552,7 +569,7 @@ export default function LeaderboardPage() {
                     </div>
 
                     <div className="flex items-start gap-2">
-                      <div className="px-3 py-2 text-right">
+                      <div className="px-1 py-1 text-right">
                         <p className="text-[10px] tracking-[0.16em] text-muted-foreground uppercase">
                           ROI
                         </p>
@@ -573,12 +590,8 @@ export default function LeaderboardPage() {
                         <Button
                           type="button"
                           size="icon-sm"
-                          variant={
-                            bookmarkedBacktestIds.has(backtest._id)
-                              ? "outline"
-                              : "ghost"
-                          }
-                          className="rounded-r-none border border-border text-muted-foreground"
+                          variant="ghost"
+                          className="rounded-r-none border-transparent text-muted-foreground shadow-none"
                           aria-label={
                             bookmarkedBacktestIds.has(backtest._id)
                               ? "Bookmarked"
@@ -607,17 +620,13 @@ export default function LeaderboardPage() {
                             <Button
                               type="button"
                               size="icon-sm"
-                              variant={
-                                bookmarkedBacktestIds.has(backtest._id)
-                                  ? "outline"
-                                  : "ghost"
-                              }
-                              className="-ml-px rounded-l-none border border-border text-muted-foreground"
+                              variant="ghost"
+                              className="-ml-px rounded-l-none border-transparent text-muted-foreground shadow-none"
                               aria-label="More actions"
                               title="More actions"
                             >
-                              <ChevronDown className="h-4 w-4" />
-                            </Button>
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent
                             align="end"
@@ -685,17 +694,11 @@ export default function LeaderboardPage() {
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                    <span className="inline-flex items-center gap-1">
-                      <UserRound className="h-3.5 w-3.5 text-primary" />@
-                      {backtest.user?.username || "unknown"}
-                    </span>
-                  </div>
                 </CardHeader>
 
-                <CardContent className="space-y-4 p-4">
+                <CardContent className="space-y-2.5">
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="rounded-xl border bg-muted/40 p-3">
+                    <div className="rounded-xl bg-muted/70 p-2">
                       <p className="text-[11px] text-muted-foreground uppercase">
                         Duration
                       </p>
@@ -704,7 +707,7 @@ export default function LeaderboardPage() {
                       </p>
                     </div>
 
-                    <div className="rounded-xl border bg-muted/40 p-3">
+                    <div className="rounded-xl bg-muted/70 p-2">
                       <p className="text-[11px] text-muted-foreground uppercase">
                         Win Rate
                       </p>
@@ -713,7 +716,7 @@ export default function LeaderboardPage() {
                       </p>
                     </div>
 
-                    <div className="rounded-xl border bg-muted/40 p-3">
+                    <div className="rounded-xl bg-muted/70 p-2">
                       <p className="text-[11px] text-muted-foreground uppercase">
                         Profit Factor
                       </p>
@@ -722,7 +725,7 @@ export default function LeaderboardPage() {
                       </p>
                     </div>
 
-                    <div className="rounded-xl border bg-muted/40 p-3">
+                    <div className="rounded-xl bg-muted/70 p-2">
                       <p className="text-[11px] text-muted-foreground uppercase">
                         Drawdown
                       </p>
@@ -736,51 +739,6 @@ export default function LeaderboardPage() {
                     </div>
                   </div>
 
-                  <div className="grid gap-2 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <ArrowLeftRight className="h-4 w-4 text-primary" />
-                      <span>
-                        Total trades {backtest.result.totalTrades} (
-                        {backtest.hedgeMode ? "Hedge mode" : "One-way"})
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CircleDollarSign className="h-4 w-4 text-primary" />
-                      <span>
-                        Entry / Exit Fees:{" "}
-                        {ratio.format(backtest.entryFeeRate ?? 0)}% /{" "}
-                        {ratio.format(backtest.exitFeeRate ?? 0)}%
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Target className="h-4 w-4 text-primary" />
-                      <span className="min-w-0 truncate">
-                        {backtest.strategy?.name || "Strategy"}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CalendarClock className="h-4 w-4 text-primary" />
-                      <span>
-                        Date Range {formatDateLabel(backtest.startDate)} to{" "}
-                        {formatDateLabel(backtest.endDate)}
-                      </span>
-                    </div>
-                  </div>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    asChild
-                    className="w-full md:w-auto"
-                  >
-                    <Link
-                      to={`/backtest/${backtest._id}`}
-                      className="inline-flex items-center justify-center gap-1.5"
-                    >
-                      <SquareArrowOutUpRight className="h-4 w-4" />
-                      Open
-                    </Link>
-                  </Button>
                 </CardContent>
               </Card>
             );

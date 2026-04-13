@@ -729,7 +729,7 @@ export default function BacktestResultPage() {
       </AlertDialog>
 
       <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-3">
-        <Card className="border-border/70 bg-background/95 dark:bg-background/80">
+        <Card className="border-border/70 bg-card">
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-2">
               <Percent className="h-4 w-4" />
@@ -766,7 +766,7 @@ export default function BacktestResultPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/70 bg-background/95 dark:bg-background/80">
+        <Card className="border-border/70 bg-card">
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-2">
               <Percent className="h-4 w-4" />
@@ -786,7 +786,7 @@ export default function BacktestResultPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/70 bg-background/95 dark:bg-background/80">
+        <Card className="border-border/70 bg-card">
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-2">
               <ShieldAlert className="h-4 w-4" />
@@ -804,7 +804,7 @@ export default function BacktestResultPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/70 bg-background/95 dark:bg-background/80">
+        <Card className="border-border/70 bg-card">
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-2">
               <Target className="h-4 w-4" />
@@ -822,7 +822,7 @@ export default function BacktestResultPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/70 bg-background/95 dark:bg-background/80">
+        <Card className="border-border/70 bg-card">
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-2">
               <CircleDollarSign className="h-4 w-4" />
@@ -843,7 +843,7 @@ export default function BacktestResultPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/70 bg-background/95 dark:bg-background/80">
+        <Card className="border-border/70 bg-card">
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
@@ -868,7 +868,7 @@ export default function BacktestResultPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/70 bg-background/95 dark:bg-background/80">
+        <Card className="border-border/70 bg-card">
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-2">
               <CalendarClock className="h-4 w-4" />
@@ -891,7 +891,7 @@ export default function BacktestResultPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/70 bg-background/95 dark:bg-background/80">
+        <Card className="border-border/70 bg-card">
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-2">
               <Clock3 className="h-4 w-4" />
@@ -916,7 +916,7 @@ export default function BacktestResultPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/70 bg-background/95 dark:bg-background/80">
+        <Card className="border-border/70 bg-card">
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-2">
               <SlidersHorizontal className="h-4 w-4" />
@@ -935,7 +935,7 @@ export default function BacktestResultPage() {
         </Card>
       </div>
 
-      <Card className="border-border/70 bg-background/95 dark:bg-background/80">
+      <Card className="border-border/70 bg-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-xl">
             <AreaChart className="h-5 w-5 text-primary" />
@@ -1075,7 +1075,7 @@ export default function BacktestResultPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-border/70 bg-background/95 dark:bg-background/80">
+      <Card className="border-border/70 bg-card">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-xl">
             <Target className="h-5 w-5 text-primary" />
@@ -1217,7 +1217,7 @@ export default function BacktestResultPage() {
         </CardContent>
       </Card>
 
-      <Card className="max-w-full min-w-0 border-border/70 bg-background/95 dark:bg-background/80">
+      <Card className="max-w-full min-w-0 border-border/70 bg-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-xl">
             <AreaChart className="h-5 w-5 text-primary" />
@@ -1238,7 +1238,7 @@ export default function BacktestResultPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-border/70 bg-background/95 dark:bg-background/80">
+      <Card className="border-border/70 bg-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-xl">
             <CandlestickChart className="h-5 w-5 text-primary" />

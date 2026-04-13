@@ -360,7 +360,7 @@ function RulePanel({
   return (
     <section
       className={cn(
-        "relative overflow-hidden rounded-[28px] border p-4 md:p-5",
+        "relative overflow-hidden rounded-[28px] p-4 md:p-5",
         isBuy ? "theme-rule-panel-buy" : "theme-rule-panel-sell",
       )}
     >
@@ -741,8 +741,7 @@ export default function StrategyDetailPage() {
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-5">
-      <Card className="text-foreground">
-        <CardContent className="space-y-5 p-4 md:p-5 lg:p-6">
+      <div className="space-y-5 p-1 text-foreground">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <Button
               type="button"
@@ -891,24 +890,6 @@ export default function StrategyDetailPage() {
             </div>
           ) : (
             <div className="space-y-3.5">
-              <div className="flex flex-wrap gap-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full border bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground uppercase">
-                  Strategy Detail
-                </span>
-                <span className="inline-flex items-center gap-1.5 rounded-full border bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground uppercase">
-                  {strategy.isPublic ? (
-                    <Globe className="h-3 w-3" />
-                  ) : (
-                    <Lock className="h-3 w-3" />
-                  )}
-                  {isMine ? "Mine" : strategy.isPublic ? "Public" : "Private"}
-                </span>
-                <span className="inline-flex items-center gap-1.5 rounded-full border bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
-                  <UserRound className="h-3 w-3" />@
-                  {strategy.user?.username || "unknown"}
-                </span>
-              </div>
-
               <div>
                 <h1 className="max-w-4xl text-2xl font-semibold tracking-tight text-foreground md:text-4xl">
                   {strategy.name}
@@ -924,17 +905,33 @@ export default function StrategyDetailPage() {
                       {formatDateLabel(strategy.updatedAt)}
                     </span>
                   </p>
+                  <div className="flex flex-wrap gap-2">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground uppercase">
+                      Strategy Detail
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 rounded-full border bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground uppercase">
+                      {strategy.isPublic ? (
+                        <Globe className="h-3 w-3" />
+                      ) : (
+                        <Lock className="h-3 w-3" />
+                      )}
+                      {isMine ? "Mine" : strategy.isPublic ? "Public" : "Private"}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 rounded-full border bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+                      <UserRound className="h-3 w-3" />@
+                      {strategy.user?.username || "unknown"}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              </div>
+            )}
+      </div>
 
       {!isLoading && strategy ? (
         <div className="space-y-5">
-          <Card className="theme-creator-card overflow-hidden rounded-[24px] border shadow-sm">
-            <CardContent className="space-y-4 px-4 py-3 md:px-5 md:py-4">
+          <Card className="theme-creator-card overflow-hidden rounded-[24px]">
+            <CardContent className="space-y-4">
               <CardTitle className="flex items-center gap-2 text-base">
                 <UserRound className="h-4 w-4 text-primary" />
                 Creator
@@ -1123,8 +1120,8 @@ export default function StrategyDetailPage() {
           />
 
           <div className="grid gap-5 lg:grid-cols-3 lg:items-start">
-            <Card className="theme-primary-card overflow-hidden rounded-[24px] shadow-sm lg:col-span-3">
-              <CardHeader className="theme-primary-card-header space-y-2 px-4 pt-2 pb-1.5 md:px-5 md:pt-3 md:pb-2">
+            <Card className="theme-primary-card overflow-hidden rounded-[24px] lg:col-span-3">
+              <CardHeader className="theme-primary-card-header space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="theme-primary-card-badge inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium tracking-[0.16em] uppercase">
                     <Radar className="h-3 w-3" />
@@ -1141,7 +1138,7 @@ export default function StrategyDetailPage() {
                   Signal inputs used in this setup.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="px-4 pt-1.5 pb-3 md:px-5 md:pt-2 md:pb-4">
+              <CardContent>
                 {strategy.indicators?.length ? (
                   <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-5">
                     {strategy.indicators.map((indicator, index) => {
@@ -1196,8 +1193,8 @@ export default function StrategyDetailPage() {
             </Card>
           </div>
 
-          <Card className="overflow-hidden rounded-[24px] border shadow-sm">
-            <CardContent className="flex flex-col gap-4 p-4 md:p-5 lg:flex-row lg:items-center lg:justify-between">
+          <Card className="overflow-hidden rounded-[24px]">
+            <CardContent className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-start gap-3 text-sm text-muted-foreground">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border bg-muted/30 text-primary">
                   <AlertTriangle className="h-4 w-4" />
@@ -1225,9 +1222,8 @@ export default function StrategyDetailPage() {
                       strategyId: strategy._id,
                       strategyName: strategy.name,
                     }}
-                    className="inline-flex items-center gap-1.5"
+                    className="inline-flex items-center"
                   >
-                    <CandlestickChart className="h-4 w-4" />
                     Backtest
                   </Link>
                 </Button>

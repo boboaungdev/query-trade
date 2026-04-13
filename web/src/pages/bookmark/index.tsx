@@ -13,7 +13,6 @@ import {
   ListFilter,
   Percent,
   Search,
-  Sparkles,
   SquareArrowOutUpRight,
   Trash2,
   TrendingDown,
@@ -384,42 +383,17 @@ export default function BookmarkPage() {
 
   return (
     <div className="mx-auto w-full max-w-6xl min-w-0 space-y-4 overflow-x-hidden md:space-y-6">
-      <Card>
-        <CardContent className="flex flex-col gap-3 p-4 md:p-6">
-          <p className="inline-flex w-fit items-center gap-1.5 rounded-full border bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground uppercase">
-            <Sparkles className="h-3.5 w-3.5 text-primary" />
-            Bookmark Hub
-          </p>
-
-          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight md:text-4xl">
-            <Bookmark className="h-6 w-6 text-primary md:h-8 md:w-8" />
-            Bookmarks
-          </h1>
-
-          <p className="max-w-3xl text-muted-foreground">
-            Keep everything you bookmark in one place so you can find it quickly
-            and remove what you no longer need.
-          </p>
-
-          <div className="flex flex-wrap gap-2 pt-1">
-            <span className="inline-flex items-center gap-1 rounded-md border bg-muted px-2 py-1 text-[11px] text-muted-foreground">
-              <Layers3 className="h-3.5 w-3.5 text-primary" />
-              Strategies
-            </span>
-            <span className="inline-flex items-center gap-1 rounded-md border bg-muted px-2 py-1 text-[11px] text-muted-foreground">
-              <CandlestickChart className="h-3.5 w-3.5 text-primary" />
-              Backtests
-            </span>
-          </div>
-        </CardContent>
-      </Card>
-
       <Card className="min-w-0 border-border/70">
-        <CardHeader className="space-y-3">
+        <CardHeader>
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <CardTitle className="text-xl">Bookmarks</CardTitle>
-              <CardDescription className="flex flex-wrap items-center gap-2">
+            <div className="space-y-1">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/8 px-2.5 py-1 text-[11px] font-medium tracking-[0.16em] text-primary uppercase">
+                Bookmark Hub
+              </span>
+              <CardTitle className="text-xl tracking-tight">
+                Bookmarks
+              </CardTitle>
+              <CardDescription className="flex flex-wrap items-center gap-2 text-sm leading-6">
                 Browse, filter, and manage your bookmarks.
                 <span className="hidden items-center gap-1 rounded-full border bg-muted/30 px-2 py-0.5 text-[11px] font-medium text-foreground md:inline-flex">
                   {totalCount} bookmarks
@@ -433,67 +407,6 @@ export default function BookmarkPage() {
             </div>
           </div>
 
-          <div className="relative">
-            <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(event) => {
-                setSearch(event.target.value);
-                setPage(1);
-              }}
-              placeholder="Search"
-              className="pr-10 pl-9"
-            />
-            <div className="absolute top-1/2 right-1.5 flex -translate-y-1/2 items-center">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    className="h-7 w-7 shrink-0"
-                  >
-                    <ListFilter className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-52">
-                  <DropdownMenuLabel>Sort by</DropdownMenuLabel>
-                  <DropdownMenuRadioGroup
-                    value={sortBy}
-                    onValueChange={(value) => {
-                      setSortBy(value as "createdAt" | "updatedAt");
-                      setPage(1);
-                    }}
-                  >
-                    <DropdownMenuRadioItem value="updatedAt">
-                      Last updated
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="createdAt">
-                      Bookmarked date
-                    </DropdownMenuRadioItem>
-                  </DropdownMenuRadioGroup>
-
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel>Order</DropdownMenuLabel>
-                  <DropdownMenuRadioGroup
-                    value={order}
-                    onValueChange={(value) => {
-                      setOrder(value as "asc" | "desc");
-                      setPage(1);
-                    }}
-                  >
-                    <DropdownMenuRadioItem value="desc">
-                      Descending
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="asc">
-                      Ascending
-                    </DropdownMenuRadioItem>
-                  </DropdownMenuRadioGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-
           <Tabs
             value={filter}
             onValueChange={(value) => {
@@ -501,21 +414,104 @@ export default function BookmarkPage() {
               setPage(1);
             }}
           >
-            <TabsList className="w-full">
-              <TabsTrigger value="all">All</TabsTrigger>
-              <TabsTrigger value="backtest">Backtests</TabsTrigger>
-              <TabsTrigger value="strategy">Strategies</TabsTrigger>
-            </TabsList>
+            <div className="flex flex-col gap-3 pt-1 md:flex-row md:items-center md:justify-between">
+              <TabsList
+                variant="line"
+                className="w-full justify-start md:w-auto"
+              >
+                <TabsTrigger
+                  value="all"
+                  className="data-[state=active]:text-primary data-[state=active]:after:bg-primary dark:data-[state=active]:text-primary dark:data-[state=active]:after:bg-primary"
+                >
+                  All
+                </TabsTrigger>
+                <TabsTrigger
+                  value="backtest"
+                  className="data-[state=active]:text-primary data-[state=active]:after:bg-primary dark:data-[state=active]:text-primary dark:data-[state=active]:after:bg-primary"
+                >
+                  Backtests
+                </TabsTrigger>
+                <TabsTrigger
+                  value="strategy"
+                  className="data-[state=active]:text-primary data-[state=active]:after:bg-primary dark:data-[state=active]:text-primary dark:data-[state=active]:after:bg-primary"
+                >
+                  Strategies
+                </TabsTrigger>
+              </TabsList>
+
+              <div className="relative min-w-0 w-full md:max-w-[320px] md:flex-1">
+                <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={search}
+                  onChange={(event) => {
+                    setSearch(event.target.value);
+                    setPage(1);
+                  }}
+                  placeholder="Search"
+                  className="rounded-md border-0 border-b-2 border-foreground/15 bg-muted/60 pr-10 pl-9 focus-visible:border-primary focus-visible:ring-0 dark:bg-input/30"
+                />
+                <div className="absolute top-1/2 right-1.5 flex -translate-y-1/2 items-center">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        className="h-7 w-7 shrink-0"
+                      >
+                        <ListFilter className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-52">
+                      <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+                      <DropdownMenuRadioGroup
+                        value={sortBy}
+                        onValueChange={(value) => {
+                          setSortBy(value as "createdAt" | "updatedAt");
+                          setPage(1);
+                        }}
+                      >
+                        <DropdownMenuRadioItem value="updatedAt">
+                          Last updated
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="createdAt">
+                          Bookmarked date
+                        </DropdownMenuRadioItem>
+                      </DropdownMenuRadioGroup>
+
+                      <DropdownMenuSeparator />
+                      <DropdownMenuLabel>Order</DropdownMenuLabel>
+                      <DropdownMenuRadioGroup
+                        value={order}
+                        onValueChange={(value) => {
+                          setOrder(value as "asc" | "desc");
+                          setPage(1);
+                        }}
+                      >
+                        <DropdownMenuRadioItem value="desc">
+                          Descending
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="asc">
+                          Ascending
+                        </DropdownMenuRadioItem>
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+            </div>
           </Tabs>
         </CardHeader>
+      </Card>
 
+      <Card className="min-w-0 border-border/70">
         <CardContent className="space-y-3">
           {isLoading ? (
-            <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
+            <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
               Loading bookmarks...
             </div>
           ) : totalCount === 0 ? (
-            <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
+            <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
               {search.trim()
                 ? "No bookmarks matched your search."
                 : "No bookmarks yet. Save strategies or backtests to build your collection."}

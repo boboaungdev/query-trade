@@ -30,6 +30,7 @@ export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const isAuthPage = location.pathname === "/auth";
+  const profileHref = user?.username ? `/${user.username}` : "/profile";
 
   const handleSignout = async () => {
     try {
@@ -88,9 +89,12 @@ export default function Navbar() {
               </Avatar>
             </DropdownMenuTrigger>
 
-            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuItem asChild>
-                <Link to="/profile" className="flex w-full items-start gap-2">
+                <Link
+                  to={profileHref}
+                  className="flex w-full items-start gap-2"
+                >
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={user.avatar} />
                     <AvatarFallback>{initials}</AvatarFallback>

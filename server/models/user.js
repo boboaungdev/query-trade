@@ -29,6 +29,12 @@ const userSchema = new Schema(
     avatar: {
       type: String,
     },
+    bio: {
+      type: String,
+      trim: true,
+      maxlength: 50,
+      default: "",
+    },
     refreshToken: {
       type: String,
       select: false,

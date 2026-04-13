@@ -12,6 +12,7 @@ export type User = {
   email: string
   role: "user" | "admin"
   avatar?: string
+  bio?: string
   passwordChangedAt?: string
   authProviders: AuthProvider[]
   stats?: {
