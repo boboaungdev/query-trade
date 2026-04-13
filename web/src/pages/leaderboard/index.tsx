@@ -3,9 +3,6 @@ import { Link } from "react-router-dom";
 import {
   Bookmark,
   BookmarkCheck,
-  ArrowLeftRight,
-  CalendarClock,
-  CandlestickChart,
   Copy,
   Compass,
   ListFilter,
@@ -15,7 +12,6 @@ import {
   Search,
   SquareArrowOutUpRight,
   Trash2,
-  TrendingUp,
   UserRound,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -137,19 +133,6 @@ function mergeBacktestPages(
   return Array.from(
     new Map([...prev, ...nextItems].map((item) => [item._id, item])).values(),
   );
-}
-
-function formatDateLabel(value?: string) {
-  if (!value) return "-";
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "2-digit",
-    year: "numeric",
-  });
 }
 
 function formatDuration(durationMs?: number) {
@@ -393,7 +376,10 @@ export default function LeaderboardPage() {
             }}
           >
             <div className="flex flex-col gap-3 py-1 md:flex-row md:items-center md:justify-between">
-              <TabsList variant="line" className="w-full justify-start md:w-auto">
+              <TabsList
+                variant="line"
+                className="w-full justify-start md:w-auto"
+              >
                 <TabsTrigger
                   value="all"
                   className="data-[state=active]:text-primary data-[state=active]:after:bg-primary dark:data-[state=active]:text-primary dark:data-[state=active]:after:bg-primary"
@@ -503,7 +489,7 @@ export default function LeaderboardPage() {
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {backtests.map((backtest, index) => {
+          {backtests.map((backtest) => {
             const isMine =
               Boolean(user?._id) && backtest.user?._id === user?._id;
 
@@ -625,8 +611,8 @@ export default function LeaderboardPage() {
                               aria-label="More actions"
                               title="More actions"
                             >
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent
                             align="end"
@@ -693,7 +679,6 @@ export default function LeaderboardPage() {
                       </ButtonGroup>
                     </div>
                   </div>
-
                 </CardHeader>
 
                 <CardContent className="space-y-2.5">
@@ -738,7 +723,6 @@ export default function LeaderboardPage() {
                       </p>
                     </div>
                   </div>
-
                 </CardContent>
               </Card>
             );
