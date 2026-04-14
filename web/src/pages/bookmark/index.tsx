@@ -401,9 +401,10 @@ function renderBookmarkBacktestCard({
                 {target?.symbol || "Backtest"}
               </CardTitle>
             </div>
+            <CardDescription className="truncate text-xs">
+              @{targetUsername || "unknown"}
+            </CardDescription>
             <CardDescription className="flex min-w-0 flex-wrap items-center gap-2">
-              <span className="truncate">@{targetUsername || "unknown"}</span>
-              <span className="text-muted-foreground/60">-</span>
               <span>{target?.timeframe || "-"}</span>
               <span className="text-muted-foreground/60">-</span>
               <span className="inline-flex min-w-0 items-center">

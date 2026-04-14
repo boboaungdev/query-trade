@@ -89,13 +89,31 @@ export const getUserFollows = async (req, res, next) => {
 
     const [result] = await FollowDB.aggregate(pipeline);
     const total = result?.metadata?.[0]?.total ?? 0;
+    const items = result?.items ?? [];
+
+    if (req.user?._id && items.length > 0) {
+      const followingItems = await FollowDB.find({
+        follower: req.user._id,
+        following: { $in: items.map((item) => item._id) },
+      })
+        .select("following")
+        .lean();
+
+      const followingSet = new Set(
+        followingItems.map((item) => String(item.following)),
+      );
+
+      items.forEach((item) => {
+        item.isFollowing = followingSet.has(String(item._id));
+      });
+    }
 
     return resJson(
       res,
       200,
       `User ${type} fetched successfully.`,
       buildPaginationResult({
-        items: result?.items ?? [],
+        items,
         total,
         page,
         limit,

@@ -37,7 +37,7 @@ import {
 import { toast } from "sonner";
 
 import { getApiErrorMessage } from "@/api/axios";
-import { createFollow, deleteFollow, fetchFollowStatus } from "@/api/follow";
+import { createFollow, deleteFollow } from "@/api/follow";
 import {
   fetchUserBacktestsByUsername,
   fetchUserFollowsByUsername,
@@ -115,6 +115,7 @@ type PublicProfileUser = {
     strategyCount?: number;
     backtestCount?: number;
   };
+  isFollowing?: boolean;
 };
 
 type PublicProfileResponse = {
@@ -136,6 +137,7 @@ type ProfileFollowListItem = {
     strategyCount?: number;
     backtestCount?: number;
   };
+  isFollowing?: boolean;
 };
 
 type ProfileStrategyListItem = {
@@ -291,12 +293,6 @@ export default function Profile() {
   const [isUnfollowDialogOpen, setIsUnfollowDialogOpen] = useState(false);
   const [pendingFollowListUnfollowUser, setPendingFollowListUnfollowUser] =
     useState<ProfileFollowListItem | null>(null);
-  const [followListStatusById, setFollowListStatusById] = useState<
-    Record<string, boolean>
-  >({});
-  const [followListStatusLoadingIds, setFollowListStatusLoadingIds] = useState<
-    Set<string>
-  >(new Set());
   const [followListUpdatingIds, setFollowListUpdatingIds] = useState<
     Set<string>
   >(new Set());
@@ -405,13 +401,10 @@ export default function Profile() {
           return;
         }
 
-        let nextIsFollowing = false;
-
-        if (isAuthenticated && !canEditProfile) {
-          const followStatusResponse = await fetchFollowStatus(nextUser._id);
-          if (!isActive) return;
-          nextIsFollowing = Boolean(followStatusResponse?.result?.isFollowing);
-        }
+        const nextIsFollowing =
+          isAuthenticated && !canEditProfile
+            ? Boolean(nextUser.isFollowing)
+            : false;
 
         setViewedUser(nextUser);
         setIsFollowing(nextIsFollowing);
@@ -551,49 +544,6 @@ export default function Profile() {
         if (profileListRequestIdRef.current[tab] !== requestId) return;
 
         const nextItems = result?.result?.items ?? [];
-
-        if (isAuthenticated && (tab === "followers" || tab === "following")) {
-          const followItems = nextItems as ProfileFollowListItem[];
-          const idsToFetch = followItems
-            .map((item) => item._id)
-            .filter((itemId) => itemId && itemId !== currentUserId);
-
-          if (idsToFetch.length > 0) {
-            setFollowListStatusLoadingIds((prev) => {
-              const next = new Set(prev);
-              idsToFetch.forEach((itemId) => next.add(itemId));
-              return next;
-            });
-
-            try {
-              const followStatuses = await Promise.all(
-                idsToFetch.map(async (itemId) => {
-                  const response = await fetchFollowStatus(itemId);
-                  return {
-                    itemId,
-                    isFollowing: Boolean(response?.result?.isFollowing),
-                  };
-                }),
-              );
-
-              if (profileListRequestIdRef.current[tab] !== requestId) return;
-
-              setFollowListStatusById((prev) => {
-                const next = { ...prev };
-                followStatuses.forEach(({ itemId, isFollowing }) => {
-                  next[itemId] = isFollowing;
-                });
-                return next;
-              });
-            } finally {
-              setFollowListStatusLoadingIds((prev) => {
-                const next = new Set(prev);
-                idsToFetch.forEach((itemId) => next.delete(itemId));
-                return next;
-              });
-            }
-          }
-        }
 
         setProfileLists((prev) => ({
           ...prev,
@@ -1166,7 +1116,7 @@ export default function Profile() {
       return;
     }
 
-    const isCurrentlyFollowing = Boolean(followListStatusById[targetUser._id]);
+    const isCurrentlyFollowing = Boolean(targetUser.isFollowing);
 
     setFollowListUpdatingIds((prev) => {
       const next = new Set(prev);
@@ -1181,9 +1131,19 @@ export default function Profile() {
         await createFollow(targetUser._id);
       }
 
-      setFollowListStatusById((prev) => ({
+      setProfileLists((prev) => ({
         ...prev,
-        [targetUser._id]: !isCurrentlyFollowing,
+        [activeProfileTab]: {
+          ...prev[activeProfileTab],
+          items: prev[activeProfileTab].items.map((item) =>
+            item._id === targetUser._id
+              ? {
+                  ...(item as ProfileFollowListItem),
+                  isFollowing: !isCurrentlyFollowing,
+                }
+              : item,
+          ),
+        },
       }));
 
       if (
@@ -1222,7 +1182,7 @@ export default function Profile() {
   };
 
   const onFollowListActionClick = (targetUser: ProfileFollowListItem) => {
-    if (followListStatusById[targetUser._id]) {
+    if (targetUser.isFollowing) {
       setPendingFollowListUnfollowUser(targetUser);
       return;
     }
@@ -1932,16 +1892,13 @@ export default function Profile() {
                                               variant="ghost"
                                               className={cn(
                                                 "rounded-r-none border-transparent shadow-none",
-                                                followListStatusById[item._id]
+                                                item.isFollowing
                                                   ? "text-primary"
                                                   : "text-muted-foreground",
                                               )}
                                               disabled={
                                                 !isAuthenticated ||
                                                 followListUpdatingIds.has(
-                                                  item._id,
-                                                ) ||
-                                                followListStatusLoadingIds.has(
                                                   item._id,
                                                 )
                                               }
@@ -1951,14 +1908,9 @@ export default function Profile() {
                                             >
                                               {followListUpdatingIds.has(
                                                 item._id,
-                                              ) ||
-                                              followListStatusLoadingIds.has(
-                                                item._id,
                                               ) ? (
                                                 <Loader2 className="h-4 w-4 animate-spin" />
-                                              ) : followListStatusById[
-                                                  item._id
-                                                ] ? (
+                                              ) : item.isFollowing ? (
                                                 <>
                                                   <UserCheck className="h-4 w-4" />
                                                 </>
@@ -2001,9 +1953,6 @@ export default function Profile() {
                                                     !isAuthenticated ||
                                                     followListUpdatingIds.has(
                                                       item._id,
-                                                    ) ||
-                                                    followListStatusLoadingIds.has(
-                                                      item._id,
                                                     )
                                                   }
                                                   onClick={() => {
@@ -2012,9 +1961,7 @@ export default function Profile() {
                                                     );
                                                   }}
                                                 >
-                                                  {followListStatusById[
-                                                    item._id
-                                                  ] ? (
+                                                  {item.isFollowing ? (
                                                     <>
                                                       <UserCheck className="h-4 w-4" />
                                                       Unfollow
