@@ -18,6 +18,7 @@ import { toast } from "sonner";
 
 import { getApiErrorMessage } from "@/api/axios";
 import { deleteBacktest, fetchBacktestLeaderboard } from "@/api/backtest";
+import { createBookmark, deleteBookmark } from "@/api/bookmark";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,7 +53,6 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth";
-import { useBookmarkIds } from "@/hooks/use-bookmark-ids";
 
 type BacktestSortBy =
   | "createdAt"
@@ -99,6 +99,7 @@ type LeaderboardBacktest = {
     username?: string;
     avatar?: string;
   };
+  isBookmarked?: boolean;
   result: {
     duration: number;
     initialBalance: number;
@@ -174,14 +175,11 @@ export default function LeaderboardPage() {
   const [order, setOrder] = useState<"asc" | "desc">("desc");
   const [backtestIdPendingDelete, setBacktestIdPendingDelete] = useState("");
   const [isDeletingBacktest, setIsDeletingBacktest] = useState(false);
+  const [updatingBacktestIds, setUpdatingBacktestIds] = useState<Set<string>>(
+    new Set(),
+  );
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const requestIdRef = useRef(0);
-  const {
-    bookmarkedIds: bookmarkedBacktestIds,
-    updatingIds: updatingBacktestIds,
-    loadBookmarks: loadBacktestBookmarks,
-    toggleBookmark: toggleBacktestBookmark,
-  } = useBookmarkIds("backtest");
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -268,12 +266,6 @@ export default function LeaderboardPage() {
     return () => observer.disconnect();
   }, [hasNextPage, isAppending, isLoading]);
 
-  useEffect(() => {
-    void loadBacktestBookmarks().catch((error) => {
-      toast.error(getApiErrorMessage(error, "Failed to load bookmarks"));
-    });
-  }, [loadBacktestBookmarks]);
-
   const onCopyResultLink = async (backtestId: string) => {
     const resultUrl = `${window.location.origin}/backtest/${backtestId}`;
 
@@ -286,17 +278,75 @@ export default function LeaderboardPage() {
   };
 
   const onToggleBacktestBookmark = async (backtestId: string) => {
-    const result = await toggleBacktestBookmark(backtestId);
-    if (!result) {
+    if (!user?._id) {
+      toast.error("Please sign in to bookmark backtests.");
       return;
     }
 
-    if (result.status === "success") {
-      toast.success(result.message);
-      return;
-    }
+    const currentBacktest = backtests.find((item) => item._id === backtestId);
+    if (!currentBacktest) return;
 
-    toast.error(result.message);
+    const isBookmarked = Boolean(currentBacktest.isBookmarked);
+
+    setUpdatingBacktestIds((prev) => new Set(prev).add(backtestId));
+
+    try {
+      if (isBookmarked) {
+        const response = await deleteBookmark({
+          targetType: "backtest",
+          targetId: backtestId,
+        });
+
+        setBacktests((prev) =>
+          prev.map((item) =>
+            item._id === backtestId ? { ...item, isBookmarked: false } : item,
+          ),
+        );
+
+        toast.success(response?.message || "Bookmark removed successfully.");
+        return;
+      }
+
+      const response = await createBookmark({
+        targetType: "backtest",
+        target: backtestId,
+      });
+
+      setBacktests((prev) =>
+        prev.map((item) =>
+          item._id === backtestId ? { ...item, isBookmarked: true } : item,
+        ),
+      );
+
+      toast.success(response?.message || "Bookmarked successfully.");
+    } catch (error) {
+      const status =
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        typeof (error as { response?: { status?: number } }).response
+          ?.status === "number"
+          ? (error as { response?: { status?: number } }).response!.status
+          : undefined;
+
+      if (isBookmarked && status === 404) {
+        setBacktests((prev) =>
+          prev.map((item) =>
+            item._id === backtestId ? { ...item, isBookmarked: false } : item,
+          ),
+        );
+        toast.success("Bookmark removed successfully.");
+        return;
+      }
+
+      toast.error(getApiErrorMessage(error, "Failed to update bookmark"));
+    } finally {
+      setUpdatingBacktestIds((prev) => {
+        const next = new Set(prev);
+        next.delete(backtestId);
+        return next;
+      });
+    }
   };
 
   const onDeleteBacktest = async () => {
@@ -583,14 +633,10 @@ export default function LeaderboardPage() {
                           variant="ghost"
                           className="rounded-r-none border-transparent text-muted-foreground shadow-none"
                           aria-label={
-                            bookmarkedBacktestIds.has(backtest._id)
-                              ? "Bookmarked"
-                              : "Bookmark"
+                            backtest.isBookmarked ? "Bookmarked" : "Bookmark"
                           }
                           title={
-                            bookmarkedBacktestIds.has(backtest._id)
-                              ? "Bookmarked"
-                              : "Bookmark"
+                            backtest.isBookmarked ? "Bookmarked" : "Bookmark"
                           }
                           disabled={updatingBacktestIds.has(backtest._id)}
                           onClick={() => {
@@ -599,7 +645,7 @@ export default function LeaderboardPage() {
                         >
                           {updatingBacktestIds.has(backtest._id) ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : bookmarkedBacktestIds.has(backtest._id) ? (
+                          ) : backtest.isBookmarked ? (
                             <BookmarkCheck className="h-4 w-4 text-primary" />
                           ) : (
                             <Bookmark className="h-4 w-4" />
@@ -646,12 +692,12 @@ export default function LeaderboardPage() {
                               }}
                               disabled={updatingBacktestIds.has(backtest._id)}
                             >
-                              {bookmarkedBacktestIds.has(backtest._id) ? (
+                              {backtest.isBookmarked ? (
                                 <BookmarkCheck className="h-4 w-4" />
                               ) : (
                                 <Bookmark className="h-4 w-4" />
                               )}
-                              {bookmarkedBacktestIds.has(backtest._id)
+                              {backtest.isBookmarked
                                 ? "Bookmarked"
                                 : "Bookmark"}
                             </DropdownMenuItem>

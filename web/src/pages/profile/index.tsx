@@ -43,7 +43,7 @@ import {
   fetchUserFollowsByUsername,
   fetchUserStrategiesByUsername,
 } from "@/api/user";
-import { useBookmarkIds } from "@/hooks/use-bookmark-ids";
+import { createBookmark, deleteBookmark } from "@/api/bookmark";
 import { useAuthStore } from "@/store/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -149,6 +149,7 @@ type ProfileStrategyListItem = {
     viewCount?: number;
     bookmarkCount?: number;
   };
+  isBookmarked?: boolean;
 };
 
 type ProfileBacktestListItem = {
@@ -156,6 +157,7 @@ type ProfileBacktestListItem = {
   symbol?: string;
   timeframe?: string;
   createdAt?: string;
+  isBookmarked?: boolean;
   strategy?: {
     name?: string;
   };
@@ -269,18 +271,12 @@ export default function Profile() {
   const user = useAuthStore((state) => state.user);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const updateUser = useAuthStore((state) => state.updateUser);
-  const {
-    bookmarkedIds: bookmarkedStrategyIds,
-    updatingIds: updatingStrategyIds,
-    loadBookmarks: loadStrategyBookmarks,
-    toggleBookmark: toggleStrategyBookmark,
-  } = useBookmarkIds("strategy");
-  const {
-    bookmarkedIds: bookmarkedBacktestIds,
-    updatingIds: updatingBacktestIds,
-    loadBookmarks: loadBacktestBookmarks,
-    toggleBookmark: toggleBacktestBookmark,
-  } = useBookmarkIds("backtest");
+  const [updatingStrategyIds, setUpdatingStrategyIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [updatingBacktestIds, setUpdatingBacktestIds] = useState<Set<string>>(
+    new Set(),
+  );
 
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -317,10 +313,6 @@ export default function Profile() {
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const profileListScrollRef = useRef<HTMLDivElement | null>(null);
   const profileListLoadMoreRef = useRef<HTMLDivElement | null>(null);
-  const bookmarkListLoadedRef = useRef({
-    strategies: false,
-    backtests: false,
-  });
 
   const [form, setForm] = useState<FormState>({
     name: user?.name || "",
@@ -541,47 +533,19 @@ export default function Profile() {
             order: activeListOrder,
           });
         } else if (tab === "strategies") {
-          const shouldLoadBookmarks =
-            isAuthenticated &&
-            activeListPage === 1 &&
-            !bookmarkListLoadedRef.current.strategies;
-
-          const [strategyResult] = await Promise.all([
-            fetchUserStrategiesByUsername(routeUsername, {
-              page: activeListPage,
-              search: activeListSearch,
-              sortBy: activeListSortBy,
-              order: activeListOrder,
-            }),
-            shouldLoadBookmarks
-              ? loadStrategyBookmarks().then(() => {
-                  bookmarkListLoadedRef.current.strategies = true;
-                })
-              : Promise.resolve(),
-          ]);
-
-          result = strategyResult;
+          result = await fetchUserStrategiesByUsername(routeUsername, {
+            page: activeListPage,
+            search: activeListSearch,
+            sortBy: activeListSortBy,
+            order: activeListOrder,
+          });
         } else {
-          const shouldLoadBookmarks =
-            isAuthenticated &&
-            activeListPage === 1 &&
-            !bookmarkListLoadedRef.current.backtests;
-
-          const [backtestResult] = await Promise.all([
-            fetchUserBacktestsByUsername(routeUsername, {
-              page: activeListPage,
-              search: activeListSearch,
-              sortBy: activeListSortBy,
-              order: activeListOrder,
-            }),
-            shouldLoadBookmarks
-              ? loadBacktestBookmarks().then(() => {
-                  bookmarkListLoadedRef.current.backtests = true;
-                })
-              : Promise.resolve(),
-          ]);
-
-          result = backtestResult;
+          result = await fetchUserBacktestsByUsername(routeUsername, {
+            page: activeListPage,
+            search: activeListSearch,
+            sortBy: activeListSortBy,
+            order: activeListOrder,
+          });
         }
 
         if (profileListRequestIdRef.current[tab] !== requestId) return;
@@ -679,8 +643,6 @@ export default function Profile() {
     currentUserId,
     routeUsername,
     isAuthenticated,
-    loadStrategyBookmarks,
-    loadBacktestBookmarks,
   ]);
 
   useEffect(() => {
@@ -723,15 +685,6 @@ export default function Profile() {
     activeListState.isLoading,
     activeProfileTab,
   ]);
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      bookmarkListLoadedRef.current = {
-        strategies: false,
-        backtests: false,
-      };
-    }
-  }, [isAuthenticated]);
 
   if (!routeUsername && isAuthenticated && user?.username) {
     return <Navigate to={`/${user.username}`} replace />;
@@ -985,20 +938,226 @@ export default function Profile() {
   };
 
   const onToggleProfileStrategyBookmark = async (strategyId: string) => {
-    const response = await toggleStrategyBookmark(strategyId);
-    if (!response) return;
+    if (!isAuthenticated) {
+      toast.error("Please sign in to bookmark strategies.");
+      return;
+    }
 
-    if (response.status !== "success") {
-      toast.error(response.message);
+    const currentStrategy = (
+      profileLists.strategies.items as ProfileStrategyListItem[]
+    ).find((item) => item._id === strategyId);
+    if (!currentStrategy) return;
+
+    const isBookmarked = Boolean(currentStrategy.isBookmarked);
+    setUpdatingStrategyIds((prev) => new Set(prev).add(strategyId));
+
+    try {
+      if (isBookmarked) {
+        const response = await deleteBookmark({
+          targetType: "strategy",
+          targetId: strategyId,
+        });
+
+        setProfileLists((prev) => ({
+          ...prev,
+          strategies: {
+            ...prev.strategies,
+            items: prev.strategies.items.map((item) =>
+              item._id === strategyId
+                ? {
+                    ...(item as ProfileStrategyListItem),
+                    isBookmarked: false,
+                    stats: {
+                      ...((item as ProfileStrategyListItem).stats ?? {}),
+                      bookmarkCount: Math.max(
+                        0,
+                        ((item as ProfileStrategyListItem).stats
+                          ?.bookmarkCount ?? 0) - 1,
+                      ),
+                    },
+                  }
+                : item,
+            ),
+          },
+        }));
+
+        toast.success(response?.message || "Bookmark removed successfully.");
+        return;
+      }
+
+      const response = await createBookmark({
+        targetType: "strategy",
+        target: strategyId,
+      });
+
+      setProfileLists((prev) => ({
+        ...prev,
+        strategies: {
+          ...prev.strategies,
+          items: prev.strategies.items.map((item) =>
+            item._id === strategyId
+              ? {
+                  ...(item as ProfileStrategyListItem),
+                  isBookmarked: true,
+                  stats: {
+                    ...((item as ProfileStrategyListItem).stats ?? {}),
+                    bookmarkCount:
+                      ((item as ProfileStrategyListItem).stats?.bookmarkCount ??
+                        0) + 1,
+                  },
+                }
+              : item,
+          ),
+        },
+      }));
+
+      toast.success(response?.message || "Bookmarked successfully.");
+    } catch (error) {
+      const status =
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        typeof (error as { response?: { status?: number } }).response
+          ?.status === "number"
+          ? (error as { response?: { status?: number } }).response!.status
+          : undefined;
+
+      if (isBookmarked && status === 404) {
+        setProfileLists((prev) => ({
+          ...prev,
+          strategies: {
+            ...prev.strategies,
+            items: prev.strategies.items.map((item) =>
+              item._id === strategyId
+                ? {
+                    ...(item as ProfileStrategyListItem),
+                    isBookmarked: false,
+                    stats: {
+                      ...((item as ProfileStrategyListItem).stats ?? {}),
+                      bookmarkCount: Math.max(
+                        0,
+                        ((item as ProfileStrategyListItem).stats
+                          ?.bookmarkCount ?? 0) - 1,
+                      ),
+                    },
+                  }
+                : item,
+            ),
+          },
+        }));
+
+        toast.success("Bookmark removed successfully.");
+        return;
+      }
+
+      toast.error(getApiErrorMessage(error, "Failed to update bookmark"));
+    } finally {
+      setUpdatingStrategyIds((prev) => {
+        const next = new Set(prev);
+        next.delete(strategyId);
+        return next;
+      });
     }
   };
 
   const onToggleProfileBacktestBookmark = async (backtestId: string) => {
-    const response = await toggleBacktestBookmark(backtestId);
-    if (!response) return;
+    if (!isAuthenticated) {
+      toast.error("Please sign in to bookmark backtests.");
+      return;
+    }
 
-    if (response.status !== "success") {
-      toast.error(response.message);
+    const currentBacktest = (
+      profileLists.backtests.items as ProfileBacktestListItem[]
+    ).find((item) => item._id === backtestId);
+    if (!currentBacktest) return;
+
+    const isBookmarked = Boolean(currentBacktest.isBookmarked);
+    setUpdatingBacktestIds((prev) => new Set(prev).add(backtestId));
+
+    try {
+      if (isBookmarked) {
+        const response = await deleteBookmark({
+          targetType: "backtest",
+          targetId: backtestId,
+        });
+
+        setProfileLists((prev) => ({
+          ...prev,
+          backtests: {
+            ...prev.backtests,
+            items: prev.backtests.items.map((item) =>
+              item._id === backtestId
+                ? {
+                    ...(item as ProfileBacktestListItem),
+                    isBookmarked: false,
+                  }
+                : item,
+            ),
+          },
+        }));
+
+        toast.success(response?.message || "Bookmark removed successfully.");
+        return;
+      }
+
+      const response = await createBookmark({
+        targetType: "backtest",
+        target: backtestId,
+      });
+
+      setProfileLists((prev) => ({
+        ...prev,
+        backtests: {
+          ...prev.backtests,
+          items: prev.backtests.items.map((item) =>
+            item._id === backtestId
+              ? {
+                  ...(item as ProfileBacktestListItem),
+                  isBookmarked: true,
+                }
+              : item,
+          ),
+        },
+      }));
+
+      toast.success(response?.message || "Bookmarked successfully.");
+    } catch (error) {
+      const status =
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        typeof (error as { response?: { status?: number } }).response
+          ?.status === "number"
+          ? (error as { response?: { status?: number } }).response!.status
+          : undefined;
+
+      if (isBookmarked && status === 404) {
+        setProfileLists((prev) => ({
+          ...prev,
+          backtests: {
+            ...prev.backtests,
+            items: prev.backtests.items.map((item) =>
+              item._id === backtestId
+                ? {
+                    ...(item as ProfileBacktestListItem),
+                    isBookmarked: false,
+                  }
+                : item,
+            ),
+          },
+        }));
+
+        toast.success("Bookmark removed successfully.");
+        return;
+      }
+
+      toast.error(getApiErrorMessage(error, "Failed to update bookmark"));
+    } finally {
+      setUpdatingBacktestIds((prev) => {
+        const next = new Set(prev);
+        next.delete(backtestId);
+        return next;
+      });
     }
   };
 
@@ -1936,9 +2095,7 @@ export default function Profile() {
                                               variant="ghost"
                                               className={cn(
                                                 "rounded-r-none border-transparent shadow-none",
-                                                bookmarkedStrategyIds.has(
-                                                  item._id,
-                                                )
+                                                item.isBookmarked
                                                   ? "text-primary"
                                                   : "text-muted-foreground",
                                               )}
@@ -1955,9 +2112,7 @@ export default function Profile() {
                                                 item._id,
                                               ) ? (
                                                 <Loader2 className="h-4 w-4 animate-spin" />
-                                              ) : bookmarkedStrategyIds.has(
-                                                  item._id,
-                                                ) ? (
+                                              ) : item.isBookmarked ? (
                                                 <>
                                                   <BookmarkCheck className="h-4 w-4" />
                                                 </>
@@ -2005,9 +2160,7 @@ export default function Profile() {
                                                     );
                                                   }}
                                                 >
-                                                  {bookmarkedStrategyIds.has(
-                                                    item._id,
-                                                  ) ? (
+                                                  {item.isBookmarked ? (
                                                     <>
                                                       <BookmarkCheck className="h-4 w-4" />
                                                       Bookmarked
@@ -2092,9 +2245,7 @@ export default function Profile() {
                                                 variant="ghost"
                                                 className={cn(
                                                   "rounded-r-none border-transparent shadow-none",
-                                                  bookmarkedBacktestIds.has(
-                                                    item._id,
-                                                  )
+                                                  item.isBookmarked
                                                     ? "text-primary"
                                                     : "text-muted-foreground",
                                                 )}
@@ -2111,9 +2262,7 @@ export default function Profile() {
                                                   item._id,
                                                 ) ? (
                                                   <Loader2 className="h-4 w-4 animate-spin" />
-                                                ) : bookmarkedBacktestIds.has(
-                                                    item._id,
-                                                  ) ? (
+                                                ) : item.isBookmarked ? (
                                                   <>
                                                     <BookmarkCheck className="h-4 w-4" />
                                                   </>
@@ -2161,9 +2310,7 @@ export default function Profile() {
                                                       );
                                                     }}
                                                   >
-                                                    {bookmarkedBacktestIds.has(
-                                                      item._id,
-                                                    ) ? (
+                                                    {item.isBookmarked ? (
                                                       <>
                                                         <BookmarkCheck className="h-4 w-4" />
                                                         Bookmarked

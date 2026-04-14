@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import { FollowDB } from "../../models/follow.js";
 import { StrategyDB } from "../../models/strategy.js";
 import { BacktestDB } from "../../models/backtest.js";
+import { BookmarkDB } from "../../models/bookmark.js";
 import { UserDB } from "../../models/user.js";
 import { resError, resJson } from "../../utils/response.js";
 import {
@@ -158,12 +159,32 @@ export const getUserStrategies = async (req, res, next) => {
       StrategyDB.countDocuments(filter),
     ]);
 
+    let bookmarkedStrategyIds = [];
+    if (req.user?._id && items.length > 0) {
+      const bookmarks = await BookmarkDB.find({
+        user: req.user._id,
+        targetType: "strategy",
+        target: { $in: items.map((strategy) => strategy._id) },
+      })
+        .select("target")
+        .lean();
+
+      bookmarkedStrategyIds = bookmarks.map((bookmark) =>
+        String(bookmark.target),
+      );
+    }
+
+    const strategiesWithBookmarkState = items.map((strategy) => ({
+      ...strategy,
+      isBookmarked: bookmarkedStrategyIds.includes(String(strategy._id)),
+    }));
+
     return resJson(
       res,
       200,
       "User strategies fetched successfully.",
       buildPaginationResult({
-        items,
+        items: strategiesWithBookmarkState,
         total,
         page,
         limit,
@@ -322,13 +343,34 @@ export const getUserBacktests = async (req, res, next) => {
 
     const [result] = await BacktestDB.aggregate(pipeline);
     const total = result?.metadata?.[0]?.total ?? 0;
+    const backtests = result?.items ?? [];
+
+    let bookmarkedBacktestIds = [];
+    if (req.user?._id && backtests.length > 0) {
+      const bookmarks = await BookmarkDB.find({
+        user: req.user._id,
+        targetType: "backtest",
+        target: { $in: backtests.map((backtest) => backtest._id) },
+      })
+        .select("target")
+        .lean();
+
+      bookmarkedBacktestIds = bookmarks.map((bookmark) =>
+        String(bookmark.target),
+      );
+    }
+
+    const backtestsWithBookmarkState = backtests.map((backtest) => ({
+      ...backtest,
+      isBookmarked: bookmarkedBacktestIds.includes(String(backtest._id)),
+    }));
 
     return resJson(
       res,
       200,
       "User backtests fetched successfully.",
       buildPaginationResult({
-        items: result?.items ?? [],
+        items: backtestsWithBookmarkState,
         total,
         page,
         limit,
