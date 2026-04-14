@@ -160,6 +160,7 @@ export const UserSchema = {
           "roi",
           "winRate",
           "createdAt",
+          "updatedAt",
           "profitFactor",
           "maxDrawdownPercent",
         )

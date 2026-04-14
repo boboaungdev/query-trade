@@ -41,12 +41,15 @@ export const BacktestSchema = {
       limit: Joi.number().integer().min(1).max(60).default(12),
       search: Joi.string().trim().allow(""),
       source: Joi.string().valid("all", "me").default("all"),
-      duration: Joi.string().valid("all", "7d", "1m", "3m", "6m", "1y").default("all"),
+      duration: Joi.string()
+        .valid("all", "7d", "1m", "3m", "6m", "1y")
+        .default("all"),
       sortBy: Joi.string()
         .valid(
           "roi",
           "winRate",
           "createdAt",
+          "updatedAt",
           "profitFactor",
           "maxDrawdownPercent",
         )

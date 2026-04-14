@@ -608,7 +608,7 @@ export default function StrategyPage() {
                 >
                   <CardContent className="flex h-full flex-col gap-4 p-4">
                     <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
+                      <div className="min-w-0 flex-1 space-y-1">
                         <div className="flex min-w-0 items-center gap-2">
                           <Avatar size="sm">
                             <AvatarImage
@@ -626,10 +626,8 @@ export default function StrategyPage() {
                           </h3>
                         </div>
 
-                        <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                          <span className="truncate">
-                            @{item.user?.username || "unknown"}
-                          </span>
+                        <div className="truncate text-xs text-muted-foreground">
+                          @{item.user?.username || "unknown"}
                         </div>
                       </div>
 
@@ -764,7 +762,7 @@ export default function StrategyPage() {
                         {description}
                       </p>
 
-                      <div className="mt-4 flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
+                      <div className="mt-4 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
                         <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5 text-foreground">
                           <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
                           {item.stats?.viewCount ?? 0}

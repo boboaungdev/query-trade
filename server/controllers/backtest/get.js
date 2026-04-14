@@ -47,6 +47,7 @@ export const getBacktestById = async (req, res, next) => {
 
 const backtestSortFieldMap = {
   createdAt: "createdAt",
+  updatedAt: "updatedAt",
   roi: "computedRoi",
   winRate: "result.winRate",
   maxDrawdownPercent: "result.maxDrawdownPercent",

@@ -64,7 +64,9 @@ type BookmarkTarget = {
   name?: string;
   description?: string;
   isPublic?: boolean;
-  user?: string | { _id?: string; name?: string; username?: string; avatar?: string };
+  user?:
+    | string
+    | { _id?: string; name?: string; username?: string; avatar?: string };
   symbol?: string;
   timeframe?: string;
   startDate?: string;
@@ -104,17 +106,6 @@ type BookmarkListResponse = {
     bookmarks?: BookmarkItem[];
   };
 };
-
-function toPrettyDate(value?: string) {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-  return date.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-  });
-}
 
 function formatDuration(durationMs?: number) {
   if (!Number.isFinite(durationMs) || !durationMs || durationMs <= 0) {
@@ -216,12 +207,19 @@ function renderBookmarkStrategyCard({
     >
       <CardContent className="flex h-full flex-col gap-4 p-4">
         <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 space-y-1">
             <div className="flex min-w-0 items-center gap-2">
               <Avatar size="sm">
-                <AvatarImage src={targetAvatar} alt={targetUsername || "Creator"} />
+                <AvatarImage
+                  src={targetAvatar}
+                  alt={targetUsername || "Creator"}
+                />
                 <AvatarFallback>
-                  {(targetUsername?.[0] || targetUserName?.[0] || "U").toUpperCase()}
+                  {(
+                    targetUsername?.[0] ||
+                    targetUserName?.[0] ||
+                    "U"
+                  ).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <h3 className="min-w-0 flex-1 truncate text-base font-semibold">
@@ -229,9 +227,8 @@ function renderBookmarkStrategyCard({
               </h3>
             </div>
 
-            <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2 text-sm text-muted-foreground">
-              <span className="truncate">@{targetUsername || "unknown"}</span>
-              <span className="text-xs">Bookmarked {toPrettyDate(item.createdAt)}</span>
+            <div className="truncate text-xs text-muted-foreground">
+              @{targetUsername || "unknown"}
             </div>
           </div>
 
@@ -306,24 +303,27 @@ function renderBookmarkStrategyCard({
           </ButtonGroup>
         </div>
 
-        <p className="line-clamp-2 text-sm text-muted-foreground">
+        <p
+          className="truncate text-sm text-muted-foreground"
+          title={target?.description?.trim() || "No description"}
+        >
           {target?.description?.trim() || "No description"}
         </p>
 
-        <div className="mt-auto flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-          <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
-            <TrendingUp className="h-3.5 w-3.5" />
+        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+          <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5 text-foreground">
+            <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
             {target?.stats?.viewCount ?? 0}
           </span>
-          <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
-            <Bookmark className="h-3.5 w-3.5" />
+          <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5 text-foreground">
+            <Bookmark className="h-3.5 w-3.5 text-muted-foreground" />
             {target?.stats?.bookmarkCount ?? 0}
           </span>
-          <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+          <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5 text-foreground">
             {target?.isPublic ? (
-              <Globe className="h-3.5 w-3.5" />
+              <Globe className="h-3.5 w-3.5 text-muted-foreground" />
             ) : (
-              <Lock className="h-3.5 w-3.5" />
+              <Lock className="h-3.5 w-3.5 text-muted-foreground" />
             )}
             {isMine ? "Mine" : target?.isPublic ? "Public" : "Private"}
           </span>
@@ -355,12 +355,9 @@ function renderBookmarkBacktestCard({
   return (
     <Card
       key={item._id}
-      className={cn(
-        "theme-hover-surface min-w-0 border-border/70 py-0",
-        targetPath && "cursor-pointer",
-      )}
-      role={targetPath ? "link" : undefined}
-      tabIndex={targetPath ? 0 : undefined}
+      className="cursor-pointer overflow-hidden border-0 transition-colors hover:bg-primary/5"
+      role="link"
+      tabIndex={0}
       onClick={(event) => {
         if (!targetPath) return;
 
@@ -388,9 +385,16 @@ function renderBookmarkBacktestCard({
           <div className="space-y-1">
             <div className="flex min-w-0 items-center gap-2">
               <Avatar size="sm">
-                <AvatarImage src={targetAvatar} alt={targetUsername || "Trader"} />
+                <AvatarImage
+                  src={targetAvatar}
+                  alt={targetUsername || "Trader"}
+                />
                 <AvatarFallback>
-                  {(targetUsername?.[0] || targetUserName?.[0] || "U").toUpperCase()}
+                  {(
+                    targetUsername?.[0] ||
+                    targetUserName?.[0] ||
+                    "U"
+                  ).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <CardTitle className="min-w-0 truncate text-base font-semibold">
@@ -944,7 +948,9 @@ export default function BookmarkPage() {
             })}
           </div>
 
-          {hasNextPage ? <div ref={loadMoreRef} className="h-1 w-full" /> : null}
+          {hasNextPage ? (
+            <div ref={loadMoreRef} className="h-1 w-full" />
+          ) : null}
         </>
       )}
 

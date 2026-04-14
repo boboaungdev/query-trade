@@ -56,6 +56,7 @@ import { useBookmarkIds } from "@/hooks/use-bookmark-ids";
 
 type BacktestSortBy =
   | "createdAt"
+  | "updatedAt"
   | "winRate"
   | "roi"
   | "maxDrawdownPercent"
@@ -430,7 +431,8 @@ export default function LeaderboardPage() {
                             nextSortBy === "roi" ||
                               nextSortBy === "winRate" ||
                               nextSortBy === "profitFactor" ||
-                              nextSortBy === "createdAt"
+                              nextSortBy === "createdAt" ||
+                              nextSortBy === "updatedAt"
                               ? "desc"
                               : "asc",
                           );
@@ -439,6 +441,9 @@ export default function LeaderboardPage() {
                       >
                         <DropdownMenuRadioItem value="maxDrawdownPercent">
                           Max Drawdown
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="updatedAt">
+                          Last Updated
                         </DropdownMenuRadioItem>
                         <DropdownMenuRadioItem value="createdAt">
                           Newest
@@ -539,11 +544,10 @@ export default function LeaderboardPage() {
                           {backtest.symbol}
                         </CardTitle>
                       </div>
+                      <CardDescription className="truncate text-xs">
+                        @{backtest.user?.username || "unknown"}
+                      </CardDescription>
                       <CardDescription className="flex min-w-0 flex-wrap items-center gap-2">
-                        <span className="truncate">
-                          @{backtest.user?.username || "unknown"}
-                        </span>
-                        <span className="text-muted-foreground/60">-</span>
                         <span>{backtest.timeframe}</span>
                         <span className="text-muted-foreground/60">-</span>
                         <span className="inline-flex min-w-0 items-center">
