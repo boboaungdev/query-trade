@@ -1305,8 +1305,8 @@ export default function BacktestPage() {
                                           setStrategyPage(1);
                                         }}
                                       >
-                                        <DropdownMenuRadioItem value="popular">
-                                          Popular
+                                        <DropdownMenuRadioItem value="updatedAt">
+                                          Last updated
                                         </DropdownMenuRadioItem>
                                         <DropdownMenuRadioItem value="name">
                                           Name
@@ -1314,8 +1314,8 @@ export default function BacktestPage() {
                                         <DropdownMenuRadioItem value="createdAt">
                                           Newest
                                         </DropdownMenuRadioItem>
-                                        <DropdownMenuRadioItem value="updatedAt">
-                                          Last updated
+                                        <DropdownMenuRadioItem value="popular">
+                                          Popular
                                         </DropdownMenuRadioItem>
                                       </DropdownMenuRadioGroup>
                                       <DropdownMenuSeparator />

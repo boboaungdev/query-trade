@@ -1,7 +1,38 @@
-import { getBookmarkTargetName, getTargetModel } from "./helpers.js";
+import { BacktestDB } from "../../models/backtest.js";
 import { BookmarkDB } from "../../models/bookmark.js";
 import { StrategyDB } from "../../models/strategy.js";
 import { resError, resJson } from "../../utils/response.js";
+
+const getTargetModel = (targetType) => {
+  if (targetType === "strategy") {
+    return StrategyDB;
+  }
+
+  if (targetType === "backtest") {
+    return BacktestDB;
+  }
+
+  throw resError(400, "Invalid target type!");
+};
+
+const populateBookmarkTarget = async (bookmark) => {
+  await BookmarkDB.populate(bookmark, {
+    path: "target",
+    populate: {
+      path: "user",
+      select: "name username avatar",
+    },
+  });
+
+  if (bookmark?.targetType === "backtest" && bookmark?.target) {
+    await BacktestDB.populate(bookmark, {
+      path: "target.strategy",
+      select: "name isPublic",
+    });
+  }
+
+  return bookmark;
+};
 
 export const createBookmark = async (req, res, next) => {
   try {
@@ -9,9 +40,7 @@ export const createBookmark = async (req, res, next) => {
     const { targetType, target } = req.body;
 
     const TargetDB = getTargetModel(targetType);
-    const targetDoc = await TargetDB.findById(target)
-      .select("name symbol timeframe")
-      .lean();
+    const targetDoc = await TargetDB.findById(target).select("_id").lean();
 
     if (!targetDoc) {
       throw resError(404, `${targetType} not found!`);
@@ -33,7 +62,6 @@ export const createBookmark = async (req, res, next) => {
       target,
       targetType,
       user: user._id,
-      name: getBookmarkTargetName(targetType, targetDoc),
     });
 
     if (targetType === "strategy") {
@@ -45,14 +73,9 @@ export const createBookmark = async (req, res, next) => {
 
     const populatedBookmark = await BookmarkDB.findById(bookmark._id)
       .populate("user", "name username")
-      .populate({
-        path: "target",
-        populate: {
-          path: "user",
-          select: "username",
-        },
-      })
       .lean();
+
+    await populateBookmarkTarget(populatedBookmark);
 
     return resJson(res, 201, "Bookmarked successfully.", {
       bookmark: populatedBookmark,

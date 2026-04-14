@@ -437,20 +437,20 @@ export default function LeaderboardPage() {
                           setPage(1);
                         }}
                       >
-                        <DropdownMenuRadioItem value="roi">
-                          ROI
-                        </DropdownMenuRadioItem>
-                        <DropdownMenuRadioItem value="winRate">
-                          Win Rate
-                        </DropdownMenuRadioItem>
-                        <DropdownMenuRadioItem value="profitFactor">
-                          Profit Factor
-                        </DropdownMenuRadioItem>
                         <DropdownMenuRadioItem value="maxDrawdownPercent">
                           Max Drawdown
                         </DropdownMenuRadioItem>
                         <DropdownMenuRadioItem value="createdAt">
                           Newest
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="profitFactor">
+                          Profit Factor
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="roi">
+                          ROI
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="winRate">
+                          Win Rate
                         </DropdownMenuRadioItem>
                       </DropdownMenuRadioGroup>
                       <DropdownMenuSeparator />
@@ -462,11 +462,11 @@ export default function LeaderboardPage() {
                           setPage(1);
                         }}
                       >
-                        <DropdownMenuRadioItem value="desc">
-                          Desc
-                        </DropdownMenuRadioItem>
                         <DropdownMenuRadioItem value="asc">
                           Asc
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="desc">
+                          Desc
                         </DropdownMenuRadioItem>
                       </DropdownMenuRadioGroup>
                     </DropdownMenuContent>

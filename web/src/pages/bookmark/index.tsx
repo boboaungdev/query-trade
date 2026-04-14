@@ -1,23 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  CalendarClock,
   Bookmark,
   BookmarkCheck,
-  CandlestickChart,
-  ChevronDown,
   Copy,
   Globe,
-  Layers3,
   Loader2,
   Lock,
   ListFilter,
-  Percent,
+  MoreHorizontal,
   Search,
   SquareArrowOutUpRight,
   Trash2,
-  TrendingDown,
   TrendingUp,
-  UserRound,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -38,6 +32,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import {
@@ -60,6 +55,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuthStore } from "@/store/auth";
+import { cn } from "@/lib/utils";
 
 type BookmarkFilter = "all" | BookmarkTargetType;
 
@@ -68,14 +64,21 @@ type BookmarkTarget = {
   name?: string;
   description?: string;
   isPublic?: boolean;
-  user?: string | { _id?: string; username?: string };
+  user?: string | { _id?: string; name?: string; username?: string; avatar?: string };
   symbol?: string;
   timeframe?: string;
   startDate?: string;
   endDate?: string;
+  strategy?: {
+    _id?: string;
+    name?: string;
+    isPublic?: boolean;
+  };
   result?: {
     roi?: number;
     winRate?: number;
+    profitFactor?: number;
+    maxDrawdownPercent?: number;
     duration?: number;
   };
   stats?: {
@@ -146,6 +149,408 @@ function mergeBookmarks(prev: BookmarkItem[], next: BookmarkItem[]) {
 
 function hasBookmarkTarget(item: BookmarkItem) {
   return Boolean(item.target?._id);
+}
+
+type BookmarkCardRenderProps = {
+  item: BookmarkItem;
+  userId?: string;
+  removingBookmarkIds: Set<string>;
+  onOpenBookmark: (bookmark: BookmarkItem) => void;
+  onCopyBookmarkLink: (bookmark: BookmarkItem) => Promise<void>;
+  onRequestRemove: (bookmark: BookmarkItem) => void;
+};
+
+function renderBookmarkStrategyCard({
+  item,
+  userId,
+  removingBookmarkIds,
+  onOpenBookmark,
+  onCopyBookmarkLink,
+  onRequestRemove,
+}: BookmarkCardRenderProps) {
+  const target = item.target;
+  const targetId = target?._id;
+  const targetPath = targetId ? `/strategy/${targetId}` : "";
+  const targetUserId =
+    typeof target?.user === "string" ? target.user : target?.user?._id;
+  const targetUserName =
+    typeof target?.user === "object" ? target.user?.name?.trim() : "";
+  const targetUsername =
+    typeof target?.user === "object"
+      ? target.user?.username?.trim().replace(/^@/, "")
+      : "";
+  const targetAvatar =
+    typeof target?.user === "object" ? target.user?.avatar : "";
+  const isMine = Boolean(userId) && targetUserId === userId;
+
+  return (
+    <Card
+      key={item._id}
+      className={cn(
+        "theme-hover-surface min-w-0 border-border/70 py-0",
+        targetPath && "cursor-pointer",
+      )}
+      role={targetPath ? "link" : undefined}
+      tabIndex={targetPath ? 0 : undefined}
+      onClick={(event) => {
+        if (!targetPath) return;
+
+        const clickTarget = event.target as HTMLElement;
+        if (
+          clickTarget.closest(
+            "button, a, input, textarea, select, [role='menuitem']",
+          )
+        ) {
+          return;
+        }
+
+        onOpenBookmark(item);
+      }}
+      onKeyDown={(event) => {
+        if (!targetPath) return;
+        if (event.key !== "Enter" && event.key !== " ") return;
+
+        event.preventDefault();
+        onOpenBookmark(item);
+      }}
+    >
+      <CardContent className="flex h-full flex-col gap-4 p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 items-center gap-2">
+              <Avatar size="sm">
+                <AvatarImage src={targetAvatar} alt={targetUsername || "Creator"} />
+                <AvatarFallback>
+                  {(targetUsername?.[0] || targetUserName?.[0] || "U").toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <h3 className="min-w-0 flex-1 truncate text-base font-semibold">
+                {target?.name || "Untitled strategy"}
+              </h3>
+            </div>
+
+            <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              <span className="truncate">@{targetUsername || "unknown"}</span>
+              <span className="text-xs">Bookmarked {toPrettyDate(item.createdAt)}</span>
+            </div>
+          </div>
+
+          <ButtonGroup className="shrink-0">
+            <Button
+              type="button"
+              size="icon-sm"
+              variant="ghost"
+              className="rounded-r-none border-transparent text-muted-foreground shadow-none"
+              aria-label="Remove bookmark"
+              title="Remove bookmark"
+              disabled={removingBookmarkIds.has(item._id)}
+              onClick={() => {
+                onRequestRemove(item);
+              }}
+            >
+              {removingBookmarkIds.has(item._id) ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <BookmarkCheck className="h-3.5 w-3.5 text-primary" />
+              )}
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  size="icon-sm"
+                  variant="ghost"
+                  className="-ml-px rounded-l-none border-transparent text-muted-foreground shadow-none"
+                  aria-label="More actions"
+                  title="More actions"
+                >
+                  <MoreHorizontal className="h-3.5 w-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44 min-w-44">
+                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                {targetId ? (
+                  <DropdownMenuItem asChild>
+                    <a href={targetPath} className="flex items-center gap-2">
+                      <SquareArrowOutUpRight className="h-4 w-4" />
+                      Open
+                    </a>
+                  </DropdownMenuItem>
+                ) : null}
+                {targetId ? (
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      void onCopyBookmarkLink(item);
+                    }}
+                  >
+                    <Copy className="h-4 w-4" />
+                    Copy link
+                  </DropdownMenuItem>
+                ) : null}
+                <DropdownMenuItem
+                  variant="destructive"
+                  disabled={removingBookmarkIds.has(item._id)}
+                  onSelect={() => {
+                    onRequestRemove(item);
+                  }}
+                >
+                  {removingBookmarkIds.has(item._id) ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
+                  Remove
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </ButtonGroup>
+        </div>
+
+        <p className="line-clamp-2 text-sm text-muted-foreground">
+          {target?.description?.trim() || "No description"}
+        </p>
+
+        <div className="mt-auto flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+          <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+            <TrendingUp className="h-3.5 w-3.5" />
+            {target?.stats?.viewCount ?? 0}
+          </span>
+          <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+            <Bookmark className="h-3.5 w-3.5" />
+            {target?.stats?.bookmarkCount ?? 0}
+          </span>
+          <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+            {target?.isPublic ? (
+              <Globe className="h-3.5 w-3.5" />
+            ) : (
+              <Lock className="h-3.5 w-3.5" />
+            )}
+            {isMine ? "Mine" : target?.isPublic ? "Public" : "Private"}
+          </span>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function renderBookmarkBacktestCard({
+  item,
+  removingBookmarkIds,
+  onOpenBookmark,
+  onCopyBookmarkLink,
+  onRequestRemove,
+}: BookmarkCardRenderProps) {
+  const target = item.target;
+  const targetId = target?._id;
+  const targetPath = targetId ? `/backtest/${targetId}` : "";
+  const targetUserName =
+    typeof target?.user === "object" ? target.user?.name?.trim() : "";
+  const targetUsername =
+    typeof target?.user === "object"
+      ? target.user?.username?.trim().replace(/^@/, "")
+      : "";
+  const targetAvatar =
+    typeof target?.user === "object" ? target.user?.avatar : "";
+
+  return (
+    <Card
+      key={item._id}
+      className={cn(
+        "theme-hover-surface min-w-0 border-border/70 py-0",
+        targetPath && "cursor-pointer",
+      )}
+      role={targetPath ? "link" : undefined}
+      tabIndex={targetPath ? 0 : undefined}
+      onClick={(event) => {
+        if (!targetPath) return;
+
+        const clickTarget = event.target as HTMLElement;
+        if (
+          clickTarget.closest(
+            "button, a, input, textarea, select, [role='menuitem']",
+          )
+        ) {
+          return;
+        }
+
+        onOpenBookmark(item);
+      }}
+      onKeyDown={(event) => {
+        if (!targetPath) return;
+        if (event.key !== "Enter" && event.key !== " ") return;
+
+        event.preventDefault();
+        onOpenBookmark(item);
+      }}
+    >
+      <CardHeader className="space-y-2 pb-0.5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-1">
+            <div className="flex min-w-0 items-center gap-2">
+              <Avatar size="sm">
+                <AvatarImage src={targetAvatar} alt={targetUsername || "Trader"} />
+                <AvatarFallback>
+                  {(targetUsername?.[0] || targetUserName?.[0] || "U").toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <CardTitle className="min-w-0 truncate text-base font-semibold">
+                {target?.symbol || "Backtest"}
+              </CardTitle>
+            </div>
+            <CardDescription className="flex min-w-0 flex-wrap items-center gap-2">
+              <span className="truncate">@{targetUsername || "unknown"}</span>
+              <span className="text-muted-foreground/60">-</span>
+              <span>{target?.timeframe || "-"}</span>
+              <span className="text-muted-foreground/60">-</span>
+              <span className="inline-flex min-w-0 items-center">
+                <span className="max-w-[180px] truncate">
+                  {target?.strategy?.name || "Strategy"}
+                </span>
+              </span>
+            </CardDescription>
+          </div>
+
+          <div className="flex items-start gap-2">
+            <div className="px-1 py-1 text-right">
+              <p className="text-[10px] tracking-[0.16em] text-muted-foreground uppercase">
+                ROI
+              </p>
+              <p
+                className={cn(
+                  "mt-1 text-base font-semibold",
+                  typeof target?.result?.roi === "number"
+                    ? target.result.roi >= 0
+                      ? "text-success"
+                      : "text-destructive"
+                    : "text-foreground",
+                )}
+              >
+                {typeof target?.result?.roi === "number"
+                  ? `${target.result.roi >= 0 ? "+" : ""}${ratio.format(target.result.roi)}%`
+                  : "-"}
+              </p>
+            </div>
+
+            <ButtonGroup className="shrink-0">
+              <Button
+                type="button"
+                size="icon-sm"
+                variant="ghost"
+                className="rounded-r-none border-transparent text-muted-foreground shadow-none"
+                aria-label="Remove bookmark"
+                title="Remove bookmark"
+                disabled={removingBookmarkIds.has(item._id)}
+                onClick={() => {
+                  onRequestRemove(item);
+                }}
+              >
+                {removingBookmarkIds.has(item._id) ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <BookmarkCheck className="h-4 w-4 text-primary" />
+                )}
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    size="icon-sm"
+                    variant="ghost"
+                    className="-ml-px rounded-l-none border-transparent text-muted-foreground shadow-none"
+                    aria-label="More actions"
+                    title="More actions"
+                  >
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-44 min-w-44">
+                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                  {targetId ? (
+                    <DropdownMenuItem asChild>
+                      <a href={targetPath} className="flex items-center gap-2">
+                        <SquareArrowOutUpRight className="h-4 w-4" />
+                        Open
+                      </a>
+                    </DropdownMenuItem>
+                  ) : null}
+                  {targetId ? (
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        void onCopyBookmarkLink(item);
+                      }}
+                    >
+                      <Copy className="h-4 w-4" />
+                      Copy link
+                    </DropdownMenuItem>
+                  ) : null}
+                  <DropdownMenuItem
+                    variant="destructive"
+                    disabled={removingBookmarkIds.has(item._id)}
+                    onSelect={() => {
+                      onRequestRemove(item);
+                    }}
+                  >
+                    {removingBookmarkIds.has(item._id) ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                    Remove
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </ButtonGroup>
+          </div>
+        </div>
+      </CardHeader>
+
+      <CardContent className="space-y-2.5">
+        <div className="grid grid-cols-2 gap-2">
+          <div className="rounded-xl bg-muted/70 p-2">
+            <p className="text-[11px] text-muted-foreground uppercase">
+              Duration
+            </p>
+            <p className="mt-1 text-sm font-semibold text-foreground">
+              {formatDuration(target?.result?.duration)}
+            </p>
+          </div>
+
+          <div className="rounded-xl bg-muted/70 p-2">
+            <p className="text-[11px] text-muted-foreground uppercase">
+              Win Rate
+            </p>
+            <p className="mt-1 text-sm font-semibold text-foreground">
+              {typeof target?.result?.winRate === "number"
+                ? `${ratio.format(target.result.winRate)}%`
+                : "-"}
+            </p>
+          </div>
+
+          <div className="rounded-xl bg-muted/70 p-2">
+            <p className="text-[11px] text-muted-foreground uppercase">
+              Profit Factor
+            </p>
+            <p className="mt-1 text-sm font-semibold text-foreground">
+              {typeof target?.result?.profitFactor === "number"
+                ? ratio.format(target.result.profitFactor)
+                : "-"}
+            </p>
+          </div>
+
+          <div className="rounded-xl bg-muted/70 p-2">
+            <p className="text-[11px] text-muted-foreground uppercase">
+              Drawdown
+            </p>
+            <p className="mt-1 text-sm font-semibold text-foreground">
+              {typeof target?.result?.maxDrawdownPercent === "number"
+                ? `-${ratio.format(Math.abs(target.result.maxDrawdownPercent))}%`
+                : "-"}
+            </p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 export default function BookmarkPage() {
@@ -471,11 +876,11 @@ export default function BookmarkPage() {
                           setPage(1);
                         }}
                       >
-                        <DropdownMenuRadioItem value="updatedAt">
-                          Last updated
-                        </DropdownMenuRadioItem>
                         <DropdownMenuRadioItem value="createdAt">
                           Bookmarked date
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="updatedAt">
+                          Last updated
                         </DropdownMenuRadioItem>
                       </DropdownMenuRadioGroup>
 
@@ -488,11 +893,11 @@ export default function BookmarkPage() {
                           setPage(1);
                         }}
                       >
-                        <DropdownMenuRadioItem value="desc">
-                          Descending
-                        </DropdownMenuRadioItem>
                         <DropdownMenuRadioItem value="asc">
-                          Ascending
+                          Asc
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="desc">
+                          Desc
                         </DropdownMenuRadioItem>
                       </DropdownMenuRadioGroup>
                     </DropdownMenuContent>
@@ -504,279 +909,44 @@ export default function BookmarkPage() {
         </CardHeader>
       </Card>
 
-      <Card className="min-w-0 border-border/70">
-        <CardContent className="space-y-3">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
-              Loading bookmarks...
-            </div>
-          ) : totalCount === 0 ? (
-            <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
-              {search.trim()
-                ? "No bookmarks matched your search."
-                : "No bookmarks yet. Save strategies or backtests to build your collection."}
-            </div>
-          ) : (
-            <div className="divide-y divide-border/60">
-              {bookmarks.map((item) => {
-                const target = item.target;
-                const targetId = target?._id;
-                const targetPath = getBookmarkTargetPath(item);
-                const isStrategy = item.targetType === "strategy";
-                const isBacktest = item.targetType === "backtest";
-                const targetUserId =
-                  typeof target?.user === "string"
-                    ? target.user
-                    : target?.user?._id;
-                const targetUsername =
-                  typeof target?.user === "object"
-                    ? target.user?.username?.trim().replace(/^@/, "")
-                    : "";
-                const isMine = Boolean(user?._id) && targetUserId === user?._id;
-                const title = isBacktest
-                  ? `${target?.symbol || "Backtest"}${target?.timeframe ? ` - ${target.timeframe}` : ""}`
-                  : target?.name || "Untitled target";
-                const description = isBacktest
-                  ? `Backtest period: ${toPrettyDate(target?.startDate)} - ${toPrettyDate(target?.endDate)}`
-                  : target?.description?.trim() || "No description";
+      {isLoading ? (
+        <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Loading bookmarks...</span>
+        </div>
+      ) : totalCount === 0 ? (
+        <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
+          {search.trim()
+            ? "No bookmarks matched your search."
+            : "No bookmarks yet."}
+        </div>
+      ) : (
+        <>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {bookmarks.map((item) => {
+              return item.targetType === "strategy"
+                ? renderBookmarkStrategyCard({
+                    item,
+                    userId: user?._id,
+                    removingBookmarkIds,
+                    onOpenBookmark,
+                    onCopyBookmarkLink,
+                    onRequestRemove: setBookmarkPendingRemove,
+                  })
+                : renderBookmarkBacktestCard({
+                    item,
+                    userId: user?._id,
+                    removingBookmarkIds,
+                    onOpenBookmark,
+                    onCopyBookmarkLink,
+                    onRequestRemove: setBookmarkPendingRemove,
+                  });
+            })}
+          </div>
 
-                return (
-                  <article
-                    key={item._id}
-                    className={`relative min-w-0 px-4 py-4 pr-20 transition-colors hover:bg-muted/30 ${
-                      targetPath ? "cursor-pointer" : ""
-                    }`}
-                    role={targetPath ? "link" : undefined}
-                    tabIndex={targetPath ? 0 : undefined}
-                    onClick={(event) => {
-                      if (!targetPath) return;
-
-                      const clickTarget = event.target as HTMLElement;
-                      if (
-                        clickTarget.closest(
-                          "button, a, input, textarea, select, [role='menuitem']",
-                        )
-                      ) {
-                        return;
-                      }
-
-                      onOpenBookmark(item);
-                    }}
-                    onKeyDown={(event) => {
-                      if (!targetPath) return;
-
-                      if (event.key !== "Enter" && event.key !== " ") return;
-
-                      event.preventDefault();
-                      onOpenBookmark(item);
-                    }}
-                  >
-                    <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex min-w-0 flex-wrap items-center gap-2">
-                          <h3 className="min-w-0 flex-1 truncate font-semibold">
-                            {title}
-                          </h3>
-                          <span
-                            className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] ${
-                              isStrategy
-                                ? "border-primary/30 bg-primary/10 text-primary"
-                                : isBacktest
-                                  ? "border-info/30 bg-info/10 text-info"
-                                  : "border-border bg-muted/50 text-muted-foreground"
-                            }`}
-                          >
-                            {isStrategy ? (
-                              <Layers3 className="h-3.5 w-3.5" />
-                            ) : isBacktest ? (
-                              <CandlestickChart className="h-3.5 w-3.5" />
-                            ) : (
-                              <Bookmark className="h-3.5 w-3.5" />
-                            )}
-                            {isStrategy
-                              ? "Strategy"
-                              : isBacktest
-                                ? "Backtest"
-                                : ""}
-                          </span>
-                        </div>
-
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          Bookmarked on {toPrettyDate(item.createdAt)}
-                        </p>
-
-                        <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
-                          {description}
-                        </p>
-
-                        {isStrategy && (
-                          <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-                            <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5">
-                              <TrendingUp className="h-3.5 w-3.5" />
-                              {target?.stats?.viewCount ?? 0}
-                            </span>
-                            <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5">
-                              <Bookmark className="h-3.5 w-3.5" />
-                              {target?.stats?.bookmarkCount ?? 0}
-                            </span>
-                            <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5">
-                              {target?.isPublic ? (
-                                <Globe className="h-3.5 w-3.5" />
-                              ) : (
-                                <Lock className="h-3.5 w-3.5" />
-                              )}
-                              {isMine
-                                ? "Mine"
-                                : target?.isPublic
-                                  ? "Public"
-                                  : "Private"}
-                            </span>
-                          </div>
-                        )}
-
-                        {isBacktest && (
-                          <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-                            <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5">
-                              {typeof target?.result?.roi === "number" &&
-                              target.result.roi < 0 ? (
-                                <TrendingDown className="h-3.5 w-3.5 text-destructive" />
-                              ) : (
-                                <TrendingUp
-                                  className={`h-3.5 w-3.5 ${
-                                    typeof target?.result?.roi === "number" &&
-                                    target.result.roi >= 0
-                                      ? "text-success"
-                                      : ""
-                                  }`}
-                                />
-                              )}
-                              <span
-                                className={
-                                  typeof target?.result?.roi === "number"
-                                    ? target.result.roi >= 0
-                                      ? "text-success"
-                                      : "text-destructive"
-                                    : ""
-                                }
-                              >
-                                {target?.result?.roi !== undefined
-                                  ? `${target.result.roi >= 0 ? "+" : ""}${ratio.format(target.result.roi)}%`
-                                  : "-"}
-                              </span>
-                            </span>
-                            <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5">
-                              <Percent className="h-3.5 w-3.5" />
-                              {target?.result?.winRate !== undefined
-                                ? `${ratio.format(target.result.winRate)}%`
-                                : "-"}
-                            </span>
-                            <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5">
-                              <CalendarClock className="h-3.5 w-3.5" />
-                              {formatDuration(target?.result?.duration)}
-                            </span>
-                            <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5">
-                              <UserRound className="h-3.5 w-3.5" />@
-                              {targetUsername || "unknown"}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="absolute top-4 right-4 flex shrink-0 flex-col items-end gap-2">
-                        <span className="sr-only">Actions</span>
-
-                        <ButtonGroup className="shrink-0">
-                          <Button
-                            type="button"
-                            size="icon-sm"
-                            variant="outline"
-                            className="rounded-r-none border border-border text-muted-foreground"
-                            aria-label="Bookmarked"
-                            title="Bookmarked"
-                            disabled={removingBookmarkIds.has(item._id)}
-                            onClick={() => {
-                              setBookmarkPendingRemove(item);
-                            }}
-                          >
-                            {removingBookmarkIds.has(item._id) ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <BookmarkCheck className="h-4 w-4 text-primary" />
-                            )}
-                          </Button>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                type="button"
-                                size="icon-sm"
-                                variant="outline"
-                                className="-ml-px rounded-l-none border border-border text-muted-foreground"
-                                aria-label="More actions"
-                                title="More actions"
-                              >
-                                <ChevronDown className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent
-                              align="end"
-                              className="w-40 min-w-40"
-                            >
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              {(isStrategy || isBacktest) && targetId ? (
-                                <DropdownMenuItem asChild>
-                                  <a
-                                    href={
-                                      isBacktest
-                                        ? `/backtest/${targetId}`
-                                        : `/strategy/${targetId}`
-                                    }
-                                    className="flex items-center gap-2"
-                                  >
-                                    <SquareArrowOutUpRight className="h-4 w-4" />
-                                    Open
-                                  </a>
-                                </DropdownMenuItem>
-                              ) : null}
-                              {(isStrategy || isBacktest) && targetId ? (
-                                <DropdownMenuItem
-                                  onSelect={() => {
-                                    void onCopyBookmarkLink(item);
-                                  }}
-                                >
-                                  <Copy className="h-4 w-4" />
-                                  Copy link
-                                </DropdownMenuItem>
-                              ) : null}
-                              <DropdownMenuItem
-                                variant="destructive"
-                                disabled={removingBookmarkIds.has(item._id)}
-                                onSelect={() => {
-                                  setBookmarkPendingRemove(item);
-                                }}
-                              >
-                                {removingBookmarkIds.has(item._id) ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <Trash2 className="h-4 w-4" />
-                                )}
-                                Remove
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </ButtonGroup>
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          )}
-
-          {hasNextPage ? (
-            <div ref={loadMoreRef} className="h-1 w-full" />
-          ) : null}
-        </CardContent>
-      </Card>
+          {hasNextPage ? <div ref={loadMoreRef} className="h-1 w-full" /> : null}
+        </>
+      )}
 
       <div className="flex h-10 items-center justify-center">
         {isAppending ? (

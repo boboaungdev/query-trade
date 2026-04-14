@@ -3,13 +3,6 @@ const { Schema } = mongoose;
 
 const bookmarkSchema = new Schema(
   {
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-      index: true,
-    },
-
     targetType: {
       type: String,
       enum: ["strategy", "backtest"],
@@ -42,6 +35,5 @@ bookmarkSchema.index(
   { unique: true, name: "unique_user_target_bookmark" },
 );
 bookmarkSchema.index({ user: 1, targetType: 1, createdAt: -1 });
-bookmarkSchema.index({ user: 1, targetType: 1, name: 1 });
 
 export const BookmarkDB = mongoose.model("bookmark", bookmarkSchema);

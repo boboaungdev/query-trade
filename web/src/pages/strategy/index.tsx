@@ -519,8 +519,8 @@ export default function StrategyPage() {
                               setPage(1);
                             }}
                           >
-                            <DropdownMenuRadioItem value="popular">
-                              Popular
+                            <DropdownMenuRadioItem value="updatedAt">
+                              Last updated
                             </DropdownMenuRadioItem>
                             <DropdownMenuRadioItem value="name">
                               Name
@@ -528,8 +528,8 @@ export default function StrategyPage() {
                             <DropdownMenuRadioItem value="createdAt">
                               Newest
                             </DropdownMenuRadioItem>
-                            <DropdownMenuRadioItem value="updatedAt">
-                              Last updated
+                            <DropdownMenuRadioItem value="popular">
+                              Popular
                             </DropdownMenuRadioItem>
                           </DropdownMenuRadioGroup>
 
@@ -543,10 +543,10 @@ export default function StrategyPage() {
                             }}
                           >
                             <DropdownMenuRadioItem value="asc">
-                              Ascending
+                              Asc
                             </DropdownMenuRadioItem>
                             <DropdownMenuRadioItem value="desc">
-                              Descending
+                              Desc
                             </DropdownMenuRadioItem>
                           </DropdownMenuRadioGroup>
                         </DropdownMenuContent>
@@ -1102,8 +1102,8 @@ const indicatorSortOptions: Array<{
   label: string;
   value: IndicatorSortField;
 }> = [
-  { label: "Name", value: "name" },
   { label: "Newest", value: "createdAt" },
+  { label: "Name", value: "name" },
 ];
 
 const indicatorResponseCache = new Map<string, IndicatorResponse>();

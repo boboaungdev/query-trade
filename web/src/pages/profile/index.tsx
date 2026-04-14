@@ -130,6 +130,12 @@ type ProfileFollowListItem = {
   name?: string;
   username?: string;
   avatar?: string;
+  stats?: {
+    followerCount?: number;
+    followingCount?: number;
+    strategyCount?: number;
+    backtestCount?: number;
+  };
 };
 
 type ProfileStrategyListItem = {
@@ -1122,15 +1128,15 @@ export default function Profile() {
         ]
       : activeProfileTab === "strategies"
         ? [
+            { value: "updatedAt", label: "Last updated" },
             { value: "name", label: "Name" },
             { value: "popular", label: "Popular" },
-            { value: "updatedAt", label: "Updated" },
           ]
         : [
+            { value: "updatedAt", label: "Last updated" },
             { value: "maxDrawdownPercent", label: "Max DD %" },
             { value: "profitFactor", label: "Profit Factor" },
             { value: "roi", label: "ROI" },
-            { value: "updatedAt", label: "Updated" },
             { value: "winRate", label: "Win Rate" },
           ];
   const profileDisplayName = canEditProfile
@@ -1704,13 +1710,53 @@ export default function Profile() {
                                                 .toUpperCase()}
                                             </AvatarFallback>
                                           </Avatar>
-                                          <div className="min-w-0">
+                                          <div className="min-w-0 space-y-1">
                                             <p className="truncate font-medium">
                                               {item.name || "Unknown"}
                                             </p>
                                             <p className="truncate text-sm text-muted-foreground">
                                               @{item.username || "unknown"}
                                             </p>
+                                            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                                              {[
+                                                {
+                                                  key: "followers",
+                                                  value:
+                                                    item.stats?.followerCount,
+                                                  icon: Users,
+                                                },
+                                                {
+                                                  key: "following",
+                                                  value:
+                                                    item.stats?.followingCount,
+                                                  icon: UserCheck,
+                                                },
+                                                {
+                                                  key: "strategies",
+                                                  value:
+                                                    item.stats?.strategyCount,
+                                                  icon: Target,
+                                                },
+                                                {
+                                                  key: "backtests",
+                                                  value:
+                                                    item.stats?.backtestCount,
+                                                  icon: CandlestickChart,
+                                                },
+                                              ].map((stat) => (
+                                                <span
+                                                  key={stat.key}
+                                                  className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5"
+                                                >
+                                                  <stat.icon className="h-3.5 w-3.5" />
+                                                  <span className="font-medium text-foreground">
+                                                    {compactNumber.format(
+                                                      stat.value ?? 0,
+                                                    )}
+                                                  </span>
+                                                </span>
+                                              ))}
+                                            </div>
                                           </div>
                                         </Link>
 
