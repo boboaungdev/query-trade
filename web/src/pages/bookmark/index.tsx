@@ -989,7 +989,8 @@ export default function BookmarkPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className="text-destructive-foreground bg-destructive hover:bg-destructive/90"
+              variant="destructive"
+              className="!bg-destructive !text-white hover:!bg-destructive/90"
               onClick={() => {
                 if (!bookmarkPendingRemove) return;
                 void onRemoveBookmark(bookmarkPendingRemove);

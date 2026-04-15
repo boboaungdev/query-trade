@@ -1287,7 +1287,7 @@ export default function Profile() {
                 </div>
                 <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                   <div className="flex min-w-0 items-center gap-4 md:items-start">
-                    <Avatar className="h-24 w-24 border-2 border-background shadow-sm md:h-28 md:w-28">
+                    <Avatar className="h-24 w-24 md:h-28 md:w-28">
                       <AvatarImage
                         src={
                           canEditProfile
@@ -2324,7 +2324,9 @@ export default function Profile() {
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
+              variant="destructive"
               disabled={isFollowUpdating}
+              className="relative !bg-destructive !text-white hover:!bg-destructive/90"
               onClick={(event) => {
                 event.preventDefault();
                 void onToggleFollow().finally(() => {
@@ -2333,13 +2335,11 @@ export default function Profile() {
               }}
             >
               {isFollowUpdating ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Unfollowing...
-                </>
-              ) : (
-                "Unfollow"
-              )}
+                <Loader2 className="absolute h-4 w-4 animate-spin text-white" />
+              ) : null}
+              <span className={isFollowUpdating ? "opacity-0" : undefined}>
+                Unfollow
+              </span>
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -2370,11 +2370,13 @@ export default function Profile() {
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
+              variant="destructive"
               disabled={
                 pendingFollowListUnfollowUser
                   ? followListUpdatingIds.has(pendingFollowListUnfollowUser._id)
                   : false
               }
+              className="relative !bg-destructive !text-white hover:!bg-destructive/90"
               onClick={(event) => {
                 event.preventDefault();
 
@@ -2389,13 +2391,18 @@ export default function Profile() {
             >
               {pendingFollowListUnfollowUser &&
               followListUpdatingIds.has(pendingFollowListUnfollowUser._id) ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Unfollowing...
-                </>
-              ) : (
-                "Unfollow"
-              )}
+                <Loader2 className="absolute h-4 w-4 animate-spin text-white" />
+              ) : null}
+              <span
+                className={
+                  pendingFollowListUnfollowUser &&
+                  followListUpdatingIds.has(pendingFollowListUnfollowUser._id)
+                    ? "opacity-0"
+                    : undefined
+                }
+              >
+                Unfollow
+              </span>
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -2,11 +2,28 @@ import { StrategyDB } from "../../models/strategy.js";
 import { IndicatorDB } from "../../models/indicator.js";
 import { UserDB } from "../../models/user.js";
 import { resError, resJson } from "../../utils/response.js";
+import {
+  pruneUnusedIndicators,
+  validateIndicatorReferences,
+} from "../../utils/strategyIndicators.js";
 
 export const createStrategy = async (req, res, next) => {
   try {
     const user = req.user;
-    const { indicators } = req.body;
+    const indicators = pruneUnusedIndicators(req.body);
+    const strategyPayload = {
+      ...req.body,
+      indicators,
+    };
+
+    const missingIndicatorKeys = validateIndicatorReferences(strategyPayload);
+
+    if (missingIndicatorKeys.length > 0) {
+      throw resError(
+        400,
+        `Missing indicator definitions for: ${missingIndicatorKeys.join(", ")}`,
+      );
+    }
 
     const indicatorIds = indicators.map((item) => item.indicator);
     const uniqueIndicatorIds = [...new Set(indicatorIds)];
@@ -20,7 +37,7 @@ export const createStrategy = async (req, res, next) => {
     }
 
     const strategy = await StrategyDB.create({
-      ...req.body,
+      ...strategyPayload,
       user: user._id,
     });
 

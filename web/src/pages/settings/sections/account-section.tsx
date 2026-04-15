@@ -1041,7 +1041,8 @@ export function AccountSection({
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
-              className="text-destructive-foreground bg-destructive hover:bg-destructive/90"
+              variant="destructive"
+              className="relative !bg-destructive !text-white hover:!bg-destructive/90"
               disabled={isDeletingAccount || !isDeleteCredentialValid}
               onClick={(event) => {
                 event.preventDefault();
@@ -1055,13 +1056,11 @@ export function AccountSection({
               }}
             >
               {isDeletingAccount ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Deleting...
-                </>
-              ) : (
-                "Delete Forever"
-              )}
+                <Loader2 className="absolute h-4 w-4 animate-spin text-white" />
+              ) : null}
+              <span className={isDeletingAccount ? "opacity-0" : undefined}>
+                Delete
+              </span>
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

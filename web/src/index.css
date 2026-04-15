@@ -13,7 +13,7 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
   --primary: oklch(0.64 0.135 219);
-  --primary-foreground: oklch(0.2 0.03 222);
+  --primary-foreground: oklch(1 0 0);
   --secondary: oklch(0.967 0.001 286.375);
   --secondary-foreground: oklch(0.21 0.006 285.885);
   --muted: oklch(0.97 0 0);
@@ -60,7 +60,7 @@
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
   --primary: oklch(0.72 0.115 214);
-  --primary-foreground: oklch(0.19 0.03 222);
+  --primary-foreground: oklch(0.98 0 0);
   --secondary: oklch(0.274 0.006 286.033);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
@@ -99,7 +99,7 @@
 }
 
 @theme inline {
-  --font-sans: 'Geist Variable', sans-serif;
+  --font-sans: "Geist Variable", sans-serif;
   --color-surface: var(--surface);
   --color-surface-muted: var(--surface-muted);
   --color-surface-elevated: var(--surface-elevated);
@@ -437,11 +437,7 @@
   }
 
   .theme-hover-surface:hover {
-    background: color-mix(
-      in oklab,
-      var(--color-primary) 5%,
-      transparent
-    );
+    background: color-mix(in oklab, var(--color-primary) 5%, transparent);
   }
 }
 

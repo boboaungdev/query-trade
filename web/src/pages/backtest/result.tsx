@@ -715,14 +715,20 @@ export default function BacktestResultPage() {
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className="text-destructive-foreground bg-destructive hover:bg-destructive/90"
+              variant="destructive"
+              className="relative !bg-destructive !text-white hover:!bg-destructive/90"
               disabled={isDeleting}
               onClick={(event) => {
                 event.preventDefault()
                 void onDeleteBacktest()
               }}
             >
-              {isDeleting ? <>Deleting...</> : "Delete Forever"}
+              {isDeleting ? (
+                <Loader2 className="absolute h-4 w-4 animate-spin text-white" />
+              ) : null}
+              <span className={isDeleting ? "opacity-0" : undefined}>
+                Delete
+              </span>
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

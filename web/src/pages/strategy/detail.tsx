@@ -8,6 +8,7 @@ import {
 } from "react-router-dom";
 import {
   AlertTriangle,
+  CalendarDays,
   ChevronDown,
   ChevronLeft,
   Bookmark,
@@ -18,6 +19,7 @@ import {
   Globe,
   Loader2,
   Lock,
+  MoreHorizontal,
   Pencil,
   Radar,
   Trash2,
@@ -360,7 +362,7 @@ function RulePanel({
   return (
     <section
       className={cn(
-        "relative overflow-hidden rounded-[28px] p-4 md:p-5",
+        "relative overflow-hidden rounded-xl p-4 md:p-5",
         isBuy ? "theme-rule-panel-buy" : "theme-rule-panel-sell",
       )}
     >
@@ -394,7 +396,7 @@ function RulePanel({
           </p>
         </div>
 
-        <div className="rounded-2xl border border-border/60 bg-muted/15 px-3 py-3">
+        <div className="rounded-xl border border-border/60 bg-muted/15 px-3 py-3">
           <p className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
             Rules
           </p>
@@ -742,195 +744,208 @@ export default function StrategyDetailPage() {
   return (
     <div className="mx-auto w-full max-w-7xl space-y-5">
       <div className="space-y-5 p-1 text-foreground">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              className=""
-              onClick={() => {
-                if (fromProfileUrl) {
-                  navigate(fromProfileUrl, { replace: true });
-                  return;
-                }
+        <Card className="theme-hero-panel relative overflow-hidden border-border/70 shadow-sm">
+          <div className="theme-hero-overlay pointer-events-none absolute inset-0 opacity-90" />
+          <div className="theme-hero-sheen pointer-events-none absolute inset-x-0 top-0 h-px" />
+          <CardContent className="relative space-y-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <Button
+                type="button"
+                variant="ghost"
+                className="theme-glass-button w-fit px-2 text-muted-foreground hover:text-foreground"
+                onClick={() => {
+                  if (fromProfileUrl) {
+                    navigate(fromProfileUrl, { replace: true });
+                    return;
+                  }
 
-                if (fromProfileUsername) {
-                  navigate(`/${fromProfileUsername}`);
-                  return;
-                }
+                  if (fromProfileUsername) {
+                    navigate(`/${fromProfileUsername}`);
+                    return;
+                  }
 
-                if (window.history.length > 1) {
-                  navigate(-1);
-                  return;
-                }
+                  if (window.history.length > 1) {
+                    navigate(-1);
+                    return;
+                  }
 
-                navigate("/strategy");
-              }}
-            >
-              <span className="inline-flex items-center gap-1.5">
-                <ChevronLeft className="h-4 w-4" />
-                Back
-              </span>
-            </Button>
+                  navigate("/strategy");
+                }}
+              >
+                <span className="inline-flex items-center gap-1.5">
+                  <ChevronLeft className="h-4 w-4" />
+                  Back
+                </span>
+              </Button>
 
-            {!isLoading && strategy ? (
-              <ButtonGroup className="shrink-0">
-                <Button
-                  type="button"
-                  variant={isBookmarked ? "outline" : "default"}
-                  size="icon-sm"
-                  className="rounded-r-none"
-                  aria-label={isBookmarked ? "Bookmarked" : "Bookmark"}
-                  title={isBookmarked ? "Bookmarked" : "Bookmark"}
-                  disabled={isStrategyBookmarkUpdating}
-                  onClick={() => {
-                    void onToggleBookmark();
-                  }}
-                >
-                  {isStrategyBookmarkUpdating ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : isBookmarked ? (
-                    <BookmarkCheck className="h-4 w-4 text-primary" />
-                  ) : (
-                    <Bookmark className="h-4 w-4" />
-                  )}
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      type="button"
-                      variant={isBookmarked ? "outline" : "default"}
-                      size="icon-sm"
-                      className="-ml-px rounded-l-none"
-                      aria-label="More actions"
-                      title="More actions"
-                    >
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-44 min-w-44">
-                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                    <DropdownMenuItem asChild>
-                      <Link
-                        to="/backtest"
-                        state={{
-                          strategyId: strategy._id,
-                          strategyName: strategy.name,
-                        }}
-                        className="flex items-center gap-2"
-                      >
-                        <CandlestickChart className="h-4 w-4" />
-                        Backtest
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onSelect={() => {
-                        void onCopyStrategyLink();
-                      }}
-                    >
-                      <Copy className="h-4 w-4" />
-                      Copy link
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onSelect={() => {
-                        void onToggleBookmark();
-                      }}
-                      disabled={isStrategyBookmarkUpdating}
-                    >
-                      {isBookmarked ? (
-                        <BookmarkCheck className="h-4 w-4" />
-                      ) : (
-                        <Bookmark className="h-4 w-4" />
-                      )}
-                      {isBookmarked ? "Bookmarked" : "Bookmark"}
-                    </DropdownMenuItem>
-                    {isMine ? (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem asChild>
-                          <Link
-                            to={`/strategy/${strategy._id}/edit`}
-                            className="flex items-center gap-2"
-                          >
-                            <Pencil className="h-4 w-4" />
-                            Edit
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          variant="destructive"
-                          onSelect={() => {
-                            setIsDeleteConfirmOpen(true);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
-                      </>
+              {!isLoading && strategy ? (
+                <ButtonGroup className="shrink-0">
+                  <Button
+                    type="button"
+                    size="icon-sm"
+                    variant="ghost"
+                    className="rounded-r-none border-transparent bg-transparent text-muted-foreground shadow-none hover:bg-background/60 hover:text-foreground"
+                    aria-label={isBookmarked ? "Bookmarked" : "Bookmark"}
+                    title={isBookmarked ? "Bookmarked" : "Bookmark"}
+                    disabled={isStrategyBookmarkUpdating}
+                    onClick={() => {
+                      void onToggleBookmark();
+                    }}
+                  >
+                    {isStrategyBookmarkUpdating ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : isBookmarked ? (
+                      <BookmarkCheck className="h-3.5 w-3.5 text-primary" />
                     ) : (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onSelect={() => {
-                            onCloneStrategy();
-                          }}
-                        >
-                          <CopyPlus className="h-4 w-4" />
-                          Clone
-                        </DropdownMenuItem>
-                      </>
+                      <Bookmark className="h-3.5 w-3.5" />
                     )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </ButtonGroup>
-            ) : null}
-          </div>
-
-          {loadError || !strategy ? (
-            <div className="rounded-xl border bg-muted/30 px-4 py-8 text-sm text-muted-foreground">
-              {loadError || "Strategy not found."}
-            </div>
-          ) : (
-            <div className="space-y-3.5">
-              <div>
-                <h1 className="max-w-4xl text-2xl font-semibold tracking-tight text-foreground md:text-4xl">
-                  {strategy.name}
-                </h1>
-                <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground md:text-base">
-                  {strategy.description?.trim() ||
-                    "A polished breakdown of the setup, its signal stack, and the risk controls used on both sides of the strategy."}
-                </p>
-                <div className="mt-3 flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center md:justify-between">
-                  <p className="text-xs text-muted-foreground">
-                    Last updated{" "}
-                    <span className="font-medium text-foreground">
-                      {formatDateLabel(strategy.updatedAt)}
-                    </span>
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <span className="inline-flex items-center gap-1.5 rounded-full border bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground uppercase">
-                      Strategy Detail
-                    </span>
-                    <span className="inline-flex items-center gap-1.5 rounded-full border bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground uppercase">
-                      {strategy.isPublic ? (
-                        <Globe className="h-3 w-3" />
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        size="icon-sm"
+                        variant="ghost"
+                        className="-ml-px rounded-l-none border-transparent bg-transparent text-muted-foreground shadow-none hover:bg-background/60 hover:text-foreground"
+                        aria-label="More actions"
+                        title="More actions"
+                      >
+                        <MoreHorizontal className="h-3.5 w-3.5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-44 min-w-44">
+                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                      <DropdownMenuItem asChild>
+                        <Link
+                          to="/backtest"
+                          state={{
+                            strategyId: strategy._id,
+                            strategyName: strategy.name,
+                          }}
+                          className="flex items-center gap-2"
+                        >
+                          <CandlestickChart className="h-4 w-4" />
+                          Backtest
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onSelect={() => {
+                          void onCopyStrategyLink();
+                        }}
+                      >
+                        <Copy className="h-4 w-4" />
+                        Copy link
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onSelect={() => {
+                          void onToggleBookmark();
+                        }}
+                        disabled={isStrategyBookmarkUpdating}
+                      >
+                        {isBookmarked ? (
+                          <BookmarkCheck className="h-4 w-4" />
+                        ) : (
+                          <Bookmark className="h-4 w-4" />
+                        )}
+                        {isBookmarked ? "Bookmarked" : "Bookmark"}
+                      </DropdownMenuItem>
+                      {isMine ? (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem asChild>
+                            <Link
+                              to={`/strategy/${strategy._id}/edit`}
+                              className="flex items-center gap-2"
+                            >
+                              <Pencil className="h-4 w-4" />
+                              Edit
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            variant="destructive"
+                            onSelect={() => {
+                              setIsDeleteConfirmOpen(true);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </>
                       ) : (
-                        <Lock className="h-3 w-3" />
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onSelect={() => {
+                              onCloneStrategy();
+                            }}
+                          >
+                            <CopyPlus className="h-4 w-4" />
+                            Clone
+                          </DropdownMenuItem>
+                        </>
                       )}
-                      {isMine ? "Mine" : strategy.isPublic ? "Public" : "Private"}
-                    </span>
-                    <span className="inline-flex items-center gap-1.5 rounded-full border bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
-                      <UserRound className="h-3 w-3" />@
-                      {strategy.user?.username || "unknown"}
-                    </span>
-                  </div>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </ButtonGroup>
+              ) : null}
+            </div>
+
+            {loadError || !strategy ? (
+              <div className="rounded-xl border bg-muted/30 px-4 py-8 text-sm text-muted-foreground">
+                {loadError || "Strategy not found."}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex flex-wrap gap-2">
+                  <span className="theme-glass-chip inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium tracking-[0.16em] text-primary uppercase">
+                    Strategy Detail
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  <h1 className="max-w-4xl text-2xl font-semibold tracking-tight text-foreground md:text-4xl">
+                    {strategy.name}
+                  </h1>
+                  <p className="text-sm leading-6 text-muted-foreground md:text-base">
+                    {strategy.description?.trim() || "No description"}
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  <span className="theme-glass-chip inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+                    <UserRound className="h-3 w-3" />@
+                    {strategy.user?.username || "unknown"}
+                  </span>
+                  <span className="theme-glass-chip inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+                    <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
+                    {formatDateLabel(strategy.updatedAt)}
+                  </span>
+                  <span className="theme-glass-chip inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium text-muted-foreground uppercase">
+                    {strategy.isPublic ? (
+                      <Globe className="h-3 w-3" />
+                    ) : (
+                      <Lock className="h-3 w-3" />
+                    )}
+                    {isMine ? "Mine" : strategy.isPublic ? "Public" : "Private"}
+                  </span>
+                  <span className="theme-glass-chip inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+                    <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
+                    {strategy.stats?.viewCount ?? 0}
+                  </span>
+                  <span className="theme-glass-chip inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+                    <Bookmark className="h-3.5 w-3.5 text-muted-foreground" />
+                    {strategy.stats?.bookmarkCount ?? 0}
+                  </span>
                 </div>
               </div>
-              </div>
             )}
+          </CardContent>
+        </Card>
       </div>
 
       {!isLoading && strategy ? (
         <div className="space-y-5">
-          <Card className="theme-creator-card overflow-hidden rounded-[24px]">
+          <Card className="theme-creator-card overflow-hidden">
             <CardContent className="space-y-4">
               <CardTitle className="flex items-center gap-2 text-base">
                 <UserRound className="h-4 w-4 text-primary" />
@@ -940,7 +955,7 @@ export default function StrategyDetailPage() {
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-center md:gap-6">
                   <div className="flex min-w-0 items-center gap-3">
-                    <Avatar size="default">
+                    <Avatar className="h-12 w-12">
                       <AvatarImage
                         src={strategy.user?.avatar}
                         alt={
@@ -957,7 +972,7 @@ export default function StrategyDetailPage() {
                         ).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="min-w-0">
+                    <div className="min-w-0 space-y-0.5">
                       <p className="truncate text-base font-semibold tracking-tight text-foreground">
                         {strategy.user?.name?.trim() ||
                           strategy.user?.username ||
@@ -1005,8 +1020,9 @@ export default function StrategyDetailPage() {
                   <ButtonGroup className="w-full md:w-auto">
                     <Button
                       type="button"
+                      size="sm"
                       variant={isFollowingCreator ? "outline" : "default"}
-                      className="min-w-0 flex-1 rounded-r-none"
+                      className="relative min-w-0 flex-1 rounded-r-none"
                       disabled={
                         !isAuthenticated ||
                         isFollowUpdating ||
@@ -1022,18 +1038,27 @@ export default function StrategyDetailPage() {
                       }}
                     >
                       {isFollowUpdating || isFollowStatusLoading ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : isFollowingCreator ? (
-                        <>
-                          <UserCheck className="h-4 w-4" />
-                          Following
-                        </>
-                      ) : (
-                        <>
-                          <UserPlus className="h-4 w-4" />
-                          Follow
-                        </>
-                      )}
+                        <Loader2 className="absolute h-4 w-4 animate-spin" />
+                      ) : null}
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1",
+                          (isFollowUpdating || isFollowStatusLoading) &&
+                            "opacity-0",
+                        )}
+                      >
+                        {isFollowingCreator ? (
+                          <>
+                            <UserCheck className="h-4 w-4" />
+                            Following
+                          </>
+                        ) : (
+                          <>
+                            <UserPlus className="h-4 w-4" />
+                            Follow
+                          </>
+                        )}
+                      </span>
                     </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -1120,7 +1145,7 @@ export default function StrategyDetailPage() {
           />
 
           <div className="grid gap-5 lg:grid-cols-3 lg:items-start">
-            <Card className="theme-primary-card overflow-hidden rounded-[24px] lg:col-span-3">
+            <Card className="theme-primary-card overflow-hidden lg:col-span-3">
               <CardHeader className="theme-primary-card-header space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="theme-primary-card-badge inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium tracking-[0.16em] uppercase">
@@ -1193,10 +1218,10 @@ export default function StrategyDetailPage() {
             </Card>
           </div>
 
-          <Card className="overflow-hidden rounded-[24px]">
-            <CardContent className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="rounded-xl border border-dashed border-border/70 bg-muted/20 px-4 py-4 md:px-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-start gap-3 text-sm text-muted-foreground">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border bg-muted/30 text-primary">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border/60 bg-background/70 text-primary">
                   <AlertTriangle className="h-4 w-4" />
                 </div>
                 <div>
@@ -1228,8 +1253,8 @@ export default function StrategyDetailPage() {
                   </Link>
                 </Button>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       ) : null}
 
@@ -1249,7 +1274,9 @@ export default function StrategyDetailPage() {
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
+              variant="destructive"
               disabled={isFollowUpdating}
+              className="relative !bg-destructive !text-white hover:!bg-destructive/90"
               onClick={(event) => {
                 event.preventDefault();
                 void onToggleCreatorFollow().finally(() => {
@@ -1258,13 +1285,11 @@ export default function StrategyDetailPage() {
               }}
             >
               {isFollowUpdating ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Unfollowing...
-                </>
-              ) : (
-                "Unfollow"
-              )}
+                <Loader2 className="absolute h-4 w-4 animate-spin text-white" />
+              ) : null}
+              <span className={isFollowUpdating ? "opacity-0" : undefined}>
+                Unfollow
+              </span>
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1289,7 +1314,8 @@ export default function StrategyDetailPage() {
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className="text-destructive-foreground bg-destructive hover:bg-destructive/90"
+              variant="destructive"
+              className="relative !bg-destructive !text-white hover:!bg-destructive/90"
               disabled={isDeleting}
               onClick={(event) => {
                 event.preventDefault();
@@ -1297,13 +1323,11 @@ export default function StrategyDetailPage() {
               }}
             >
               {isDeleting ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Deleting...
-                </>
-              ) : (
-                "Delete Forever"
-              )}
+                <Loader2 className="absolute h-4 w-4 animate-spin text-white" />
+              ) : null}
+              <span className={isDeleting ? "opacity-0" : undefined}>
+                Delete
+              </span>
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

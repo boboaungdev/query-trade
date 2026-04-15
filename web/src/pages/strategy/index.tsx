@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useEffectEvent,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   Bookmark,
@@ -167,6 +174,7 @@ export default function StrategyPage() {
   const [sortBy, setSortBy] = useState<StrategySortBy>("name");
   const [order, setOrder] = useState<"asc" | "desc">("asc");
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
+  const [sheetStrategyId, setSheetStrategyId] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
   const [createSheetControls, setCreateSheetControls] =
     useState<StrategyBuilderFooterControls | null>(null);
@@ -408,6 +416,28 @@ export default function StrategyPage() {
     });
   };
 
+  const openCreateSheet = () => {
+    setSheetStrategyId("");
+    setIsCreateSheetOpen(true);
+  };
+
+  const openEditSheet = (strategyId: string) => {
+    setSheetStrategyId(strategyId);
+    setIsCreateSheetOpen(true);
+  };
+
+  const closeCreateSheet = () => {
+    setIsCreateSheetOpen(false);
+    setSheetStrategyId("");
+    setCreateSheetControls(null);
+
+    if (shouldOpenStrategyBuilder) {
+      navigate(location.pathname, { replace: true });
+    }
+  };
+
+  const isEditingInSheet = Boolean(sheetStrategyId);
+
   return (
     <div className="mx-auto w-full max-w-6xl min-w-0 space-y-4 overflow-x-hidden md:space-y-6">
       <Card className="min-w-0 border-border/70">
@@ -437,7 +467,7 @@ export default function StrategyPage() {
               <Button
                 type="button"
                 className="inline-flex items-center gap-1.5"
-                onClick={() => setIsCreateSheetOpen(true)}
+                onClick={openCreateSheet}
               >
                 <Plus className="h-4 w-4" />
                 Create
@@ -717,14 +747,13 @@ export default function StrategyPage() {
                               {isMine ? (
                                 <>
                                   <DropdownMenuSeparator />
-                                  <DropdownMenuItem asChild>
-                                    <a
-                                      href={`/strategy/${item._id}/edit`}
-                                      className="flex items-center gap-2"
-                                    >
-                                      <Pencil className="h-4 w-4" />
-                                      Edit
-                                    </a>
+                                  <DropdownMenuItem
+                                    onSelect={() => {
+                                      openEditSheet(item._id);
+                                    }}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                    Edit
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
                                     variant="destructive"
@@ -827,21 +856,20 @@ export default function StrategyPage() {
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
+              variant="destructive"
               onClick={(event) => {
                 event.preventDefault();
                 void onDeleteStrategy();
               }}
               disabled={isDeletingStrategy}
-              className="text-destructive-foreground bg-destructive hover:bg-destructive/90"
+              className="relative !bg-destructive !text-white hover:!bg-destructive/90"
             >
               {isDeletingStrategy ? (
-                <span className="inline-flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Deleting...
-                </span>
-              ) : (
-                "Delete"
-              )}
+                <Loader2 className="absolute h-4 w-4 animate-spin text-white" />
+              ) : null}
+              <span className={isDeletingStrategy ? "opacity-0" : undefined}>
+                Delete
+              </span>
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -850,15 +878,12 @@ export default function StrategyPage() {
       <Sheet
         open={isCreateSheetOpen}
         onOpenChange={(open) => {
-          setIsCreateSheetOpen(open);
-
-          if (!open) {
-            setCreateSheetControls(null);
+          if (open) {
+            setIsCreateSheetOpen(true);
+            return;
           }
 
-          if (!open && shouldOpenStrategyBuilder) {
-            navigate(location.pathname, { replace: true });
-          }
+          closeCreateSheet();
         }}
       >
         <SheetContent
@@ -869,19 +894,24 @@ export default function StrategyPage() {
           }}
         >
           <SheetHeader className="border-b px-6 py-5">
-            <SheetTitle>Create Strategy</SheetTitle>
-            <SheetDescription>Build a new strategy.</SheetDescription>
+            <SheetTitle>
+              {isEditingInSheet ? "Edit Strategy" : "Create Strategy"}
+            </SheetTitle>
+            <SheetDescription>
+              {isEditingInSheet
+                ? "Edit your strategy."
+                : "Build a new strategy."}
+            </SheetDescription>
           </SheetHeader>
 
           <div className="flex-1 overflow-y-auto">
             {isCreateSheetOpen ? (
               <StrategyBuilder
                 embedded
+                strategyId={sheetStrategyId}
                 onEmbeddedControlsChange={setCreateSheetControls}
                 onSuccess={() => {
-                  setIsCreateSheetOpen(false);
-                  setCreateSheetControls(null);
-                  navigate(location.pathname, { replace: true });
+                  closeCreateSheet();
                   setPage(1);
                   setReloadKey((prev) => prev + 1);
                 }}
@@ -893,24 +923,27 @@ export default function StrategyPage() {
             <Button
               onClick={() => createSheetControls?.onSubmit()}
               disabled={createSheetControls?.submitDisabled ?? true}
-              className="w-full md:w-auto"
+              className="relative w-full md:w-auto"
             >
               {createSheetControls?.isSubmitting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="absolute h-4 w-4 animate-spin" />
               ) : null}
-              {createSheetControls?.isSubmitting
-                ? null
-                : (createSheetControls?.submitLabel ?? "Create Strategy")}
+              <span
+                className={
+                  createSheetControls?.isSubmitting ? "opacity-0" : undefined
+                }
+              >
+                {createSheetControls?.submitLabel ?? "Create Strategy"}
+              </span>
             </Button>
             <Button
               onClick={() => {
-                setIsCreateSheetOpen(false);
-                setCreateSheetControls(null);
-                if (shouldOpenStrategyBuilder) {
-                  navigate(location.pathname, { replace: true });
-                }
+                closeCreateSheet();
               }}
-              disabled={createSheetControls?.isSubmitting ?? false}
+              disabled={
+                createSheetControls?.isSubmitting ||
+                createSheetControls?.isLoadingStrategy
+              }
               variant="outline"
               className="w-full md:w-auto"
             >
@@ -1258,6 +1291,68 @@ function buildIndicatorDropdownOptions(indicatorKeys: string[]) {
 
 function getFirstIndicatorKey(indicatorKeys: string[]) {
   return indicatorKeys[0] ?? "";
+}
+
+function collectUsedIndicatorKeysFromCondition(
+  node: ConditionNode,
+  usedKeys: Set<string>,
+) {
+  if (node.type === "group") {
+    node.conditions.forEach((condition) =>
+      collectUsedIndicatorKeysFromCondition(condition, usedKeys),
+    );
+    return;
+  }
+
+  if (node.left.mode === "indicator" && node.left.value.trim()) {
+    usedKeys.add(node.left.value.trim());
+  }
+
+  if (node.right.mode === "indicator" && node.right.value.trim()) {
+    usedKeys.add(node.right.value.trim());
+  }
+}
+
+function extractUsedIndicatorKeysFromBlock(block: LogicBlockDraft) {
+  const usedKeys = new Set<string>();
+
+  block.conditions.forEach((condition) =>
+    collectUsedIndicatorKeysFromCondition(condition, usedKeys),
+  );
+
+  if (
+    block.riskManagement.stopLoss.type === "indicator" &&
+    block.riskManagement.stopLoss.indicator.trim()
+  ) {
+    usedKeys.add(block.riskManagement.stopLoss.indicator.trim());
+  }
+
+  if (
+    block.riskManagement.stopLoss.type === "atr" &&
+    block.riskManagement.stopLoss.atrPeriod.trim()
+  ) {
+    usedKeys.add(`atr_${block.riskManagement.stopLoss.atrPeriod.trim()}`);
+  }
+
+  if (
+    block.riskManagement.takeProfit.type === "indicator" &&
+    block.riskManagement.takeProfit.indicator.trim()
+  ) {
+    usedKeys.add(block.riskManagement.takeProfit.indicator.trim());
+  }
+
+  return usedKeys;
+}
+
+function isIndicatorDraftUsed(draft: IndicatorDraft, usedKeys: Set<string>) {
+  const indicatorKey = draft.key.trim();
+
+  if (!indicatorKey) return false;
+
+  return [...usedKeys].some(
+    (usedKey) =>
+      usedKey === indicatorKey || usedKey.startsWith(`${indicatorKey}.`),
+  );
 }
 
 function getParamHelpText(paramKey: string) {
@@ -2167,24 +2262,25 @@ function ConditionEditor({
 }) {
   if (node.type === "group") {
     return (
-      <div className="space-y-3 rounded-xl border border-dashed p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="relative space-y-3 rounded-xl border border-dashed p-4">
+        <div className="pr-10">
           <div>
             <p className="text-sm font-medium">{title}</p>
             <p className="text-xs text-muted-foreground">
-              Combine nested rules with shared logic.
+              Set the logic for this group.
             </p>
           </div>
-          <Button
-            type="button"
-            variant="ghost"
-            className="text-destructive hover:text-destructive/80"
-            onClick={onRemove}
-          >
-            <X className="h-4 w-4" />
-            Remove Group
-          </Button>
         </div>
+        <Button
+          type="button"
+          variant="ghost"
+          className="absolute top-3 right-3 h-8 w-8 p-0 text-destructive hover:text-destructive/80"
+          onClick={onRemove}
+          aria-label="Remove group"
+          title="Remove group"
+        >
+          <X className="h-4 w-4" />
+        </Button>
 
         <div className="space-y-3">
           {node.conditions.length > 1 && (
@@ -2266,25 +2362,25 @@ function ConditionEditor({
   }
 
   return (
-    <div className="space-y-3 rounded-xl border p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <div className="relative space-y-3 rounded-xl border p-4">
+      <div className="pr-10">
         <div>
           <p className="text-sm font-medium">{title}</p>
           <p className="text-xs text-muted-foreground">
-            Compare a field or indicator key against another field or a number.
+            Set the comparison for this rule.
           </p>
         </div>
-        <Button
-          type="button"
-          variant="ghost"
-          className="h-8 w-8 p-0 text-destructive hover:text-destructive/80"
-          onClick={onRemove}
-          aria-label="Remove rule"
-          title="Remove rule"
-        >
-          <X className="h-4 w-4" />
-        </Button>
       </div>
+      <Button
+        type="button"
+        variant="ghost"
+        className="absolute top-3 right-3 h-8 w-8 p-0 text-destructive hover:text-destructive/80"
+        onClick={onRemove}
+        aria-label="Remove rule"
+        title="Remove rule"
+      >
+        <X className="h-4 w-4" />
+      </Button>
 
       <OperandEditor
         label="Left"
@@ -2732,7 +2828,7 @@ function LogicBlockEditor({
   return (
     <section
       className={cn(
-        "relative overflow-hidden rounded-[28px] border p-4 md:p-5",
+        "relative overflow-hidden rounded-xl border p-4 md:p-5",
         isBuy ? "theme-rule-panel-buy" : "theme-rule-panel-sell",
       )}
     >
@@ -2762,7 +2858,7 @@ function LogicBlockEditor({
           <p className="text-sm text-muted-foreground">{description}</p>
         </div>
 
-        <div className="rounded-2xl border border-border/60 bg-muted/15 px-3 py-3">
+        <div className="rounded-xl border border-border/60 bg-muted/15 px-3 py-3">
           <div className="flex items-center justify-between gap-2">
             <p className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
               Rules
@@ -3087,24 +3183,28 @@ export type StrategyBuilderFooterControls = {
   submitLabel: string;
   submitDisabled: boolean;
   isSubmitting: boolean;
+  isLoadingStrategy: boolean;
   helperText: string | null;
   onSubmit: () => void;
 };
 
 export type StrategyBuilderProps = {
   embedded?: boolean;
+  strategyId?: string;
   onSuccess?: (strategyId?: string) => void;
   onEmbeddedControlsChange?: (controls: StrategyBuilderFooterControls) => void;
 };
 
 export function StrategyBuilder({
   embedded = false,
+  strategyId: strategyIdProp = "",
   onSuccess,
   onEmbeddedControlsChange,
 }: StrategyBuilderProps = {}) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { strategyId = "" } = useParams();
+  const { strategyId: routeStrategyId = "" } = useParams();
+  const strategyId = strategyIdProp || routeStrategyId;
   const isEditing = Boolean(strategyId);
   const duplicateStrategyId =
     typeof location.state === "object" &&
@@ -3378,6 +3478,16 @@ export function StrategyBuilder({
     [indicatorKeys],
   );
 
+  const usedIndicatorKeys = useMemo(() => {
+    const usedKeys = extractUsedIndicatorKeysFromBlock(buyDraft);
+
+    extractUsedIndicatorKeysFromBlock(sellDraft).forEach((usedKey) =>
+      usedKeys.add(usedKey),
+    );
+
+    return usedKeys;
+  }, [buyDraft, sellDraft]);
+
   const updateIndicatorDraft = (
     draftId: string,
     updater: (draft: IndicatorDraft) => IndicatorDraft,
@@ -3571,6 +3681,10 @@ export function StrategyBuilder({
     }
   };
 
+  const handleEmbeddedSubmit = useEffectEvent(() => {
+    void handleSubmit();
+  });
+
   const submitLabel = isEditing ? "Update Strategy" : "Create Strategy";
   const submitDisabled =
     isSubmitting ||
@@ -3580,9 +3694,11 @@ export function StrategyBuilder({
     (isEditing && !hasChanges);
   const helperText = formValidationError
     ? formValidationError
-    : isEditing && !isLoadingStrategy && !hasChanges
-      ? "No changes to update yet."
-      : null;
+    : isLoadingStrategy
+      ? "Loading strategy..."
+      : isEditing && !isLoadingStrategy && !hasChanges
+        ? "No changes to update yet."
+        : null;
 
   useEffect(() => {
     if (!embedded || !onEmbeddedControlsChange) return;
@@ -3591,10 +3707,9 @@ export function StrategyBuilder({
       submitLabel,
       submitDisabled,
       isSubmitting,
+      isLoadingStrategy,
       helperText,
-      onSubmit: () => {
-        void handleSubmit();
-      },
+      onSubmit: handleEmbeddedSubmit,
     });
   }, [
     embedded,
@@ -3611,7 +3726,7 @@ export function StrategyBuilder({
 
   return (
     <fieldset
-      disabled={isSubmitting}
+      disabled={isSubmitting || isLoadingStrategy}
       className={cn(
         "min-w-0 w-full space-y-4 overflow-x-hidden border-0 p-0 md:space-y-6",
         embedded ? "p-4 md:p-6" : "mx-auto max-w-6xl",
@@ -3983,6 +4098,11 @@ export function StrategyBuilder({
               </div>
             ) : (
               indicatorDrafts.map((draft, index) => {
+                const isUsedInStrategy = isIndicatorDraftUsed(
+                  draft,
+                  usedIndicatorKeys,
+                );
+
                 return (
                   <div
                     key={draft.id}
@@ -4257,13 +4377,20 @@ export function StrategyBuilder({
                           variant="ghost"
                           size="icon-sm"
                           className="text-destructive hover:text-destructive/80"
-                          onClick={() =>
+                          onClick={() => {
+                            if (isUsedInStrategy) return;
+
                             setIndicatorDrafts((prev) =>
                               prev.filter((item) => item.id !== draft.id),
-                            )
-                          }
+                            );
+                          }}
+                          disabled={isUsedInStrategy}
                           aria-label={`Remove indicator ${index + 1}`}
-                          title="Remove indicator"
+                          title={
+                            isUsedInStrategy
+                              ? "This indicator is used in rules or risk settings"
+                              : "Remove indicator"
+                          }
                         >
                           <Minus className="h-4 w-4" />
                         </Button>
@@ -4310,16 +4437,22 @@ export function StrategyBuilder({
               <CardContent className="space-y-3">
                 <Button
                   type="button"
-                  className="w-full"
+                  className="relative w-full"
                   onClick={() => void handleSubmit()}
                   disabled={submitDisabled}
                 >
                   {isSubmitting ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
+                    <Loader2 className="absolute h-4 w-4 animate-spin" />
+                  ) : null}
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-2",
+                      isSubmitting && "opacity-0",
+                    )}
+                  >
                     <Save className="h-4 w-4" />
-                  )}
-                  {submitLabel}
+                    {submitLabel}
+                  </span>
                 </Button>
                 {helperText ? (
                   <p className="text-xs text-muted-foreground">{helperText}</p>
