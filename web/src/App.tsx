@@ -32,14 +32,14 @@ function ProtectedRoute() {
   return <Outlet />;
 }
 
-function OwnProfileRedirect() {
-  const user = useAuthStore((state) => state.user);
+function AuthRoute() {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
-  if (!user?.username) {
+  if (isAuthenticated) {
     return <Navigate to="/" replace />;
   }
 
-  return <Navigate to={`/${user.username}`} replace />;
+  return <Auth />;
 }
 
 export default function App() {
@@ -56,7 +56,7 @@ export default function App() {
         <main className="flex-1 p-6">
           <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="/auth" element={<Auth />} />
+            <Route path="/auth" element={<AuthRoute />} />
 
             <Route element={<ProtectedRoute />}>
               <Route path="/dashboard" element={<Dashboard />} />
@@ -81,7 +81,6 @@ export default function App() {
                 path="/backtest/:backtestId"
                 element={<BacktestResult />}
               />
-              <Route path="/profile" element={<OwnProfileRedirect />} />
               <Route path="/settings" element={<Settings />} />
             </Route>
 

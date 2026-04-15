@@ -1,40 +1,70 @@
-import { Link } from "react-router-dom"
-import { Compass, Home } from "lucide-react"
+import { Link } from "react-router-dom";
+import { Home, Search, ArrowLeft } from "lucide-react";
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { useAuthStore } from "@/store/auth"
+import { Button } from "@/components/ui/button";
+import { useAuthStore } from "@/store/auth";
 
 export default function NotFoundPage() {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-5">
-      <Card>
-        <CardContent className="p-4 md:p-6">
-          <p className="inline-flex items-center gap-1 rounded-full border bg-background/70 px-2.5 py-1 text-xs font-medium text-muted-foreground">
-            <Compass className="h-3.5 w-3.5 text-primary" />
-            Page Not Found
-          </p>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background to-muted/20 p-4">
+      <div className="text-center space-y-8 max-w-md">
+        {/* Large 404 Text */}
+        <div className="relative">
+          <h1 className="text-8xl md:text-9xl font-bold text-primary/20 select-none">
             404
           </h1>
-          <p className="mt-2 text-sm text-muted-foreground md:text-base">
-            The page you are looking for does not exist or may have been moved.
-          </p>
-        </CardContent>
-      </Card>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Search className="h-16 w-16 md:h-20 md:w-20 text-primary animate-pulse" />
+          </div>
+        </div>
 
-      <Card>
-        <CardContent className="flex flex-wrap items-center gap-2 p-4 md:p-5">
-          <Button type="button" asChild>
+        {/* Error Message */}
+        <div className="space-y-4">
+          <h2 className="text-2xl md:text-3xl font-semibold text-foreground">
+            Oops! Page Not Found
+          </h2>
+          <p className="text-muted-foreground text-lg">
+            The page you're looking for doesn't exist or has been moved.
+          </p>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <Button asChild size="lg" className="gap-2">
             <Link to={isAuthenticated ? "/dashboard" : "/"}>
               <Home className="h-4 w-4" />
-              {isAuthenticated ? "Go to Dashboard" : "Go to Home"}
+              {isAuthenticated ? "Back to Dashboard" : "Back to Home"}
             </Link>
           </Button>
-        </CardContent>
-      </Card>
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={() => window.history.back()}
+            className="gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Go Back
+          </Button>
+        </div>
+
+        {/* Decorative Elements */}
+        <div className="flex justify-center space-x-2">
+          <div
+            className="h-2 w-2 rounded-full bg-primary/30 animate-bounce"
+            style={{ animationDelay: "0ms" }}
+          ></div>
+          <div
+            className="h-2 w-2 rounded-full bg-primary/30 animate-bounce"
+            style={{ animationDelay: "150ms" }}
+          ></div>
+          <div
+            className="h-2 w-2 rounded-full bg-primary/30 animate-bounce"
+            style={{ animationDelay: "300ms" }}
+          ></div>
+        </div>
+      </div>
     </div>
-  )
+  );
 }

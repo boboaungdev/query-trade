@@ -102,6 +102,7 @@ import {
 } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useAuthStore } from "@/store/auth";
 import { cn } from "@/lib/utils";
 
@@ -862,7 +863,10 @@ export default function StrategyPage() {
       >
         <SheetContent
           side="right"
-          className="flex h-full w-full flex-col p-0 md:max-w-[92vw]"
+          className="flex h-full w-full flex-col overflow-x-hidden p-0 md:max-w-[92vw] lg:max-w-[960px] xl:max-w-[1100px]"
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+          }}
         >
           <SheetHeader className="border-b px-6 py-5">
             <SheetTitle>Create Strategy</SheetTitle>
@@ -891,7 +895,12 @@ export default function StrategyPage() {
               disabled={createSheetControls?.submitDisabled ?? true}
               className="w-full md:w-auto"
             >
-              {createSheetControls?.submitLabel ?? "Create Strategy"}
+              {createSheetControls?.isSubmitting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : null}
+              {createSheetControls?.isSubmitting
+                ? null
+                : (createSheetControls?.submitLabel ?? "Create Strategy")}
             </Button>
             <Button
               onClick={() => {
@@ -901,6 +910,7 @@ export default function StrategyPage() {
                   navigate(location.pathname, { replace: true });
                 }
               }}
+              disabled={createSheetControls?.isSubmitting ?? false}
               variant="outline"
               className="w-full md:w-auto"
             >
@@ -1089,11 +1099,11 @@ const indicatorCategoryOptions: Array<{
   value: IndicatorCategory | "all";
 }> = [
   { label: "All", value: "all" },
-  { label: "Trend", value: "trend" },
   { label: "Momentum", value: "momentum" },
+  { label: "SNR", value: "support_resistance" },
+  { label: "Trend", value: "trend" },
   { label: "Volatility", value: "volatility" },
   { label: "Volume", value: "volume" },
-  { label: "Support/Resistance", value: "support_resistance" },
 ];
 
 const indicatorSortOptions: Array<{
@@ -1487,9 +1497,16 @@ function serializeTakeProfit(takeProfit: TakeProfitDraft) {
   }
 }
 
-function serializeLogicBlock(block: LogicBlockDraft): StrategyLogicBlock {
+function serializeLogicBlock(
+  block: LogicBlockDraft,
+  sideLabel?: "Buy" | "Sell",
+): StrategyLogicBlock {
   if (block.conditions.length === 0) {
-    throw new Error("Each side needs at least one condition");
+    throw new Error(
+      sideLabel
+        ? `Add at least one ${sideLabel} rule`
+        : "Add at least one rule",
+    );
   }
 
   return {
@@ -1815,8 +1832,7 @@ function DraftLogicWord({ logic }: { logic: "and" | "or" }) {
   return (
     <span
       className={cn(
-        "mx-1 inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase",
-        logic === "and" ? "bg-info/10 text-info" : "bg-warning/10 text-warning",
+        "mx-1 inline-flex items-center justify-center px-1 text-[10px] font-medium tracking-[0.12em] text-muted-foreground uppercase",
       )}
     >
       {logic}
@@ -1979,13 +1995,48 @@ function LogicLabel({ children }: { children: string }) {
           side="top"
           className="w-60 p-3 text-xs text-muted-foreground"
         >
-          Use <span className="font-medium text-foreground">and</span> when
-          every rule must match. Use{" "}
-          <span className="font-medium text-foreground">or</span> when any one
-          rule can match.
+          <div className="space-y-1">
+            <p>
+              <span className="font-medium text-foreground">and</span> - when
+              every rule must match.
+            </p>
+            <p>
+              <span className="font-medium text-foreground">or</span> - when any
+              one rule can match.
+            </p>
+          </div>
         </PopoverContent>
       </Popover>
     </div>
+  );
+}
+
+function LogicToggle({
+  value,
+  onChange,
+}: {
+  value: "and" | "or";
+  onChange: (next: "and" | "or") => void;
+}) {
+  return (
+    <ToggleGroup
+      type="single"
+      value={value}
+      onValueChange={(nextValue) => {
+        if (nextValue === "and" || nextValue === "or") {
+          onChange(nextValue);
+        }
+      }}
+      variant="outline"
+      size="sm"
+    >
+      <ToggleGroupItem value="and" variant="outline" size="sm">
+        AND
+      </ToggleGroupItem>
+      <ToggleGroupItem value="or" variant="outline" size="sm">
+        OR
+      </ToggleGroupItem>
+    </ToggleGroup>
   );
 }
 
@@ -2137,9 +2188,9 @@ function ConditionEditor({
 
         <div className="space-y-3">
           {node.conditions.length > 1 && (
-            <div className="space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <LogicLabel>Group Logic</LogicLabel>
-              <DropdownField
+              <LogicToggle
                 value={node.logic}
                 onChange={(nextLogic) =>
                   onChange({
@@ -2147,36 +2198,38 @@ function ConditionEditor({
                     logic: nextLogic,
                   })
                 }
-                options={[
-                  { label: "and", value: "and" },
-                  { label: "or", value: "or" },
-                ]}
               />
             </div>
           )}
 
           {node.conditions.map((child, index) => (
-            <ConditionEditor
-              key={child.id}
-              node={child}
-              title={`Rule ${index + 1}`}
-              candleOptions={candleOptions}
-              indicatorFieldOptions={indicatorFieldOptions}
-              onChange={(next) =>
-                onChange({
-                  ...node,
-                  conditions: node.conditions.map((item) =>
-                    item.id === child.id ? next : item,
-                  ),
-                })
-              }
-              onRemove={() =>
-                onChange({
-                  ...node,
-                  conditions: removeConditionTree(node.conditions, child.id),
-                })
-              }
-            />
+            <div key={child.id} className="space-y-3">
+              {index > 0 ? (
+                <div className="flex justify-center">
+                  <DraftLogicWord logic={node.logic} />
+                </div>
+              ) : null}
+              <ConditionEditor
+                node={child}
+                title={`Rule ${index + 1}`}
+                candleOptions={candleOptions}
+                indicatorFieldOptions={indicatorFieldOptions}
+                onChange={(next) =>
+                  onChange({
+                    ...node,
+                    conditions: node.conditions.map((item) =>
+                      item.id === child.id ? next : item,
+                    ),
+                  })
+                }
+                onRemove={() =>
+                  onChange({
+                    ...node,
+                    conditions: removeConditionTree(node.conditions, child.id),
+                  })
+                }
+              />
+            </div>
           ))}
         </div>
 
@@ -2324,7 +2377,7 @@ function StopLossEditor({
           : `Using the average ${candleSideLabel} from ${candleSourceLabel}.`;
 
   return (
-    <div className="space-y-3 rounded-xl border p-4">
+    <div className="space-y-3">
       <div className="space-y-2">
         <HelpLabel
           children="Stop Loss Type"
@@ -2431,9 +2484,6 @@ function StopLossEditor({
                 }}
                 placeholder="0"
               />
-              <p className="hidden text-xs text-muted-foreground md:block">
-                {candleSelectionMessage}
-              </p>
             </div>
             <div className="space-y-2">
               <div className="flex items-center gap-1.5">
@@ -2461,7 +2511,7 @@ function StopLossEditor({
               />
             </div>
           </div>
-          <p className="text-xs text-muted-foreground md:hidden">
+          <p className="text-xs text-muted-foreground">
             {candleSelectionMessage}
           </p>
         </div>
@@ -2749,9 +2799,9 @@ function LogicBlockEditor({
                     <div className="space-y-4 p-4">
                       <div className="space-y-3">
                         {draft.conditions.length > 1 && (
-                          <div className="space-y-2">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
                             <LogicLabel>Root Logic</LogicLabel>
-                            <DropdownField
+                            <LogicToggle
                               value={draft.logic}
                               onChange={(nextLogic) =>
                                 onChange({
@@ -2759,11 +2809,6 @@ function LogicBlockEditor({
                                   logic: nextLogic,
                                 })
                               }
-                              compact
-                              options={[
-                                { label: "and", value: "and" },
-                                { label: "or", value: "or" },
-                              ]}
                             />
                           </div>
                         )}
@@ -2842,9 +2887,9 @@ function LogicBlockEditor({
                   <div className="space-y-4 p-4">
                     <div className="space-y-3">
                       {draft.conditions.length > 1 && (
-                        <div className="space-y-2">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
                           <LogicLabel>Root Logic</LogicLabel>
-                          <DropdownField
+                          <LogicToggle
                             value={draft.logic}
                             onChange={(nextLogic) =>
                               onChange({
@@ -2852,11 +2897,6 @@ function LogicBlockEditor({
                                 logic: nextLogic,
                               })
                             }
-                            compact
-                            options={[
-                              { label: "and", value: "and" },
-                              { label: "or", value: "or" },
-                            ]}
                           />
                         </div>
                       )}
@@ -3046,6 +3086,7 @@ function LogicBlockEditor({
 export type StrategyBuilderFooterControls = {
   submitLabel: string;
   submitDisabled: boolean;
+  isSubmitting: boolean;
   helperText: string | null;
   onSubmit: () => void;
 };
@@ -3099,7 +3140,7 @@ export function StrategyBuilder({
   const [sellDraft, setSellDraft] = useState<LogicBlockDraft>(
     createLogicBlockDraft(),
   );
-  const [isLoadingIndicators, setIsLoadingIndicators] = useState(true);
+  const [isLoadingIndicators, setIsLoadingIndicators] = useState(false);
   const [isLoadingStrategy, setIsLoadingStrategy] = useState(isEditing);
   const [initialPayloadSnapshot, setInitialPayloadSnapshot] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -3115,6 +3156,10 @@ export function StrategyBuilder({
   }, [indicatorSearch]);
 
   useEffect(() => {
+    if (!isIndicatorMenuOpen) {
+      return;
+    }
+
     const loadIndicators = async () => {
       if (indicatorPage === 1) {
         setIsLoadingIndicators(true);
@@ -3133,21 +3178,8 @@ export function StrategyBuilder({
 
         const items = response?.result?.indicators ?? [];
         setIndicatorOptions((prev) => {
-          const selectedIndicatorIds = new Set(
-            indicatorDrafts
-              .map((draft) => draft.indicator)
-              .filter((value): value is string => Boolean(value)),
-          );
-
           if (indicatorPage === 1) {
-            return Array.from(
-              new Map(
-                [
-                  ...prev.filter((item) => selectedIndicatorIds.has(item._id)),
-                  ...items,
-                ].map((item) => [item._id, item]),
-              ).values(),
-            );
+            return items;
           }
 
           return Array.from(
@@ -3167,9 +3199,9 @@ export function StrategyBuilder({
 
     void loadIndicators();
   }, [
+    isIndicatorMenuOpen,
     debouncedIndicatorSearch,
     indicatorCategory,
-    indicatorDrafts,
     indicatorOrder,
     indicatorPage,
     indicatorSortBy,
@@ -3255,10 +3287,10 @@ export function StrategyBuilder({
                 entry: {
                   buy:
                     strategy.entry?.buy ??
-                    serializeLogicBlock(createLogicBlockDraft()),
+                    serializeLogicBlock(createLogicBlockDraft(), "Buy"),
                   sell:
                     strategy.entry?.sell ??
-                    serializeLogicBlock(createLogicBlockDraft()),
+                    serializeLogicBlock(createLogicBlockDraft(), "Sell"),
                 },
               })
             : "",
@@ -3425,10 +3457,19 @@ export function StrategyBuilder({
         params: serializeParams(draft.params),
       };
     }),
-    entry: {
-      buy: serializeLogicBlock(buyDraft),
-      sell: serializeLogicBlock(sellDraft),
-    },
+    entry: (() => {
+      const hasBuyRules = buyDraft.conditions.length > 0;
+      const hasSellRules = sellDraft.conditions.length > 0;
+
+      if (!hasBuyRules && !hasSellRules) {
+        throw new Error("Add at least one Buy and Sell rule");
+      }
+
+      return {
+        buy: serializeLogicBlock(buyDraft, "Buy"),
+        sell: serializeLogicBlock(sellDraft, "Sell"),
+      };
+    })(),
   });
 
   const formValidationError = useMemo(() => {
@@ -3549,6 +3590,7 @@ export function StrategyBuilder({
     onEmbeddedControlsChange({
       submitLabel,
       submitDisabled,
+      isSubmitting,
       helperText,
       onSubmit: () => {
         void handleSubmit();
@@ -3568,9 +3610,10 @@ export function StrategyBuilder({
   ]);
 
   return (
-    <div
+    <fieldset
+      disabled={isSubmitting}
       className={cn(
-        "w-full space-y-4 md:space-y-6",
+        "min-w-0 w-full space-y-4 overflow-x-hidden border-0 p-0 md:space-y-6",
         embedded ? "p-4 md:p-6" : "mx-auto max-w-6xl",
       )}
     >
@@ -3620,9 +3663,14 @@ export function StrategyBuilder({
         </Card>
       ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
-        <div className="space-y-4">
-          <div className="space-y-4">
+      <div
+        className={cn(
+          "grid min-w-0 gap-4",
+          !embedded && "lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]",
+        )}
+      >
+        <div className="min-w-0 space-y-4">
+          <div className="min-w-0 space-y-4">
             <div className="space-y-2">
               <Label htmlFor="strategy-name">Strategy Name</Label>
               <Input
@@ -3671,59 +3719,63 @@ export function StrategyBuilder({
             </div>
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Indicators</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Add Indicator</Label>
-                <Dialog
-                  open={isIndicatorMenuOpen}
-                  onOpenChange={(open) => {
-                    setIsIndicatorMenuOpen(open);
-                    if (open) {
-                      setIndicatorPage(1);
-                    }
-                    if (!open) {
-                      setIndicatorSearch("");
-                      setIndicatorCategory("all");
-                      setIndicatorSortBy("name");
-                      setIndicatorOrder("asc");
-                      setIndicatorPage(1);
-                      setIsAppendingIndicators(false);
-                    }
+          <div className="min-w-0 space-y-4">
+            <h3 className="text-base font-semibold">Indicators</h3>
+            <div className="min-w-0 space-y-2">
+              <Dialog
+                open={isIndicatorMenuOpen}
+                onOpenChange={(open) => {
+                  setIsIndicatorMenuOpen(open);
+                  if (open) {
+                    setIndicatorPage(1);
+                  }
+                  if (!open) {
+                    setIndicatorSearch("");
+                    setIndicatorCategory("all");
+                    setIndicatorSortBy("name");
+                    setIndicatorOrder("asc");
+                    setIndicatorPage(1);
+                    setIsAppendingIndicators(false);
+                  }
+                }}
+              >
+                <DialogTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="h-auto w-full min-w-0 justify-between rounded-xl border border-dashed border-border/70 bg-muted/25 px-3 py-3 text-left whitespace-normal hover:bg-muted/45"
+                  >
+                    <span className="flex min-w-0 items-center gap-3">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border/70 bg-background">
+                        <Plus className="h-4 w-4" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-medium text-foreground">
+                          Add indicator
+                        </span>
+                        <span className="block break-words text-xs text-muted-foreground">
+                          Pick and configure an indicator
+                        </span>
+                      </span>
+                    </span>
+                  </Button>
+                </DialogTrigger>
+
+                <DialogContent
+                  className="top-[8vh] max-h-[calc(100vh-4rem)] -translate-y-0 gap-0 overflow-hidden p-0 md:top-[10vh] md:max-w-2xl"
+                  onOpenAutoFocus={(event) => {
+                    event.preventDefault();
                   }}
                 >
-                  <DialogTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className={cn(
-                        "relative w-full justify-start overflow-hidden pr-10 text-left",
-                        !isLoadingIndicators && "text-muted-foreground",
-                      )}
-                    >
-                      <span className="block min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
-                        {isLoadingIndicators
-                          ? "Loading indicators..."
-                          : "Search and add indicator"}
-                      </span>
-                      <ChevronsUpDown className="absolute top-1/2 right-3 h-4 w-4 shrink-0 -translate-y-1/2 opacity-50" />
-                    </Button>
-                  </DialogTrigger>
-
-                  <DialogContent
-                    className="top-[8vh] max-h-[calc(100vh-4rem)] -translate-y-0 gap-0 overflow-hidden p-0 md:top-[10vh] md:max-w-2xl"
-                    onOpenAutoFocus={(event) => {
-                      event.preventDefault();
-                    }}
-                  >
-                    <DialogHeader className="border-b px-4 pt-4 pb-3">
-                      <DialogTitle>Select indicator</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-3 px-4 pt-2 pb-2">
-                      <div className="relative">
+                  <DialogHeader className="border-b px-4 pt-4 pb-3">
+                    <DialogTitle>Add Indicator</DialogTitle>
+                    <DialogDescription>
+                      Browse and select an indicator to add to this strategy.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-3 px-4 py-3">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-end">
+                      <div className="relative min-w-0 flex-1">
                         <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
                           value={indicatorSearch}
@@ -3732,7 +3784,7 @@ export function StrategyBuilder({
                             setIndicatorPage(1);
                           }}
                           placeholder="Search"
-                          className="w-full pr-10 pl-9"
+                          className="w-full rounded-md border-0 border-b-2 border-foreground/15 bg-muted/60 pr-10 pl-9 focus-visible:border-primary focus-visible:ring-0 dark:bg-input/30"
                         />
                         <div className="absolute top-1/2 right-1.5 flex -translate-y-1/2 items-center">
                           <DropdownMenu modal={false}>
@@ -3796,412 +3848,435 @@ export function StrategyBuilder({
                           </DropdownMenu>
                         </div>
                       </div>
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {indicatorCategoryOptions.map((option) => (
-                          <Button
-                            key={option.value}
-                            type="button"
-                            variant={
-                              indicatorCategory === option.value
-                                ? "default"
-                                : "outline"
-                            }
-                            className="h-7 rounded-full px-2.5 text-[11px]"
-                            onClick={(event) => {
-                              event.preventDefault();
-                              event.stopPropagation();
-                              setIndicatorCategory(option.value);
-                              setIndicatorPage(1);
-                            }}
+                      <div className="flex w-full md:w-[180px] md:flex-none">
+                        <DropdownMenu modal={false}>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="h-8 w-full justify-between gap-2"
+                            >
+                              {
+                                indicatorCategoryOptions.find(
+                                  (option) =>
+                                    option.value === indicatorCategory,
+                                )?.label
+                              }
+                              <ChevronsUpDown className="h-3.5 w-3.5 opacity-60" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            align="start"
+                            onClick={(event) => event.stopPropagation()}
                           >
-                            {option.label}
-                          </Button>
-                        ))}
+                            <DropdownMenuLabel>Category</DropdownMenuLabel>
+                            <DropdownMenuRadioGroup
+                              value={indicatorCategory}
+                              onValueChange={(value) => {
+                                setIndicatorCategory(
+                                  value as IndicatorCategory | "all",
+                                );
+                                setIndicatorPage(1);
+                              }}
+                            >
+                              {indicatorCategoryOptions.map((option) => (
+                                <DropdownMenuRadioItem
+                                  key={option.value}
+                                  value={option.value}
+                                >
+                                  {option.label}
+                                </DropdownMenuRadioItem>
+                              ))}
+                            </DropdownMenuRadioGroup>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
-                    <DropdownMenuSeparator />
-                    {indicatorOptions.length === 0 ? (
-                      <p className="px-4 pb-4 text-xs text-muted-foreground">
-                        No indicators found.
-                      </p>
-                    ) : (
-                      <ScrollArea
-                        className={cn(
-                          "px-4 pb-4",
-                          indicatorOptions.length > 4 && "h-[320px]",
-                        )}
-                        onScrollCapture={(event) => {
-                          const node = event.target as HTMLElement;
-                          const distanceToBottom =
-                            node.scrollHeight -
-                            node.scrollTop -
-                            node.clientHeight;
+                  </div>
+                  <DropdownMenuSeparator />
+                  {isLoadingIndicators ? (
+                    <div className="flex items-center justify-center gap-2 px-4 pb-4 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Loading indicators...</span>
+                    </div>
+                  ) : indicatorOptions.length === 0 ? (
+                    <p className="px-4 pb-4 text-center text-sm text-muted-foreground">
+                      No indicators found.
+                    </p>
+                  ) : (
+                    <ScrollArea
+                      className={cn(
+                        "px-4 pb-4",
+                        indicatorOptions.length > 4 && "h-[320px]",
+                      )}
+                      onScrollCapture={(event) => {
+                        const node = event.target as HTMLElement;
+                        const distanceToBottom =
+                          node.scrollHeight -
+                          node.scrollTop -
+                          node.clientHeight;
 
-                          if (
-                            distanceToBottom < 24 &&
-                            indicatorHasNextPage &&
-                            !isLoadingIndicators &&
-                            !isAppendingIndicators
-                          ) {
-                            setIndicatorPage((prev) => prev + 1);
-                          }
-                        }}
-                      >
-                        <div className="space-y-0">
-                          {indicatorOptions.map((item) => (
-                            <div
-                              key={item._id}
-                              role="button"
-                              tabIndex={0}
-                              className="border-b border-border/60 px-2 py-2 text-left transition-colors hover:bg-accent/40 last:border-b-0"
-                              onClick={() => {
-                                appendIndicatorDraft(item._id);
-                                setIsIndicatorMenuOpen(false);
-                              }}
-                              onKeyDown={(event) => {
-                                if (
-                                  event.key !== "Enter" &&
-                                  event.key !== " "
-                                ) {
-                                  return;
-                                }
-
-                                event.preventDefault();
-                                appendIndicatorDraft(item._id);
-                                setIsIndicatorMenuOpen(false);
-                              }}
-                            >
-                              <span className="block w-full truncate text-sm">
-                                <span className="font-medium">{item.name}</span>
-                                <span className="text-muted-foreground">
-                                  {" "}
-                                  - {item.description}
-                                </span>
-                              </span>
-                            </div>
-                          ))}
-                          {indicatorHasNextPage ? (
-                            <div className="flex h-10 items-center justify-center">
-                              {isAppendingIndicators ? (
-                                <>
-                                  <Loader2 className="mr-2 h-4 w-4 animate-spin text-muted-foreground" />
-                                  <span className="text-sm text-muted-foreground">
-                                    Loading...
-                                  </span>
-                                </>
-                              ) : null}
-                            </div>
-                          ) : null}
-                        </div>
-                      </ScrollArea>
-                    )}
-                  </DialogContent>
-                </Dialog>
-              </div>
-
-              {indicatorDrafts.length === 0 ? (
-                <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-                  No indicators added yet. Open the dropdown above and choose
-                  one.
-                </div>
-              ) : (
-                indicatorDrafts.map((draft, index) => {
-                  return (
-                    <div
-                      key={draft.id}
-                      className="rounded-xl border border-border/60 p-2.5 md:p-3"
+                        if (
+                          distanceToBottom < 24 &&
+                          indicatorHasNextPage &&
+                          !isLoadingIndicators &&
+                          !isAppendingIndicators
+                        ) {
+                          setIndicatorPage((prev) => prev + 1);
+                        }
+                      }}
                     >
-                      <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-                        <div className="min-w-0 flex-1 space-y-1.5">
-                          <p className="text-sm font-medium break-words">
-                            {index + 1}.{" "}
-                            {draft.indicatorName || "Unknown indicator"}
-                          </p>
-                          {draft.params.length === 0 ? (
-                            <p className="text-xs break-words text-muted-foreground">
-                              No params
-                            </p>
-                          ) : (
-                            <div className="space-y-1 text-xs text-muted-foreground">
-                              {draft.params.map((param) => (
-                                <p key={param.id} className="break-words">
-                                  {param.key}: {param.value}
-                                </p>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="flex w-full gap-2 self-start md:w-auto md:self-center">
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon-sm"
-                                aria-label={`Edit indicator ${index + 1}`}
-                                title="Edit indicator"
-                              >
-                                <Settings2 className="h-4 w-4" />
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent
-                              onOpenAutoFocus={(event) =>
-                                event.preventDefault()
+                      <div className="space-y-0">
+                        {indicatorOptions.map((item) => (
+                          <div
+                            key={item._id}
+                            role="button"
+                            tabIndex={0}
+                            className="border-b border-border/60 px-2 py-2 text-left transition-colors hover:bg-accent/40 last:border-b-0"
+                            onClick={() => {
+                              appendIndicatorDraft(item._id);
+                              setIsIndicatorMenuOpen(false);
+                            }}
+                            onKeyDown={(event) => {
+                              if (event.key !== "Enter" && event.key !== " ") {
+                                return;
                               }
-                              className="top-[8vh] max-h-[calc(100vh-4rem)] -translate-y-0 gap-0 overflow-hidden p-0 md:top-[10vh] md:max-w-[420px]"
+
+                              event.preventDefault();
+                              appendIndicatorDraft(item._id);
+                              setIsIndicatorMenuOpen(false);
+                            }}
+                          >
+                            <div className="min-w-0 space-y-0.5">
+                              <p className="truncate text-sm font-medium">
+                                {item.name}
+                              </p>
+                              <p className="line-clamp-2 text-xs text-muted-foreground">
+                                {item.description}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                        {indicatorHasNextPage ? (
+                          <div className="flex h-10 items-center justify-center">
+                            {isAppendingIndicators ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin text-muted-foreground" />
+                                <span className="text-sm text-muted-foreground">
+                                  Loading...
+                                </span>
+                              </>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </div>
+                    </ScrollArea>
+                  )}
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            {indicatorDrafts.length === 0 ? (
+              <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                No indicators added yet. Click the Add indicator button to
+                choose one.
+              </div>
+            ) : (
+              indicatorDrafts.map((draft, index) => {
+                return (
+                  <div
+                    key={draft.id}
+                    className="rounded-xl border border-border/60 p-2.5 md:p-3"
+                  >
+                    <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                      <div className="min-w-0 flex-1 space-y-1.5">
+                        <p className="text-sm font-medium break-words">
+                          {index + 1}.{" "}
+                          {draft.indicatorName || "Unknown indicator"}
+                        </p>
+                        {draft.params.length === 0 ? (
+                          <p className="text-xs break-words text-muted-foreground">
+                            No params
+                          </p>
+                        ) : (
+                          <div className="space-y-1 text-xs text-muted-foreground">
+                            {draft.params.map((param) => (
+                              <p key={param.id} className="break-words">
+                                {param.key}: {param.value}
+                              </p>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex w-full gap-2 self-start md:w-auto md:self-center">
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-sm"
+                              aria-label={`Edit indicator ${index + 1}`}
+                              title="Edit indicator"
                             >
-                              <DialogHeader className="border-b px-4 pt-4 pb-3">
-                                <DialogTitle>
-                                  {draft.indicatorName || "Indicator"}
-                                </DialogTitle>
-                                <DialogDescription className="break-words">
-                                  {draft.indicatorDescription ||
-                                    "Edit indicator source and parameter values."}
-                                </DialogDescription>
-                              </DialogHeader>
-                              <div className="space-y-4 p-4">
-                                <div className="grid items-center gap-2 md:grid-cols-[72px_minmax(0,1fr)] md:gap-3">
-                                  <div>
-                                    <Label>source</Label>
-                                  </div>
-                                  <div className="md:max-w-[180px]">
-                                    <DropdownField
-                                      value={draft.source}
-                                      onChange={(nextSource) =>
-                                        updateIndicatorDraft(
-                                          draft.id,
-                                          (current) => ({
-                                            ...current,
-                                            source: nextSource,
-                                          }),
-                                        )
-                                      }
-                                      options={sourceOptions.map((source) => ({
-                                        label: source,
-                                        value: source,
-                                      }))}
-                                    />
-                                  </div>
+                              <Settings2 className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent
+                            onOpenAutoFocus={(event) => event.preventDefault()}
+                            className="top-[8vh] max-h-[calc(100vh-4rem)] -translate-y-0 gap-0 overflow-hidden p-0 md:top-[10vh] md:max-w-[420px]"
+                          >
+                            <DialogHeader className="border-b px-4 pt-4 pb-3">
+                              <DialogTitle>
+                                {draft.indicatorName || "Indicator"}
+                              </DialogTitle>
+                              <DialogDescription className="break-words">
+                                {draft.indicatorDescription ||
+                                  "Edit indicator source and parameter values."}
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-4 p-4">
+                              <div className="grid items-center gap-2 md:grid-cols-[72px_minmax(0,1fr)] md:gap-3">
+                                <div>
+                                  <Label>source</Label>
                                 </div>
+                                <div className="md:max-w-[180px]">
+                                  <DropdownField
+                                    value={draft.source}
+                                    onChange={(nextSource) =>
+                                      updateIndicatorDraft(
+                                        draft.id,
+                                        (current) => ({
+                                          ...current,
+                                          source: nextSource,
+                                        }),
+                                      )
+                                    }
+                                    options={sourceOptions.map((source) => ({
+                                      label: source,
+                                      value: source,
+                                    }))}
+                                  />
+                                </div>
+                              </div>
 
-                                {draft.params.length > 0 && (
-                                  <div className="space-y-3">
-                                    <Label>Parameters</Label>
-                                    <div className="space-y-2 rounded-lg border p-3">
-                                      {draft.params.map((param) =>
-                                        (() => {
-                                          const paramHelpText =
-                                            getParamHelpText(param.key);
+                              {draft.params.length > 0 && (
+                                <div className="space-y-3">
+                                  <Label>Parameters</Label>
+                                  <div className="space-y-2 rounded-lg border p-3">
+                                    {draft.params.map((param) =>
+                                      (() => {
+                                        const paramHelpText = getParamHelpText(
+                                          param.key,
+                                        );
 
-                                          return (
-                                            <div
-                                              key={param.id}
-                                              className={cn(
-                                                "grid items-center gap-1.5 md:gap-2",
-                                                param.type === "boolean"
-                                                  ? "grid-cols-[minmax(0,1fr)_auto]"
-                                                  : "md:grid-cols-[minmax(0,1fr)_minmax(120px,160px)]",
-                                              )}
-                                            >
-                                              <div>
-                                                <div className="flex min-h-8 items-center gap-1.5 rounded-lg px-1 text-sm font-medium text-foreground">
-                                                  <span>{param.key}</span>
-                                                  {paramHelpText && (
-                                                    <ParamHelpTooltip
-                                                      label={param.key}
-                                                      content={paramHelpText}
-                                                    />
-                                                  )}
-                                                </div>
-                                              </div>
-
-                                              <div
-                                                className={
-                                                  param.type === "boolean"
-                                                    ? "w-fit"
-                                                    : "md:max-w-[160px]"
-                                                }
-                                              >
-                                                {param.type === "boolean" ? (
-                                                  <div className="flex h-8 items-center">
-                                                    <Switch
-                                                      checked={
-                                                        param.value === "true"
-                                                      }
-                                                      onCheckedChange={(
-                                                        checked,
-                                                      ) =>
-                                                        updateIndicatorDraft(
-                                                          draft.id,
-                                                          (current) => {
-                                                            const params =
-                                                              current.params.map(
-                                                                (item) =>
-                                                                  item.id ===
-                                                                  param.id
-                                                                    ? {
-                                                                        ...item,
-                                                                        value:
-                                                                          checked
-                                                                            ? "true"
-                                                                            : "false",
-                                                                      }
-                                                                    : item,
-                                                              );
-                                                            const indicatorName =
-                                                              current.indicatorName ??
-                                                              "";
-
-                                                            return {
-                                                              ...current,
-                                                              params,
-                                                              key: indicatorName
-                                                                ? buildUniqueIndicatorKey(
-                                                                    indicatorName,
-                                                                    params,
-                                                                    indicatorDrafts,
-                                                                    current.id,
-                                                                  )
-                                                                : current.key,
-                                                            };
-                                                          },
-                                                        )
-                                                      }
-                                                    />
-                                                  </div>
-                                                ) : (
-                                                  <Input
-                                                    className="h-8"
-                                                    value={param.value}
-                                                    onChange={(event) =>
-                                                      updateIndicatorDraft(
-                                                        draft.id,
-                                                        (current) => {
-                                                          const params =
-                                                            current.params.map(
-                                                              (item) =>
-                                                                item.id ===
-                                                                param.id
-                                                                  ? {
-                                                                      ...item,
-                                                                      value:
-                                                                        param.type ===
-                                                                        "number"
-                                                                          ? sanitizeDecimalInput(
-                                                                              event
-                                                                                .target
-                                                                                .value,
-                                                                            )
-                                                                          : event
-                                                                              .target
-                                                                              .value,
-                                                                    }
-                                                                  : item,
-                                                            );
-                                                          const indicatorName =
-                                                            current.indicatorName ??
-                                                            "";
-
-                                                          return {
-                                                            ...current,
-                                                            params,
-                                                            key: indicatorName
-                                                              ? buildUniqueIndicatorKey(
-                                                                  indicatorName,
-                                                                  params,
-                                                                  indicatorDrafts,
-                                                                  current.id,
-                                                                )
-                                                              : current.key,
-                                                          };
-                                                        },
-                                                      )
-                                                    }
-                                                    onBlur={() =>
-                                                      updateIndicatorDraft(
-                                                        draft.id,
-                                                        (current) => {
-                                                          const params =
-                                                            current.params.map(
-                                                              (item) =>
-                                                                item.id ===
-                                                                param.id
-                                                                  ? {
-                                                                      ...item,
-                                                                      value:
-                                                                        param.type ===
-                                                                        "number"
-                                                                          ? fallbackInputValue(
-                                                                              item.value,
-                                                                              item.defaultValue,
-                                                                            )
-                                                                          : item.value,
-                                                                    }
-                                                                  : item,
-                                                            );
-                                                          const indicatorName =
-                                                            current.indicatorName ??
-                                                            "";
-
-                                                          return {
-                                                            ...current,
-                                                            params,
-                                                            key: indicatorName
-                                                              ? buildUniqueIndicatorKey(
-                                                                  indicatorName,
-                                                                  params,
-                                                                  indicatorDrafts,
-                                                                  current.id,
-                                                                )
-                                                              : current.key,
-                                                          };
-                                                        },
-                                                      )
-                                                    }
-                                                    placeholder={
-                                                      param.defaultValue ||
-                                                      "value"
-                                                    }
+                                        return (
+                                          <div
+                                            key={param.id}
+                                            className={cn(
+                                              "grid items-center gap-1.5 md:gap-2",
+                                              param.type === "boolean"
+                                                ? "grid-cols-[minmax(0,1fr)_auto]"
+                                                : "md:grid-cols-[minmax(0,1fr)_minmax(120px,160px)]",
+                                            )}
+                                          >
+                                            <div>
+                                              <div className="flex min-h-8 items-center gap-1.5 rounded-lg px-1 text-sm font-medium text-foreground">
+                                                <span>{param.key}</span>
+                                                {paramHelpText && (
+                                                  <ParamHelpTooltip
+                                                    label={param.key}
+                                                    content={paramHelpText}
                                                   />
                                                 )}
                                               </div>
                                             </div>
-                                          );
-                                        })(),
-                                      )}
-                                    </div>
+
+                                            <div
+                                              className={
+                                                param.type === "boolean"
+                                                  ? "w-fit"
+                                                  : "md:max-w-[160px]"
+                                              }
+                                            >
+                                              {param.type === "boolean" ? (
+                                                <div className="flex h-8 items-center">
+                                                  <Switch
+                                                    checked={
+                                                      param.value === "true"
+                                                    }
+                                                    onCheckedChange={(
+                                                      checked,
+                                                    ) =>
+                                                      updateIndicatorDraft(
+                                                        draft.id,
+                                                        (current) => {
+                                                          const params =
+                                                            current.params.map(
+                                                              (item) =>
+                                                                item.id ===
+                                                                param.id
+                                                                  ? {
+                                                                      ...item,
+                                                                      value:
+                                                                        checked
+                                                                          ? "true"
+                                                                          : "false",
+                                                                    }
+                                                                  : item,
+                                                            );
+                                                          const indicatorName =
+                                                            current.indicatorName ??
+                                                            "";
+
+                                                          return {
+                                                            ...current,
+                                                            params,
+                                                            key: indicatorName
+                                                              ? buildUniqueIndicatorKey(
+                                                                  indicatorName,
+                                                                  params,
+                                                                  indicatorDrafts,
+                                                                  current.id,
+                                                                )
+                                                              : current.key,
+                                                          };
+                                                        },
+                                                      )
+                                                    }
+                                                  />
+                                                </div>
+                                              ) : (
+                                                <Input
+                                                  className="h-8"
+                                                  value={param.value}
+                                                  onChange={(event) =>
+                                                    updateIndicatorDraft(
+                                                      draft.id,
+                                                      (current) => {
+                                                        const params =
+                                                          current.params.map(
+                                                            (item) =>
+                                                              item.id ===
+                                                              param.id
+                                                                ? {
+                                                                    ...item,
+                                                                    value:
+                                                                      param.type ===
+                                                                      "number"
+                                                                        ? sanitizeDecimalInput(
+                                                                            event
+                                                                              .target
+                                                                              .value,
+                                                                          )
+                                                                        : event
+                                                                            .target
+                                                                            .value,
+                                                                  }
+                                                                : item,
+                                                          );
+                                                        const indicatorName =
+                                                          current.indicatorName ??
+                                                          "";
+
+                                                        return {
+                                                          ...current,
+                                                          params,
+                                                          key: indicatorName
+                                                            ? buildUniqueIndicatorKey(
+                                                                indicatorName,
+                                                                params,
+                                                                indicatorDrafts,
+                                                                current.id,
+                                                              )
+                                                            : current.key,
+                                                        };
+                                                      },
+                                                    )
+                                                  }
+                                                  onBlur={() =>
+                                                    updateIndicatorDraft(
+                                                      draft.id,
+                                                      (current) => {
+                                                        const params =
+                                                          current.params.map(
+                                                            (item) =>
+                                                              item.id ===
+                                                              param.id
+                                                                ? {
+                                                                    ...item,
+                                                                    value:
+                                                                      param.type ===
+                                                                      "number"
+                                                                        ? fallbackInputValue(
+                                                                            item.value,
+                                                                            item.defaultValue,
+                                                                          )
+                                                                        : item.value,
+                                                                  }
+                                                                : item,
+                                                          );
+                                                        const indicatorName =
+                                                          current.indicatorName ??
+                                                          "";
+
+                                                        return {
+                                                          ...current,
+                                                          params,
+                                                          key: indicatorName
+                                                            ? buildUniqueIndicatorKey(
+                                                                indicatorName,
+                                                                params,
+                                                                indicatorDrafts,
+                                                                current.id,
+                                                              )
+                                                            : current.key,
+                                                        };
+                                                      },
+                                                    )
+                                                  }
+                                                  placeholder={
+                                                    param.defaultValue ||
+                                                    "value"
+                                                  }
+                                                />
+                                              )}
+                                            </div>
+                                          </div>
+                                        );
+                                      })(),
+                                    )}
                                   </div>
-                                )}
-                              </div>
-                            </DialogContent>
-                          </Dialog>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-sm"
-                            className="text-destructive hover:text-destructive/80"
-                            onClick={() =>
-                              setIndicatorDrafts((prev) =>
-                                prev.filter((item) => item.id !== draft.id),
-                              )
-                            }
-                            aria-label={`Remove indicator ${index + 1}`}
-                            title="Remove indicator"
-                          >
-                            <Minus className="h-4 w-4" />
-                          </Button>
-                        </div>
+                                </div>
+                              )}
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          className="text-destructive hover:text-destructive/80"
+                          onClick={() =>
+                            setIndicatorDrafts((prev) =>
+                              prev.filter((item) => item.id !== draft.id),
+                            )
+                          }
+                          aria-label={`Remove indicator ${index + 1}`}
+                          title="Remove indicator"
+                        >
+                          <Minus className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
-                  );
-                })
-              )}
-            </CardContent>
-          </Card>
+                  </div>
+                );
+              })
+            )}
+          </div>
         </div>
 
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <LogicBlockEditor
             title="Buy Entry"
             description="Set the buy-side root logic, nested conditions, and risk management."
@@ -4254,6 +4329,6 @@ export function StrategyBuilder({
           ) : null}
         </div>
       </div>
-    </div>
+    </fieldset>
   );
 }

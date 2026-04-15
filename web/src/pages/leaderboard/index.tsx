@@ -400,26 +400,6 @@ export default function LeaderboardPage() {
           </div>
 
           <Tabs
-            value={duration}
-            onValueChange={(value) => {
-              setDuration(value as BacktestDurationFilter);
-              setPage(1);
-            }}
-          >
-            <TabsList variant="line" className="w-full justify-start py-1">
-              {durationFilterOptions.map((option) => (
-                <TabsTrigger
-                  key={option.value}
-                  value={option.value}
-                  className="data-[state=active]:text-primary data-[state=active]:after:bg-primary dark:data-[state=active]:text-primary dark:data-[state=active]:after:bg-primary"
-                >
-                  {option.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
-
-          <Tabs
             value={source}
             onValueChange={(value) => {
               setSource(value as "all" | "me");
@@ -529,6 +509,29 @@ export default function LeaderboardPage() {
                 </div>
               </div>
             </div>
+          </Tabs>
+
+          <Tabs
+            value={duration}
+            onValueChange={(value) => {
+              setDuration(value as BacktestDurationFilter);
+              setPage(1);
+            }}
+          >
+            <TabsList
+              variant="line"
+              className="w-full justify-start py-1 md:w-fit"
+            >
+              {durationFilterOptions.map((option) => (
+                <TabsTrigger
+                  key={option.value}
+                  value={option.value}
+                  className="data-[state=active]:text-primary data-[state=active]:after:bg-primary dark:data-[state=active]:text-primary dark:data-[state=active]:after:bg-primary md:flex-none"
+                >
+                  {option.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
           </Tabs>
         </CardHeader>
       </Card>
