@@ -3,9 +3,15 @@ import { evaluateCondition } from "./evaluateConditions.js";
 import { closePosition, openPosition } from "./tradeExecutor.js";
 import { buildRiskTargets, getRiskExit } from "./riskManagement.js";
 
-const createContext = ({ candles, indicatorValues, index }) => ({
+const createContext = ({
+  candles,
+  indicatorValues,
+  riskIndicatorValues,
+  index,
+}) => ({
   candle: candles[index],
   indicators: indicatorValues[index] || {},
+  riskIndicators: riskIndicatorValues[index] || {},
 });
 
 const hasEnoughBalance = ({ balance, amountPerTrade }) =>
@@ -93,6 +99,7 @@ export const simulateBacktest = ({
   candles,
   strategy,
   indicatorValues,
+  riskIndicatorValues = [],
   initialBalance,
   amountPerTrade,
   entryFeeRate,
@@ -137,10 +144,16 @@ export const simulateBacktest = ({
 
   for (let index = 1; index < candles.length; index += 1) {
     const candle = candles[index];
-    const context = createContext({ candles, indicatorValues, index });
+    const context = createContext({
+      candles,
+      indicatorValues,
+      riskIndicatorValues,
+      index,
+    });
     const previousContext = createContext({
       candles,
       indicatorValues,
+      riskIndicatorValues,
       index: index - 1,
     });
 

@@ -10,6 +10,9 @@ const getNestedValue = (target, path) => {
 const resolveIndicatorValue = (indicatorKey, context) =>
   getNestedValue(context?.indicators, indicatorKey) ?? null;
 
+const resolveRiskIndicatorValue = (indicatorKey, context) =>
+  getNestedValue(context?.riskIndicators, indicatorKey) ?? null;
+
 const aggregateValues = ({ values, aggregation }) => {
   if (!values.length) return null;
 
@@ -100,7 +103,7 @@ const resolveStopLossPrice = ({
   }
 
   if (rule.type === "atr") {
-    const atrValue = resolveIndicatorValue(`atr_${rule.period}`, context);
+    const atrValue = resolveRiskIndicatorValue(`atr_${rule.period}`, context);
     if (atrValue == null) return null;
 
     return side === "buy"
@@ -117,7 +120,6 @@ const resolveTakeProfitPrice = ({
   stopLossPrice,
   rule,
   context,
-  previousContext,
 }) => {
   if (!rule) return null;
 

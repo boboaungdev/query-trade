@@ -35,14 +35,6 @@ const collectRiskManagementReferences = (riskManagement, usedKeys) => {
     addIndicatorReference(stopLoss.indicator, usedKeys);
   }
 
-  if (
-    stopLoss?.type === "atr" &&
-    Number.isInteger(stopLoss.period) &&
-    stopLoss.period > 0
-  ) {
-    usedKeys.add(`atr_${stopLoss.period}`);
-  }
-
   if (takeProfit?.type === "indicator") {
     addIndicatorReference(takeProfit.indicator, usedKeys);
   }
@@ -100,4 +92,25 @@ export const validateIndicatorReferences = (strategy) => {
         matchesIndicatorKey(usedKey, indicator?.key),
       ),
   );
+};
+
+export const extractRequiredAtrPeriods = (strategy) => {
+  const periods = new Set();
+
+  const maybeAddPeriod = (block) => {
+    const period = block?.riskManagement?.stopLoss?.period;
+
+    if (block?.riskManagement?.stopLoss?.type !== "atr") {
+      return;
+    }
+
+    if (Number.isInteger(period) && period > 0) {
+      periods.add(period);
+    }
+  };
+
+  maybeAddPeriod(strategy?.entry?.buy);
+  maybeAddPeriod(strategy?.entry?.sell);
+
+  return [...periods];
 };

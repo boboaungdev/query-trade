@@ -4,7 +4,11 @@ import { UserDB } from "../../models/user.js";
 import { resError, resJson } from "../../utils/response.js";
 import { fetchOHLCV } from "../../services/backtest/fetchOHLCV.js";
 import { simulateBacktest } from "../../services/backtest/simulateBacktest.js";
-import { calculateIndicators } from "../../services/backtest/calculateIndicators.js";
+import {
+  calculateIndicators,
+  calculateRiskIndicators,
+} from "../../services/backtest/calculateIndicators.js";
+import { extractRequiredAtrPeriods } from "../../utils/strategyIndicators.js";
 
 export const createBacktest = async (req, res, next) => {
   try {
@@ -47,11 +51,16 @@ export const createBacktest = async (req, res, next) => {
       candles,
       indicators: strategy.indicators,
     });
+    const riskIndicatorValues = calculateRiskIndicators({
+      candles,
+      atrPeriods: extractRequiredAtrPeriods(strategy),
+    });
 
     const result = simulateBacktest({
       symbol,
       candles,
       indicatorValues,
+      riskIndicatorValues,
       strategy,
       initialBalance,
       amountPerTrade,

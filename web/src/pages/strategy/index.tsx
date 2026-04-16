@@ -30,7 +30,6 @@ import {
   Settings2,
   Trash2,
   X,
-  Minus,
   MoreHorizontal,
   TrendingDown,
   TrendingUp,
@@ -2049,22 +2048,22 @@ function DraftRiskTile({
   return (
     <div
       className={cn(
-        "rounded-xl border px-2.5 py-2",
+        "w-full rounded-xl border px-2.5 py-2",
         label === "Stop Loss"
           ? "border-destructive/20 bg-destructive/8"
           : "border-info/20 bg-info/8",
       )}
     >
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="text-[11px] font-medium tracking-[0.16em] text-muted-foreground uppercase">
             {label}
           </p>
-          <p className="mt-1 text-sm leading-5 font-medium text-foreground">
+          <p className="mt-1 text-sm leading-5 font-medium break-words text-foreground [overflow-wrap:anywhere]">
             {value}
           </p>
         </div>
-        {editContent}
+        {editContent ? <div className="shrink-0">{editContent}</div> : null}
       </div>
     </div>
   );
@@ -2223,7 +2222,7 @@ function OperandEditor({
                   })
             }
             placeholder="Add indicators first"
-            disabled={indicatorFieldOptions.length === 1}
+            disabled={!hasIndicatorOptions}
             options={indicatorFieldOptions}
           />
         ) : (
@@ -4385,14 +4384,18 @@ export function StrategyBuilder({
                             );
                           }}
                           disabled={isUsedInStrategy}
-                          aria-label={`Remove indicator ${index + 1}`}
+                          aria-label={`Clear indicator ${index + 1}`}
                           title={
                             isUsedInStrategy
-                              ? "This indicator is used in rules or risk settings"
-                              : "Remove indicator"
+                              ? "This indicator is used in rules or risk settings, so clear is disabled"
+                              : "Clear indicator"
                           }
                         >
-                          <Minus className="h-4 w-4" />
+                          {isUsedInStrategy ? (
+                            <Lock className="h-4 w-4" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
                         </Button>
                       </div>
                     </div>

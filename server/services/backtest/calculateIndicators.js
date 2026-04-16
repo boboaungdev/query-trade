@@ -140,3 +140,30 @@ export const calculateIndicators = ({ candles, indicators }) => {
     return row;
   });
 };
+
+export const calculateRiskIndicators = ({ candles, atrPeriods = [] }) => {
+  const uniqueAtrPeriods = [
+    ...new Set(
+      atrPeriods.filter(
+        (period) => Number.isInteger(period) && Number.isFinite(period) && period > 0,
+      ),
+    ),
+  ];
+
+  if (uniqueAtrPeriods.length === 0) {
+    return candles.map(() => ({}));
+  }
+
+  const syntheticAtrIndicators = uniqueAtrPeriods.map((period) => ({
+    key: `atr_${period}`,
+    indicator: {
+      name: "atr",
+      params: { period },
+    },
+  }));
+
+  return calculateIndicators({
+    candles,
+    indicators: syntheticAtrIndicators,
+  });
+};

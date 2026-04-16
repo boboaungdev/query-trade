@@ -339,7 +339,7 @@ function RiskTile({
       <p className="text-[11px] font-medium tracking-[0.16em] text-muted-foreground uppercase">
         {label}
       </p>
-      <p className="mt-1 text-sm leading-5 font-medium text-foreground">
+      <p className="mt-1 text-sm leading-5 font-medium break-words text-foreground [overflow-wrap:anywhere]">
         {value}
       </p>
     </div>
@@ -752,7 +752,7 @@ export default function StrategyDetailPage() {
               <Button
                 type="button"
                 variant="ghost"
-                className="theme-glass-button w-fit px-2 text-muted-foreground hover:text-foreground"
+                className="w-fit px-2 text-muted-foreground hover:text-foreground"
                 onClick={() => {
                   if (fromProfileUrl) {
                     navigate(fromProfileUrl, { replace: true });
