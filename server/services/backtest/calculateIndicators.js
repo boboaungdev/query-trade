@@ -26,8 +26,8 @@ const indicatorRegistry = {
       fastPeriod: ind.fastPeriod,
       slowPeriod: ind.slowPeriod,
       signalPeriod: ind.signalPeriod,
-      SimpleMAOscillator: ind.SimpleMAOscillator,
-      SimpleMASignal: ind.SimpleMASignal,
+      SimpleMAOscillator: false,
+      SimpleMASignal: false,
     }),
 
   bb: ({ ind, values }) =>
@@ -145,7 +145,8 @@ export const calculateRiskIndicators = ({ candles, atrPeriods = [] }) => {
   const uniqueAtrPeriods = [
     ...new Set(
       atrPeriods.filter(
-        (period) => Number.isInteger(period) && Number.isFinite(period) && period > 0,
+        (period) =>
+          Number.isInteger(period) && Number.isFinite(period) && period > 0,
       ),
     ),
   ];

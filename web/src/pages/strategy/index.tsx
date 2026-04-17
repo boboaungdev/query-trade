@@ -72,6 +72,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  Command,
+  CommandGroup,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -1192,21 +1198,41 @@ function inferParamType(value: unknown): ParamType {
   return "string";
 }
 
-function createParamDrafts(params?: Record<string, unknown>): ParamDraft[] {
+function shouldHideIndicatorParam(indicatorName: string, paramKey: string) {
+  const normalizedIndicatorName = indicatorName.trim().toLowerCase();
+  const normalizedParamKey = paramKey.trim().toLowerCase();
+
+  return (
+    normalizedIndicatorName === "macd" &&
+    (normalizedParamKey === "simplemaoscillator" ||
+      normalizedParamKey === "simplemasignal")
+  );
+}
+
+function createParamDrafts(
+  params?: Record<string, unknown>,
+  indicatorName = "",
+): ParamDraft[] {
   if (!params) return [];
 
-  return Object.entries(params).map(([key, value]) => ({
-    id: createId(),
-    key,
-    value: String(value),
-    defaultValue: String(value),
-    type: inferParamType(value),
-  }));
+  return Object.entries(params)
+    .filter(([key]) => !shouldHideIndicatorParam(indicatorName, key))
+    .map(([key, value]) => ({
+      id: createId(),
+      key,
+      value: String(value),
+      defaultValue: String(value),
+      type: inferParamType(value),
+    }));
 }
 
 function buildIndicatorKey(name: string, params: ParamDraft[]) {
   const base = name.trim().toLowerCase().replace(/\s+/g, "_");
   const suffix = params
+    .filter((param) => {
+      const key = param.key.trim().toLowerCase();
+      return key !== "simplemaoscillator" && key !== "simplemasignal";
+    })
     .map((param) => String(param.value).trim())
     .filter(Boolean)
     .join("_");
@@ -1356,10 +1382,6 @@ function isIndicatorDraftUsed(draft: IndicatorDraft, usedKeys: Set<string>) {
 
 function getParamHelpText(paramKey: string) {
   switch (paramKey) {
-    case "SimpleMAOscillator":
-      return "Use SMA instead of EMA for the MACD fast and slow oscillator lines.";
-    case "SimpleMASignal":
-      return "Use SMA instead of EMA for the MACD signal line.";
     default:
       return "";
   }
@@ -1778,6 +1800,7 @@ function DropdownField<T extends string>({
     return groups;
   }, []);
   const shouldScroll = options.length > 7;
+  const scrollAreaRef = useRef<HTMLDivElement | null>(null);
 
   const dropdownItems = (
     <DropdownMenuRadioGroup
@@ -1797,7 +1820,7 @@ function DropdownField<T extends string>({
               key={option.value}
               value={option.value}
               disabled={option.disabled}
-              className="pl-2.5"
+              className="min-w-0 pl-2.5"
             >
               {option.label}
             </DropdownMenuRadioItem>
@@ -1831,7 +1854,32 @@ function DropdownField<T extends string>({
         className="w-[var(--radix-dropdown-menu-trigger-width)] overflow-hidden bg-popover p-0"
       >
         {shouldScroll ? (
-          <ScrollArea className="h-56">{dropdownItems}</ScrollArea>
+          <ScrollArea
+            ref={scrollAreaRef}
+            className="h-44"
+            onWheelCapture={(event) => {
+              const viewport = scrollAreaRef.current?.querySelector<HTMLElement>(
+                '[data-slot="scroll-area-viewport"]',
+              );
+
+              if (!viewport) {
+                return;
+              }
+
+              const canScroll =
+                viewport.scrollHeight > viewport.clientHeight &&
+                event.deltaY !== 0;
+
+              if (!canScroll) {
+                return;
+              }
+
+              event.preventDefault();
+              viewport.scrollTop += event.deltaY;
+            }}
+          >
+            {dropdownItems}
+          </ScrollArea>
         ) : (
           dropdownItems
         )}
@@ -2048,10 +2096,10 @@ function DraftRiskTile({
   return (
     <div
       className={cn(
-        "w-full rounded-xl border px-2.5 py-2",
+        "w-full rounded-xl px-2.5 py-2",
         label === "Stop Loss"
-          ? "border-destructive/20 bg-destructive/8"
-          : "border-info/20 bg-info/8",
+          ? "bg-destructive/8"
+          : "bg-info/8",
       )}
     >
       <div className="flex items-start justify-between gap-2">
@@ -2700,7 +2748,7 @@ function TakeProfitEditor({
   const indicatorDropdownOptions = buildIndicatorDropdownOptions(indicatorKeys);
 
   return (
-    <div className="space-y-3 rounded-xl border p-4">
+    <div className="space-y-3">
       <div className="space-y-2">
         <HelpLabel
           children="Take Profit Type"
@@ -2827,7 +2875,7 @@ function LogicBlockEditor({
   return (
     <section
       className={cn(
-        "relative overflow-hidden rounded-xl border p-4 md:p-5",
+        "relative overflow-hidden rounded-xl p-4 md:p-5",
         isBuy ? "theme-rule-panel-buy" : "theme-rule-panel-sell",
       )}
     >
@@ -2857,7 +2905,7 @@ function LogicBlockEditor({
           <p className="text-sm text-muted-foreground">{description}</p>
         </div>
 
-        <div className="rounded-xl border border-border/60 bg-muted/15 px-3 py-3">
+        <div className="rounded-xl border border-border/40 bg-muted/15 px-3 py-3">
           <div className="flex items-center justify-between gap-2">
             <p className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
               Rules
@@ -3342,7 +3390,7 @@ export function StrategyBuilder({
             const indicatorId = item.indicator?._id ?? "";
             const indicatorName =
               item.indicator?.name?.trim() || `indicator_${drafts.length + 1}`;
-            const params = createParamDrafts(item.params);
+            const params = createParamDrafts(item.params, indicatorName);
 
             drafts.push({
               id: createId(),
@@ -3500,7 +3548,7 @@ export function StrategyBuilder({
     const selected = indicatorMap.get(indicatorId);
     if (!selected) return;
 
-    const nextParams = createParamDrafts(selected.params);
+    const nextParams = createParamDrafts(selected.params, selected.name);
     setIndicatorDrafts((prev) => [
       ...prev,
       {
@@ -3856,19 +3904,19 @@ export function StrategyBuilder({
                 <DialogTrigger asChild>
                   <Button
                     type="button"
-                    variant="ghost"
-                    className="h-auto w-full min-w-0 justify-between rounded-xl border border-dashed border-border/70 bg-muted/25 px-3 py-3 text-left whitespace-normal hover:bg-muted/45"
+                    variant="outline"
+                    className="h-auto w-full min-w-0 justify-between rounded-lg border-border/70 bg-background px-3 py-2.5 text-left whitespace-normal hover:bg-muted/30"
                   >
                     <span className="flex min-w-0 items-center gap-3">
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border/70 bg-background">
-                        <Plus className="h-4 w-4" />
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                        <Plus className="h-3.5 w-3.5" />
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block text-sm font-medium text-foreground">
                           Add indicator
                         </span>
                         <span className="block break-words text-xs text-muted-foreground">
-                          Pick and configure an indicator
+                          Search and configure an indicator
                         </span>
                       </span>
                     </span>
@@ -3896,6 +3944,20 @@ export function StrategyBuilder({
                           onChange={(event) => {
                             setIndicatorSearch(event.target.value);
                             setIndicatorPage(1);
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key !== "Enter") {
+                              return;
+                            }
+
+                            const firstIndicator = indicatorOptions[0];
+                            if (!firstIndicator) {
+                              return;
+                            }
+
+                            event.preventDefault();
+                            appendIndicatorDraft(firstIndicator._id);
+                            setIsIndicatorMenuOpen(false);
                           }}
                           placeholder="Search"
                           className="w-full rounded-md border-0 border-b-2 border-foreground/15 bg-muted/60 pr-10 pl-9 focus-visible:border-primary focus-visible:ring-0 dark:bg-input/30"
@@ -4018,73 +4080,70 @@ export function StrategyBuilder({
                       No indicators found.
                     </p>
                   ) : (
-                    <ScrollArea
-                      className={cn(
-                        "px-4 pb-4",
-                        indicatorOptions.length > 4 && "h-[320px]",
-                      )}
-                      onScrollCapture={(event) => {
-                        const node = event.target as HTMLElement;
-                        const distanceToBottom =
-                          node.scrollHeight -
-                          node.scrollTop -
-                          node.clientHeight;
-
-                        if (
-                          distanceToBottom < 24 &&
-                          indicatorHasNextPage &&
-                          !isLoadingIndicators &&
-                          !isAppendingIndicators
-                        ) {
-                          setIndicatorPage((prev) => prev + 1);
-                        }
-                      }}
+                    <Command
+                      shouldFilter={false}
+                      className="rounded-none bg-transparent p-0"
                     >
-                      <div className="space-y-0">
-                        {indicatorOptions.map((item) => (
-                          <div
-                            key={item._id}
-                            role="button"
-                            tabIndex={0}
-                            className="border-b border-border/60 px-2 py-2 text-left transition-colors hover:bg-accent/40 last:border-b-0"
-                            onClick={() => {
-                              appendIndicatorDraft(item._id);
-                              setIsIndicatorMenuOpen(false);
-                            }}
-                            onKeyDown={(event) => {
-                              if (event.key !== "Enter" && event.key !== " ") {
-                                return;
-                              }
+                      <ScrollArea
+                        className={cn(
+                          "px-4 py-3",
+                          indicatorOptions.length > 4 && "h-[320px]",
+                        )}
+                        onScrollCapture={(event) => {
+                          const node = event.target as HTMLElement;
+                          const distanceToBottom =
+                            node.scrollHeight -
+                            node.scrollTop -
+                            node.clientHeight;
 
-                              event.preventDefault();
-                              appendIndicatorDraft(item._id);
-                              setIsIndicatorMenuOpen(false);
-                            }}
-                          >
-                            <div className="min-w-0 space-y-0.5">
-                              <p className="truncate text-sm font-medium">
-                                {item.name}
-                              </p>
-                              <p className="line-clamp-2 text-xs text-muted-foreground">
-                                {item.description}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                        {indicatorHasNextPage ? (
-                          <div className="flex h-10 items-center justify-center">
-                            {isAppendingIndicators ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin text-muted-foreground" />
-                                <span className="text-sm text-muted-foreground">
-                                  Loading...
-                                </span>
-                              </>
+                          if (
+                            distanceToBottom < 24 &&
+                            indicatorHasNextPage &&
+                            !isLoadingIndicators &&
+                            !isAppendingIndicators
+                          ) {
+                            setIndicatorPage((prev) => prev + 1);
+                          }
+                        }}
+                      >
+                        <CommandList className="max-h-none overflow-visible px-0 py-0">
+                          <CommandGroup className="space-y-1 p-0">
+                            {indicatorOptions.map((item) => (
+                              <CommandItem
+                                key={item._id}
+                                value={`${item.name} ${item.category} ${item.description}`}
+                                className="px-3 py-1.5 text-left"
+                                onSelect={() => {
+                                  appendIndicatorDraft(item._id);
+                                  setIsIndicatorMenuOpen(false);
+                                }}
+                              >
+                                <div className="min-w-0 w-full space-y-0.5">
+                                  <p className="truncate text-sm font-medium text-foreground">
+                                    {item.name}
+                                  </p>
+                                  <p className="line-clamp-2 text-xs leading-4 text-muted-foreground">
+                                    {item.description}
+                                  </p>
+                                </div>
+                              </CommandItem>
+                            ))}
+                            {indicatorHasNextPage ? (
+                              <div className="flex h-10 items-center justify-center">
+                                {isAppendingIndicators ? (
+                                  <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin text-muted-foreground" />
+                                    <span className="text-sm text-muted-foreground">
+                                      Loading...
+                                    </span>
+                                  </>
+                                ) : null}
+                              </div>
                             ) : null}
-                          </div>
-                        ) : null}
-                      </div>
-                    </ScrollArea>
+                          </CommandGroup>
+                        </CommandList>
+                      </ScrollArea>
+                    </Command>
                   )}
                 </DialogContent>
               </Dialog>
