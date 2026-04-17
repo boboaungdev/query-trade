@@ -3,10 +3,14 @@ import { resJson } from "../../utils/response.js";
 
 export const existUser = async (req, res, next) => {
   try {
-    const { email } = req.body;
+    const { email, username } = req.body;
+    const query = email
+      ? { email }
+      : username
+        ? { username: username.trim() }
+        : {};
 
-    // Your logic to check if user exists
-    const user = await UserDB.exists({ email });
+    const user = await UserDB.exists(query);
 
     return resJson(res, 200, "User existence checked.", { exist: !!user });
   } catch (error) {

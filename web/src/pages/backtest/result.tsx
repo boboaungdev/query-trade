@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react"
-import { Link, Navigate, useNavigate, useParams } from "react-router-dom"
-import { format } from "date-fns"
+import { useEffect, useMemo, useState } from "react";
+import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
+import { format } from "date-fns";
 import {
   Bookmark,
   BookmarkCheck,
@@ -26,13 +26,13 @@ import {
   TrendingDown,
   TrendingUp,
   UserRound,
-} from "lucide-react"
+} from "lucide-react";
 import {
   Area,
   AreaChart as RechartsAreaChart,
   CartesianGrid,
   XAxis,
-} from "recharts"
+} from "recharts";
 
 import {
   AlertDialog,
@@ -43,20 +43,17 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { Button } from "@/components/ui/button"
-import { ButtonGroup } from "@/components/ui/button-group"
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import {
-  ChartContainer,
-  type ChartConfig,
-} from "@/components/ui/chart"
+} from "@/components/ui/card";
+import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -64,7 +61,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   Pagination,
   PaginationContent,
@@ -73,128 +70,128 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-} from "@/components/ui/pagination"
-import { useBookmarkIds } from "@/hooks/use-bookmark-ids"
-import { cn } from "@/lib/utils"
-import { deleteBacktest, fetchBacktestById } from "@/api/backtest"
-import { useAuthStore } from "@/store/auth"
-import { toast } from "sonner"
+} from "@/components/ui/pagination";
+import { useBookmarkIds } from "@/hooks/use-bookmark-ids";
+import { cn } from "@/lib/utils";
+import { deleteBacktest, fetchBacktestById } from "@/api/backtest";
+import { useAuthStore } from "@/store/auth";
+import { toast } from "sonner";
 
 type EquityPoint = {
-  timestamp: number
-  equity: number
-}
+  timestamp: number;
+  equity: number;
+};
 
 type Trade = {
-  side: "buy" | "sell" | string
-  entryTime: number
-  exitTime: number
-  entryPrice: number
-  exitPrice: number
-  pnl: number
-  pnlPercent: number
-  exitReason: "stopLoss" | "takeProfit" | string
-}
+  side: "buy" | "sell" | string;
+  entryTime: number;
+  exitTime: number;
+  entryPrice: number;
+  exitPrice: number;
+  pnl: number;
+  pnlPercent: number;
+  exitReason: "stopLoss" | "takeProfit" | string;
+};
 
 type BacktestResult = {
-  duration: number
-  initialBalance: number
-  finalBalance: number
-  totalPnL: number
-  roi: number
-  totalTrades: number
-  wins: number
-  losses: number
-  winRate: number
-  profitFactor: number
-  payoffRatio?: number
-  grossProfit: number
-  grossLoss: number
-  averageWin: number
-  averageLoss: number
-  expectancy?: number
-  averageTradeDuration?: number
-  longestTradeDuration?: number
-  shortestTradeDuration?: number
-  maxWin: number
-  maxLoss: number
-  maxWinStreak: number
-  maxLossStreak: number
-  streakInsight?: string
-  maxDrawdown: number
-  maxDrawdownPercent: number
-  recoveryFactor?: number
-  totalFees: number
-  averageTradeFee: number
-  averageTradePnL: number
-  equityCurves: EquityPoint[]
-  trades: Trade[]
-}
+  duration: number;
+  initialBalance: number;
+  finalBalance: number;
+  totalPnL: number;
+  roi: number;
+  totalTrades: number;
+  wins: number;
+  losses: number;
+  winRate: number;
+  profitFactor: number;
+  payoffRatio?: number;
+  grossProfit: number;
+  grossLoss: number;
+  averageWin: number;
+  averageLoss: number;
+  expectancy?: number;
+  averageTradeDuration?: number;
+  longestTradeDuration?: number;
+  shortestTradeDuration?: number;
+  maxWin: number;
+  maxLoss: number;
+  maxWinStreak: number;
+  maxLossStreak: number;
+  streakInsight?: string;
+  maxDrawdown: number;
+  maxDrawdownPercent: number;
+  recoveryFactor?: number;
+  totalFees: number;
+  averageTradeFee: number;
+  averageTradePnL: number;
+  equityCurves: EquityPoint[];
+  trades: Trade[];
+};
 
 type BacktestDetail = {
-  _id: string
-  symbol: string
-  timeframe: string
-  startDate: string
-  endDate: string
-  hedgeMode: boolean
-  amountPerTrade: number
-  entryFeeRate: number
-  exitFeeRate: number
+  _id: string;
+  symbol: string;
+  timeframe: string;
+  startDate: string;
+  endDate: string;
+  hedgeMode: boolean;
+  amountPerTrade: number;
+  entryFeeRate: number;
+  exitFeeRate: number;
   strategy?: {
-    _id?: string
-    name?: string
-    description?: string
-    isPublic?: boolean
+    _id?: string;
+    name?: string;
+    description?: string;
+    isPublic?: boolean;
     stats?: {
-      viewCount?: number
-      bookmarkCount?: number
-    }
+      viewCount?: number;
+      bookmarkCount?: number;
+    };
     user?: {
-      _id?: string
-      name?: string
-      username?: string
-      avatar?: string
-    }
-  }
+      _id?: string;
+      name?: string;
+      username?: string;
+      avatar?: string;
+    };
+  };
   user?: {
-    _id?: string
-    name?: string
-    username?: string
-  }
-  result: BacktestResult
-}
+    _id?: string;
+    name?: string;
+    username?: string;
+  };
+  result: BacktestResult;
+};
 
-let backtestBookmarkLoadPromise: Promise<void> | null = null
+let backtestBookmarkLoadPromise: Promise<void> | null = null;
 
 async function loadBacktestBookmarksOnce(
-  loadBacktestBookmarks: () => Promise<void>
+  loadBacktestBookmarks: () => Promise<void>,
 ) {
-  if (backtestBookmarkLoadPromise) return backtestBookmarkLoadPromise
+  if (backtestBookmarkLoadPromise) return backtestBookmarkLoadPromise;
 
   backtestBookmarkLoadPromise = loadBacktestBookmarks().finally(() => {
-    backtestBookmarkLoadPromise = null
-  })
+    backtestBookmarkLoadPromise = null;
+  });
 
-  return backtestBookmarkLoadPromise
+  return backtestBookmarkLoadPromise;
 }
 
 const money = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
   maximumFractionDigits: 2,
-})
+});
 
 const moneyFixed = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
-})
+});
 
 const ratio = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
-})
+});
 
 function formatDateTime(ts: number) {
   return new Date(ts).toLocaleString("en-US", {
@@ -205,28 +202,28 @@ function formatDateTime(ts: number) {
     minute: "2-digit",
     hour12: false,
     timeZone: "UTC",
-  })
+  });
 }
 
 function formatDuration(durationMs?: number) {
   if (!Number.isFinite(durationMs) || !durationMs || durationMs <= 0) {
-    return "-"
+    return "-";
   }
 
-  const totalMinutes = Math.floor(durationMs / 60000)
-  const totalHours = Math.floor(durationMs / 3600000)
-  const totalDays = Math.floor(durationMs / 86400000)
+  const totalMinutes = Math.floor(durationMs / 60000);
+  const totalHours = Math.floor(durationMs / 3600000);
+  const totalDays = Math.floor(durationMs / 86400000);
 
   if (totalDays >= 1) {
-    return `${totalDays}d`
+    return `${totalDays}d`;
   }
 
   if (totalHours >= 1) {
-    const minutes = totalMinutes % 60
-    return minutes > 0 ? `${totalHours}h ${minutes}m` : `${totalHours}h`
+    const minutes = totalMinutes % 60;
+    return minutes > 0 ? `${totalHours}h ${minutes}m` : `${totalHours}h`;
   }
 
-  return `${Math.max(1, totalMinutes)}m`
+  return `${Math.max(1, totalMinutes)}m`;
 }
 
 function EquityCurve({
@@ -234,9 +231,9 @@ function EquityCurve({
   initialBalance,
   finalBalance,
 }: {
-  data: EquityPoint[]
-  initialBalance: number
-  finalBalance: number
+  data: EquityPoint[];
+  initialBalance: number;
+  finalBalance: number;
 }) {
   const chartData = useMemo(
     () =>
@@ -244,30 +241,30 @@ function EquityCurve({
         timestamp: item.timestamp,
         equity: Number(item.equity.toFixed(2)),
       })),
-    [data]
-  )
+    [data],
+  );
 
   if (chartData.length < 2) {
     return (
       <div className="flex h-72 items-center justify-center rounded-lg border border-border/70 bg-background text-sm text-muted-foreground">
         No equity curve data available.
       </div>
-    )
+    );
   }
 
-  const startEquity = initialBalance
-  const endEquity = finalBalance
+  const startEquity = initialBalance;
+  const endEquity = finalBalance;
   const returnPercent =
-    startEquity > 0 ? ((endEquity - startEquity) / startEquity) * 100 : 0
-  const isProfit = endEquity >= startEquity
-  const returnPrefix = returnPercent >= 0 ? "+" : ""
+    startEquity > 0 ? ((endEquity - startEquity) / startEquity) * 100 : 0;
+  const isProfit = endEquity >= startEquity;
+  const returnPrefix = returnPercent >= 0 ? "+" : "";
 
   const chartConfig = {
     equity: {
       label: "Equity",
       color: isProfit ? "var(--color-success)" : "var(--color-destructive)",
     },
-  } satisfies ChartConfig
+  } satisfies ChartConfig;
 
   return (
     <div
@@ -275,7 +272,7 @@ function EquityCurve({
         "overflow-hidden rounded-xl border border-border/70 bg-background shadow-sm",
         isProfit
           ? "shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-success)_12%,transparent)]"
-          : "shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-destructive)_12%,transparent)]"
+          : "shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-destructive)_12%,transparent)]",
       )}
     >
       <div className="flex items-center justify-between border-b border-border/60 px-4 py-3 md:px-5">
@@ -289,7 +286,7 @@ function EquityCurve({
             "inline-flex shrink-0 rounded-md border px-2 py-1 text-xs font-medium",
             isProfit
               ? "border-success/25 bg-success/10 text-success"
-              : "border-destructive/25 bg-destructive/10 text-destructive"
+              : "border-destructive/25 bg-destructive/10 text-destructive",
           )}
         >
           ROI {returnPrefix}
@@ -355,44 +352,44 @@ function EquityCurve({
         </ChartContainer>
       </div>
     </div>
-  )
+  );
 }
 
 export default function BacktestResultPage() {
-  const navigate = useNavigate()
-  const { backtestId = "" } = useParams()
-  const user = useAuthStore((state) => state.user)
+  const navigate = useNavigate();
+  const { backtestId = "" } = useParams();
+  const user = useAuthStore((state) => state.user);
   const {
     bookmarkedIds: bookmarkedBacktestIds,
     updatingIds: updatingBacktestIds,
     loadBookmarks: loadBacktestBookmarks,
     toggleBookmark: toggleBacktestBookmark,
-  } = useBookmarkIds("backtest")
+  } = useBookmarkIds("backtest");
   const {
     bookmarkedIds: bookmarkedStrategyIds,
     updatingIds: updatingStrategyIds,
     loadBookmarks: loadStrategyBookmarks,
     toggleBookmark: toggleStrategyBookmark,
-  } = useBookmarkIds("strategy")
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
-  const [tradesPage, setTradesPage] = useState(1)
-  const [backtest, setBacktest] = useState<BacktestDetail | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isDeleting, setIsDeleting] = useState(false)
-  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
+  } = useBookmarkIds("strategy");
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const [tradesPage, setTradesPage] = useState(1);
+  const [backtest, setBacktest] = useState<BacktestDetail | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
   useEffect(() => {
-    let isMounted = true
+    let isMounted = true;
 
     const loadBacktest = async () => {
       if (!backtestId) {
-        if (isMounted) setBacktest(null)
-        if (isMounted) setIsLoading(false)
-        return
+        if (isMounted) setBacktest(null);
+        if (isMounted) setIsLoading(false);
+        return;
       }
 
-      setIsLoading(true)
-      setBacktest(null)
+      setIsLoading(true);
+      setBacktest(null);
 
       try {
         const [response] = await Promise.all([
@@ -403,24 +400,29 @@ export default function BacktestResultPage() {
                 loadStrategyBookmarks(),
               ])
             : Promise.resolve(),
-        ])
+        ]);
 
-        if (!isMounted) return
-        setBacktest(response?.result?.backtest ?? null)
+        if (!isMounted) return;
+        setBacktest(response?.result?.backtest ?? null);
       } finally {
-        if (isMounted) setIsLoading(false)
+        if (isMounted) setIsLoading(false);
       }
-    }
+    };
 
-    void loadBacktest()
+    void loadBacktest();
 
     return () => {
-      isMounted = false
-    }
-  }, [backtestId, isAuthenticated, loadBacktestBookmarks, loadStrategyBookmarks])
+      isMounted = false;
+    };
+  }, [
+    backtestId,
+    isAuthenticated,
+    loadBacktestBookmarks,
+    loadStrategyBookmarks,
+  ]);
 
   if (!backtestId) {
-    return <Navigate to="/backtest" replace />
+    return <Navigate to="/backtest" replace />;
   }
 
   if (isLoading) {
@@ -433,121 +435,120 @@ export default function BacktestResultPage() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   if (!backtest?.result) {
-    return <Navigate to="/backtest" replace />
+    return <Navigate to="/backtest" replace />;
   }
 
-  const result = backtest.result
-  const pnlPositive = result.totalPnL >= 0
+  const result = backtest.result;
+  const pnlPositive = result.totalPnL >= 0;
   const averageTradeFee = Number.isFinite(result.averageTradeFee)
     ? result.averageTradeFee
-    : 0
-  const strategyName = backtest.strategy?.name?.trim() || "Strategy"
-  const strategyIsPublic = backtest.strategy?.isPublic ?? false
+    : 0;
+  const strategyName = backtest.strategy?.name?.trim() || "Strategy";
+  const strategyIsPublic = backtest.strategy?.isPublic ?? false;
   const strategyCreatorUsername =
-    backtest.strategy?.user?.username?.trim().replace(/^@/, "") || "unknown"
-  const isBacktestOwner = Boolean(user?._id) && backtest.user?._id === user?._id
-  const isBacktestBookmarked = bookmarkedBacktestIds.has(backtestId)
-  const isBacktestBookmarkUpdating = updatingBacktestIds.has(backtestId)
+    backtest.strategy?.user?.username?.trim().replace(/^@/, "") || "unknown";
+  const isBacktestOwner =
+    Boolean(user?._id) && backtest.user?._id === user?._id;
+  const isBacktestBookmarked = bookmarkedBacktestIds.has(backtestId);
+  const isBacktestBookmarkUpdating = updatingBacktestIds.has(backtestId);
   const isStrategyOwner =
-    Boolean(user?._id) && backtest.strategy?.user?._id === user?._id
+    Boolean(user?._id) && backtest.strategy?.user?._id === user?._id;
   const isStrategyBookmarked = Boolean(
-    backtest.strategy?._id &&
-      bookmarkedStrategyIds.has(backtest.strategy._id)
-  )
+    backtest.strategy?._id && bookmarkedStrategyIds.has(backtest.strategy._id),
+  );
   const isStrategyBookmarkUpdating = Boolean(
-    backtest.strategy?._id &&
-      updatingStrategyIds.has(backtest.strategy._id)
-  )
+    backtest.strategy?._id && updatingStrategyIds.has(backtest.strategy._id),
+  );
   const canOpenCreatorProfile =
-    !isStrategyOwner && strategyCreatorUsername !== "unknown"
+    !isStrategyOwner && strategyCreatorUsername !== "unknown";
   const canOpenStrategy =
-    Boolean(backtest.strategy?._id) && (strategyIsPublic || isStrategyOwner)
-  const tradesPerPage = 10
+    Boolean(backtest.strategy?._id) && (strategyIsPublic || isStrategyOwner);
+  const tradesPerPage = 10;
   const totalTradesPages = Math.max(
     1,
-    Math.ceil(result.trades.length / tradesPerPage)
-  )
+    Math.ceil(result.trades.length / tradesPerPage),
+  );
   const recentTrades = result.trades.slice(
     (tradesPage - 1) * tradesPerPage,
-    tradesPage * tradesPerPage
-  )
+    tradesPage * tradesPerPage,
+  );
   const tradePageItems = (() => {
     if (totalTradesPages <= 7) {
-      return Array.from({ length: totalTradesPages }, (_, index) => index + 1)
+      return Array.from({ length: totalTradesPages }, (_, index) => index + 1);
     }
 
-    const items: Array<number | "left-ellipsis" | "right-ellipsis"> = [1]
-    const start = Math.max(2, tradesPage - 1)
-    const end = Math.min(totalTradesPages - 1, tradesPage + 1)
+    const items: Array<number | "left-ellipsis" | "right-ellipsis"> = [1];
+    const start = Math.max(2, tradesPage - 1);
+    const end = Math.min(totalTradesPages - 1, tradesPage + 1);
 
-    if (start > 2) items.push("left-ellipsis")
-    for (let page = start; page <= end; page += 1) items.push(page)
-    if (end < totalTradesPages - 1) items.push("right-ellipsis")
-    items.push(totalTradesPages)
-    return items
-  })()
+    if (start > 2) items.push("left-ellipsis");
+    for (let page = start; page <= end; page += 1) items.push(page);
+    if (end < totalTradesPages - 1) items.push("right-ellipsis");
+    items.push(totalTradesPages);
+    return items;
+  })();
 
   const onDeleteBacktest = async () => {
-    setIsDeleting(true)
+    setIsDeleting(true);
 
     try {
-      const promise = deleteBacktest(backtestId)
+      const promise = deleteBacktest(backtestId);
 
       // Keep the result page responsive while the delete completes.
-      await promise
-      navigate("/leaderboard", { replace: true })
+      await promise;
+      navigate("/leaderboard", { replace: true });
     } finally {
-      setIsDeleting(false)
-      setIsDeleteConfirmOpen(false)
+      setIsDeleting(false);
+      setIsDeleteConfirmOpen(false);
     }
-  }
+  };
 
   const onCopyResultLink = async () => {
-    const resultUrl = `${window.location.origin}/backtest/${backtestId}`
+    const resultUrl = `${window.location.origin}/backtest/${backtestId}`;
 
     try {
-      await navigator.clipboard.writeText(resultUrl)
-      toast.success("Link copied")
+      await navigator.clipboard.writeText(resultUrl);
+      toast.success("Link copied");
     } catch {
-      toast.error("Failed to copy link")
+      toast.error("Failed to copy link");
     }
-  }
+  };
 
   const onToggleBacktestBookmark = async () => {
-    const result = await toggleBacktestBookmark(backtestId)
+    const result = await toggleBacktestBookmark(backtestId);
     if (!result) {
-      return
+      return;
     }
 
     if (result.status === "success") {
-      toast.success(result.message)
-      return
+      toast.success(result.message);
+      return;
     }
 
-    toast.error(result.message)
-  }
+    toast.error(result.message);
+  };
 
   const onToggleStrategyBookmark = async () => {
     if (!backtest.strategy?._id) {
-      return
+      return;
     }
 
-    const result = await toggleStrategyBookmark(backtest.strategy._id)
+    const result = await toggleStrategyBookmark(backtest.strategy._id);
     if (!result) {
-      return
+      return;
     }
 
     if (result.status === "success") {
-      toast.success(result.message)
-      return
+      toast.success(result.message);
+      return;
     }
 
-    toast.error(result.message)
-  }
+    toast.error(result.message);
+  };
 
   return (
     <div className="mx-auto w-full max-w-6xl min-w-0 space-y-4 overflow-x-hidden md:space-y-6">
@@ -560,11 +561,11 @@ export default function BacktestResultPage() {
               className="w-fit"
               onClick={() => {
                 if (window.history.length > 1) {
-                  navigate(-1)
-                  return
+                  navigate(-1);
+                  return;
                 }
 
-                navigate("/backtest")
+                navigate("/backtest");
               }}
             >
               <span className="inline-flex items-center gap-1.5">
@@ -583,7 +584,7 @@ export default function BacktestResultPage() {
                 title={isBacktestBookmarked ? "Bookmarked" : "Bookmark"}
                 disabled={isBacktestBookmarkUpdating}
                 onClick={() => {
-                  void onToggleBacktestBookmark()
+                  void onToggleBacktestBookmark();
                 }}
               >
                 {isBacktestBookmarkUpdating ? (
@@ -611,7 +612,7 @@ export default function BacktestResultPage() {
                   <DropdownMenuLabel>Actions</DropdownMenuLabel>
                   <DropdownMenuItem
                     onSelect={() => {
-                      void onCopyResultLink()
+                      void onCopyResultLink();
                     }}
                   >
                     <Copy className="h-4 w-4" />
@@ -619,7 +620,7 @@ export default function BacktestResultPage() {
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onSelect={() => {
-                      void onToggleBacktestBookmark()
+                      void onToggleBacktestBookmark();
                     }}
                     disabled={isBacktestBookmarkUpdating}
                   >
@@ -645,7 +646,7 @@ export default function BacktestResultPage() {
                       <DropdownMenuItem
                         variant="destructive"
                         onSelect={() => {
-                          setIsDeleteConfirmOpen(true)
+                          setIsDeleteConfirmOpen(true);
                         }}
                       >
                         <Trash2 className="h-4 w-4" />
@@ -700,7 +701,7 @@ export default function BacktestResultPage() {
         open={isDeleteConfirmOpen}
         onOpenChange={(open) => {
           if (!isDeleting) {
-            setIsDeleteConfirmOpen(open)
+            setIsDeleteConfirmOpen(open);
           }
         }}
       >
@@ -719,8 +720,8 @@ export default function BacktestResultPage() {
               className="relative !bg-destructive !text-white hover:!bg-destructive/90"
               disabled={isDeleting}
               onClick={(event) => {
-                event.preventDefault()
-                void onDeleteBacktest()
+                event.preventDefault();
+                void onDeleteBacktest();
               }}
             >
               {isDeleting ? (
@@ -744,7 +745,7 @@ export default function BacktestResultPage() {
             <CardTitle
               className={cn(
                 "text-xl md:text-2xl",
-                result.roi >= 0 ? "text-success" : "text-destructive"
+                result.roi >= 0 ? "text-success" : "text-destructive",
               )}
             >
               {result.roi >= 0 ? "+" : ""}
@@ -974,7 +975,7 @@ export default function BacktestResultPage() {
                 <p
                   className={cn(
                     "font-semibold",
-                    result.totalPnL >= 0 ? "text-success" : "text-destructive"
+                    result.totalPnL >= 0 ? "text-success" : "text-destructive",
                   )}
                 >
                   {money.format(result.totalPnL)}
@@ -1021,7 +1022,7 @@ export default function BacktestResultPage() {
                     "font-semibold",
                     (result.expectancy ?? 0) >= 0
                       ? "text-success"
-                      : "text-destructive"
+                      : "text-destructive",
                   )}
                 >
                   {money.format(result.expectancy ?? 0)}
@@ -1052,7 +1053,7 @@ export default function BacktestResultPage() {
                     "font-semibold",
                     (result.recoveryFactor ?? 0) >= 0
                       ? "text-success"
-                      : "text-destructive"
+                      : "text-destructive",
                   )}
                 >
                   {ratio.format(result.recoveryFactor ?? 0)}
@@ -1180,7 +1181,7 @@ export default function BacktestResultPage() {
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onSelect={() => {
-                        void onToggleStrategyBookmark()
+                        void onToggleStrategyBookmark();
                       }}
                       disabled={
                         !backtest.strategy?._id || isStrategyBookmarkUpdating
@@ -1363,8 +1364,8 @@ export default function BacktestResultPage() {
                   <PaginationPrevious
                     href="#"
                     onClick={(event) => {
-                      event.preventDefault()
-                      setTradesPage((prev) => Math.max(1, prev - 1))
+                      event.preventDefault();
+                      setTradesPage((prev) => Math.max(1, prev - 1));
                     }}
                     className={
                       tradesPage <= 1
@@ -1381,8 +1382,8 @@ export default function BacktestResultPage() {
                         href="#"
                         isActive={item === tradesPage}
                         onClick={(event) => {
-                          event.preventDefault()
-                          setTradesPage(item)
+                          event.preventDefault();
+                          setTradesPage(item);
                         }}
                       >
                         {item}
@@ -1392,17 +1393,17 @@ export default function BacktestResultPage() {
                     <PaginationItem key={`${item}-${index}`}>
                       <PaginationEllipsis />
                     </PaginationItem>
-                  )
+                  ),
                 )}
 
                 <PaginationItem>
                   <PaginationNext
                     href="#"
                     onClick={(event) => {
-                      event.preventDefault()
+                      event.preventDefault();
                       setTradesPage((prev) =>
-                        Math.min(totalTradesPages, prev + 1)
-                      )
+                        Math.min(totalTradesPages, prev + 1),
+                      );
                     }}
                     className={
                       tradesPage >= totalTradesPages
@@ -1417,5 +1418,5 @@ export default function BacktestResultPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

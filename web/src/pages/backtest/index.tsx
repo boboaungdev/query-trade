@@ -41,11 +41,7 @@ import { fetchStrategies, type StrategySource } from "@/api/strategy";
 
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Card,
   CardContent,
@@ -583,8 +579,7 @@ export default function BacktestPage() {
             sortBy: strategySortBy,
             order: strategyOrder,
             source: strategySource,
-            isPublic:
-              strategySource === "all" ? strategyPublicOnly : undefined,
+            isPublic: strategySource === "all" ? strategyPublicOnly : undefined,
           }),
         )) as StrategyListResponse;
 
@@ -1280,24 +1275,24 @@ export default function BacktestPage() {
                                     <Input
                                       ref={strategySearchInputRef}
                                       value={strategySearch}
-                                    onChange={(event) => {
-                                      setStrategySearch(event.target.value);
-                                      setStrategyPage(1);
-                                    }}
-                                    onKeyDown={(event) => {
-                                      if (event.key !== "Enter") {
-                                        return;
-                                      }
+                                      onChange={(event) => {
+                                        setStrategySearch(event.target.value);
+                                        setStrategyPage(1);
+                                      }}
+                                      onKeyDown={(event) => {
+                                        if (event.key !== "Enter") {
+                                          return;
+                                        }
 
-                                      if (!firstVisibleStrategy) {
-                                        return;
-                                      }
+                                        if (!firstVisibleStrategy) {
+                                          return;
+                                        }
 
-                                      event.preventDefault();
-                                      selectStrategy(firstVisibleStrategy);
-                                    }}
-                                    aria-label="Search strategy"
-                                    placeholder="Search strategy"
+                                        event.preventDefault();
+                                        selectStrategy(firstVisibleStrategy);
+                                      }}
+                                      aria-label="Search strategy"
+                                      placeholder="Search strategy"
                                       className={cn(
                                         "rounded-md border-0 border-b-2 border-foreground/15 pr-10 pl-9 focus-visible:border-primary focus-visible:ring-0",
                                         defaultFieldSurfaceClass,
@@ -1504,91 +1499,90 @@ export default function BacktestPage() {
                                                 selectStrategy(item)
                                               }
                                             >
-                                                <div className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-2 text-[11px] text-muted-foreground md:items-center">
-                                                  <span className="flex min-w-0 items-start gap-3">
-                                                    <Avatar className="mt-0.5 h-8 w-8 shrink-0">
-                                                      <AvatarImage
-                                                        src={item.user?.avatar}
-                                                        alt={
-                                                          item.user?.username ||
-                                                          item.name
-                                                        }
-                                                      />
-                                                      <AvatarFallback>
-                                                        {(
-                                                          item.user?.username ||
-                                                          item.name ||
-                                                          "U"
-                                                        )
-                                                          .slice(0, 2)
-                                                          .toUpperCase()}
-                                                      </AvatarFallback>
-                                                    </Avatar>
-                                                    <span className="min-w-0 overflow-hidden">
-                                                      <span className="block w-full truncate text-sm font-medium whitespace-nowrap text-foreground">
-                                                        {item.name}
-                                                      </span>
-                                                      <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
-                                                        @
-                                                        {item.user?.username ||
-                                                          "unknown"}
-                                                        {" · "}
-                                                        {item.description?.trim() ||
-                                                          "No description provided."}
-                                                      </span>
+                                              <div className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-2 text-[11px] text-muted-foreground md:items-center">
+                                                <span className="flex min-w-0 items-start gap-3">
+                                                  <Avatar className="mt-0.5 h-8 w-8 shrink-0">
+                                                    <AvatarImage
+                                                      src={item.user?.avatar}
+                                                      alt={
+                                                        item.user?.username ||
+                                                        item.name
+                                                      }
+                                                    />
+                                                    <AvatarFallback>
+                                                      {(
+                                                        item.user?.username ||
+                                                        item.name ||
+                                                        "U"
+                                                      )
+                                                        .slice(0, 2)
+                                                        .toUpperCase()}
+                                                    </AvatarFallback>
+                                                  </Avatar>
+                                                  <span className="min-w-0 overflow-hidden">
+                                                    <span className="block w-full truncate text-sm font-medium whitespace-nowrap text-foreground">
+                                                      {item.name}
+                                                    </span>
+                                                    <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+                                                      @
+                                                      {item.user?.username ||
+                                                        "unknown"}
+                                                      {" · "}
+                                                      {item.description?.trim() ||
+                                                        "No description provided."}
                                                     </span>
                                                   </span>
-                                                  <span className="inline-flex shrink-0 flex-col items-end gap-1 pl-2 pr-0 md:flex-row md:items-center md:gap-2">
-                                                    <span className="inline-flex items-center gap-1">
-                                                      <TrendingUp className="h-3 w-3" />
-                                                      {item.stats?.viewCount ??
-                                                        0}
-                                                    </span>
-                                                    <span className="inline-flex items-center gap-1">
-                                                      <button
-                                                        type="button"
-                                                        className={cn(
-                                                          "inline-flex h-4 w-4 items-center justify-center rounded-sm",
-                                                          item.isBookmarked
-                                                            ? "text-primary"
-                                                            : "text-muted-foreground",
-                                                        )}
-                                                        aria-label={
-                                                          item.isBookmarked
-                                                            ? "Remove bookmark"
-                                                            : "Add bookmark"
-                                                        }
-                                                        title={
-                                                          item.isBookmarked
-                                                            ? "Remove bookmark"
-                                                            : "Add bookmark"
-                                                        }
-                                                        disabled={updatingStrategyIds.has(
-                                                          item._id,
-                                                        )}
-                                                        onClick={(event) => {
-                                                          event.preventDefault();
-                                                          event.stopPropagation();
-                                                          void onToggleStrategyBookmark(
-                                                            item._id,
-                                                          );
-                                                        }}
-                                                      >
-                                                        {updatingStrategyIds.has(
-                                                          item._id,
-                                                        ) ? (
-                                                          <Loader2 className="h-3 w-3 animate-spin" />
-                                                        ) : item.isBookmarked ? (
-                                                          <BookmarkCheck className="h-3 w-3" />
-                                                        ) : (
-                                                          <Bookmark className="h-3 w-3" />
-                                                        )}
-                                                      </button>
-                                                      {item.stats
-                                                        ?.bookmarkCount ?? 0}
-                                                    </span>
+                                                </span>
+                                                <span className="inline-flex shrink-0 flex-col items-end gap-1 pl-2 pr-0 md:flex-row md:items-center md:gap-2">
+                                                  <span className="inline-flex items-center gap-1">
+                                                    <TrendingUp className="h-3 w-3" />
+                                                    {item.stats?.viewCount ?? 0}
                                                   </span>
-                                                </div>
+                                                  <span className="inline-flex items-center gap-1">
+                                                    <button
+                                                      type="button"
+                                                      className={cn(
+                                                        "inline-flex h-4 w-4 items-center justify-center rounded-sm",
+                                                        item.isBookmarked
+                                                          ? "text-primary"
+                                                          : "text-muted-foreground",
+                                                      )}
+                                                      aria-label={
+                                                        item.isBookmarked
+                                                          ? "Remove bookmark"
+                                                          : "Add bookmark"
+                                                      }
+                                                      title={
+                                                        item.isBookmarked
+                                                          ? "Remove bookmark"
+                                                          : "Add bookmark"
+                                                      }
+                                                      disabled={updatingStrategyIds.has(
+                                                        item._id,
+                                                      )}
+                                                      onClick={(event) => {
+                                                        event.preventDefault();
+                                                        event.stopPropagation();
+                                                        void onToggleStrategyBookmark(
+                                                          item._id,
+                                                        );
+                                                      }}
+                                                    >
+                                                      {updatingStrategyIds.has(
+                                                        item._id,
+                                                      ) ? (
+                                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                                      ) : item.isBookmarked ? (
+                                                        <BookmarkCheck className="h-3 w-3" />
+                                                      ) : (
+                                                        <Bookmark className="h-3 w-3" />
+                                                      )}
+                                                    </button>
+                                                    {item.stats
+                                                      ?.bookmarkCount ?? 0}
+                                                  </span>
+                                                </span>
+                                              </div>
                                             </CommandItem>
                                           );
                                         })}
@@ -1742,11 +1736,15 @@ export default function BacktestPage() {
                                 >
                                   <div className="space-y-1 text-sm leading-relaxed">
                                     <p>
-                                      <span className="font-semibold">One-way</span>{" "}
+                                      <span className="font-semibold">
+                                        One-way
+                                      </span>{" "}
                                       keeps a single net position per market.
                                     </p>
                                     <p>
-                                      <span className="font-semibold">Hedge</span>{" "}
+                                      <span className="font-semibold">
+                                        Hedge
+                                      </span>{" "}
                                       lets long and short positions exist at the
                                       same time.
                                     </p>

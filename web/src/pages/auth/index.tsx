@@ -37,6 +37,7 @@ import { getApiErrorMessage } from "@/api/axios";
 import { APP_NAME } from "@/constants";
 import {
   AtSign,
+  CheckCircle2,
   ChevronLeft,
   Eye,
   EyeOff,
@@ -45,6 +46,7 @@ import {
   LockKeyhole,
   Mail,
   UserRound,
+  XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -64,6 +66,14 @@ type AuthFieldKey =
   | "code"
   | "newPassword"
   | "confirmNewPassword";
+
+type UsernameStatus =
+  | "idle"
+  | "invalid"
+  | "checking"
+  | "available"
+  | "unavailable"
+  | "error";
 
 type AuthInputProps = ComponentProps<typeof Input> & {
   icon: typeof Mail;
@@ -121,6 +131,9 @@ export default function Auth() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
+  const [debouncedUsername, setDebouncedUsername] = useState("");
+  const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>("idle");
+  const usernameRequestIdRef = useRef(0);
 
   const [showPassword, setShowPassword] = useState(false);
   const [isSigninPasswordVisible, setIsSigninPasswordVisible] = useState(false);
@@ -172,7 +185,10 @@ export default function Auth() {
     (showPassword && !forgotStep && !validPassword) ||
     (isSignup &&
       !verifyStep &&
-      (!validName || !validUsername || !validPassword)) ||
+      (!validName ||
+        !validUsername ||
+        usernameStatus !== "available" ||
+        !validPassword)) ||
     (resetStep &&
       (!validNewPassword ||
         !confirmNewPassword.trim() ||
@@ -293,6 +309,66 @@ export default function Auth() {
 
     return () => clearTimeout(timer);
   }, [resendTimer, forgotStep, verifyStep]);
+
+  useEffect(() => {
+    if (!isSignup || verifyStep) {
+      setDebouncedUsername("");
+      setUsernameStatus("idle");
+      return;
+    }
+
+    const normalizedUsername = username.trim();
+
+    if (!normalizedUsername) {
+      setDebouncedUsername("");
+      setUsernameStatus("idle");
+      return;
+    }
+
+    if (!USERNAME_REGEX.test(normalizedUsername)) {
+      setDebouncedUsername("");
+      setUsernameStatus("invalid");
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedUsername(normalizedUsername);
+    }, 250);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [isSignup, username, verifyStep]);
+
+  useEffect(() => {
+    if (!isSignup || verifyStep || !debouncedUsername) {
+      return;
+    }
+
+    if (debouncedUsername !== username.trim()) {
+      return;
+    }
+
+    const requestId = usernameRequestIdRef.current + 1;
+    usernameRequestIdRef.current = requestId;
+    setUsernameStatus("checking");
+
+    checkUserExist({ username: debouncedUsername })
+      .then((data) => {
+        if (usernameRequestIdRef.current !== requestId) {
+          return;
+        }
+
+        setUsernameStatus(data?.result?.exist ? "unavailable" : "available");
+      })
+      .catch(() => {
+        if (usernameRequestIdRef.current !== requestId) {
+          return;
+        }
+
+        setUsernameStatus("error");
+      });
+  }, [debouncedUsername, isSignup, username, verifyStep]);
 
   useEffect(() => {
     if (!showPassword || forgotStep || resetStep || isSignup) return;
@@ -650,6 +726,8 @@ export default function Auth() {
       setIsSignup(false);
       setName("");
       setUsername("");
+      setDebouncedUsername("");
+      setUsernameStatus("idle");
       setPassword("");
       setIsSignupPasswordVisible(false);
       return;
@@ -728,6 +806,26 @@ export default function Auth() {
             : "Enter your email or continue with OAuth";
   const isWelcomeState =
     !showPassword && !isSignup && !forgotStep && !resetStep && !verifyStep;
+  const isUsernameSearchPending =
+    isSignup &&
+    !verifyStep &&
+    validUsername &&
+    username.trim().length > 0 &&
+    username.trim() !== debouncedUsername;
+  const isUsernameLiveInvalid =
+    usernameStatus === "invalid" ||
+    usernameStatus === "unavailable" ||
+    usernameStatus === "error";
+  const usernameHelperText =
+    usernameStatus === "invalid"
+      ? "Username must be 6-20 characters"
+      : usernameStatus === "checking" || isUsernameSearchPending
+        ? "Checking username availability..."
+        : usernameStatus === "unavailable"
+          ? "Username is not available"
+          : usernameStatus === "error"
+            ? "Unable to check username right now"
+            : "";
 
   return (
     <div className="min-h-[80vh] p-6">
@@ -1069,23 +1167,58 @@ export default function Auth() {
                       <div className="flex items-center gap-1.5">
                         <Label>Username</Label>
                       </div>
-                      <AuthInput
-                        icon={AtSign}
-                        placeholder="Username"
-                        aria-label="Username"
-                        value={username}
-                        maxLength={20}
-                        aria-invalid={invalidFields.username}
-                        disabled={loading || verifyStep}
-                        onChange={(e) => {
-                          clearInvalidField("username");
-                          setUsername(
-                            e.target.value
-                              .toLowerCase()
-                              .replace(/[^a-z0-9]/g, ""),
-                          );
-                        }}
-                      />
+                      <div className="space-y-2">
+                        <div className="relative">
+                          <AtSign
+                            className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                            aria-hidden="true"
+                          />
+                          <Input
+                            className="pl-9 pr-10"
+                            placeholder="Username"
+                            aria-label="Username"
+                            value={username}
+                            maxLength={20}
+                            aria-invalid={
+                              invalidFields.username || isUsernameLiveInvalid
+                            }
+                            disabled={loading || verifyStep}
+                            onChange={(e) => {
+                              clearInvalidField("username");
+                              setUsername(
+                                e.target.value
+                                  .toLowerCase()
+                                  .replace(/[^a-z0-9]/g, ""),
+                              );
+                            }}
+                          />
+                          <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2">
+                            {usernameStatus === "checking" ||
+                            isUsernameSearchPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                            ) : usernameStatus === "available" ? (
+                              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                            ) : usernameStatus === "invalid" ||
+                              usernameStatus === "unavailable" ||
+                              usernameStatus === "error" ? (
+                              <XCircle className="h-4 w-4 text-destructive" />
+                            ) : null}
+                          </span>
+                        </div>
+                        {usernameHelperText ? (
+                          <p
+                            className={`text-xs ${
+                              usernameStatus === "invalid" ||
+                              usernameStatus === "unavailable" ||
+                              usernameStatus === "error"
+                                ? "text-destructive"
+                                : "text-muted-foreground"
+                            }`}
+                          >
+                            {usernameHelperText}
+                          </p>
+                        ) : null}
+                      </div>
                     </div>
 
                     <div className="space-y-2">

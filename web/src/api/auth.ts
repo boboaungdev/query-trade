@@ -1,8 +1,15 @@
 import api from "./axios";
 
-export async function checkUserExist({ email }: { email: string }) {
+export async function checkUserExist({
+  email,
+  username,
+}: {
+  email?: string;
+  username?: string;
+}) {
   const { data } = await api.post("/auth/exist-user", {
     email,
+    username,
   });
 
   return data;

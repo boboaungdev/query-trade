@@ -33,8 +33,15 @@ export const UserSchema = {
   }),
 
   existUser: Joi.object({
-    email: Joi.string().email({ minDomainSegments: 2 }).lowercase().required(),
-  }),
+    email: Joi.string().email({ minDomainSegments: 2 }).lowercase(),
+    username: Joi.string()
+      .trim()
+      .pattern(/^[a-z0-9]{6,20}$/)
+      .messages({
+        "string.pattern.base":
+          "Username must be 6-20 characters: lowercase letters and numbers only",
+      }),
+  }).or("email", "username"),
 
   signinGoogle: Joi.object({
     credential: Joi.string().required(),
