@@ -15,6 +15,7 @@ import {
   Globe,
   Lock,
   Loader2,
+  MoreHorizontal,
   Pencil,
   Percent,
   ShieldAlert,
@@ -552,149 +553,153 @@ export default function BacktestResultPage() {
 
   return (
     <div className="mx-auto w-full max-w-6xl min-w-0 space-y-4 overflow-x-hidden md:space-y-6">
-      <Card>
-        <CardContent className="flex flex-col gap-3 p-4 md:p-6">
-          <div className="flex items-center justify-between gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              className="w-fit"
-              onClick={() => {
-                if (window.history.length > 1) {
-                  navigate(-1);
-                  return;
-                }
-
-                navigate("/backtest");
-              }}
-            >
-              <span className="inline-flex items-center gap-1.5">
-                <ChevronLeft className="h-4 w-4" />
-                Back
-              </span>
-            </Button>
-
-            <ButtonGroup className="shrink-0">
+      <Card className="min-w-0 border-border/70 text-sm">
+        <CardHeader>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-3">
               <Button
                 type="button"
-                variant={isBacktestBookmarked ? "outline" : "default"}
-                size="icon-sm"
-                className="rounded-r-none"
-                aria-label={isBacktestBookmarked ? "Bookmarked" : "Bookmark"}
-                title={isBacktestBookmarked ? "Bookmarked" : "Bookmark"}
-                disabled={isBacktestBookmarkUpdating}
+                variant="ghost"
+                className="w-fit px-2 text-muted-foreground hover:text-foreground"
                 onClick={() => {
-                  void onToggleBacktestBookmark();
+                  if (window.history.length > 1) {
+                    navigate(-1);
+                    return;
+                  }
+
+                  navigate("/backtest");
                 }}
               >
-                {isBacktestBookmarkUpdating ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : isBacktestBookmarked ? (
-                  <BookmarkCheck className="h-4 w-4 text-primary" />
-                ) : (
-                  <Bookmark className="h-4 w-4" />
-                )}
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    type="button"
-                    variant={isBacktestBookmarked ? "outline" : "default"}
-                    size="icon-sm"
-                    className="-ml-px rounded-l-none"
-                    aria-label="More actions"
-                    title="More actions"
-                  >
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-44 min-w-44">
-                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                  <DropdownMenuItem
-                    onSelect={() => {
-                      void onCopyResultLink();
-                    }}
-                  >
-                    <Copy className="h-4 w-4" />
-                    Copy link
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onSelect={() => {
-                      void onToggleBacktestBookmark();
-                    }}
-                    disabled={isBacktestBookmarkUpdating}
-                  >
-                    {isBacktestBookmarked ? (
-                      <BookmarkCheck className="h-4 w-4" />
-                    ) : (
-                      <Bookmark className="h-4 w-4" />
-                    )}
-                    {isBacktestBookmarked ? "Bookmarked" : "Bookmark"}
-                  </DropdownMenuItem>
-                  {isBacktestOwner ? (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <Link
-                          to={`/backtest/${backtestId}/edit`}
-                          className="flex items-center gap-2"
-                        >
-                          <Pencil className="h-4 w-4" />
-                          Edit
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        variant="destructive"
-                        onSelect={() => {
-                          setIsDeleteConfirmOpen(true);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </>
-                  ) : null}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </ButtonGroup>
-          </div>
-
-          <div>
-            <p className="inline-flex w-fit items-center gap-1.5 rounded-md border bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground uppercase">
-              <Sparkles className="h-3.5 w-3.5 text-primary" />
-              Backtest Result
-            </p>
-
-            <h1 className="mt-3 flex items-center gap-2 text-2xl font-semibold tracking-tight md:text-4xl">
-              <CandlestickChart className="h-6 w-6 text-primary md:h-8 md:w-8" />
-              {backtest.symbol} Backtest Result
-            </h1>
-            <p className="mt-2 max-w-3xl text-sm text-muted-foreground md:text-base">
-              Review the full result on its own page with performance metrics,
-              equity movement, and detailed trade history.
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2 pt-1">
-              <span className="inline-flex items-center gap-1 rounded-md border bg-muted px-2 py-1 text-[11px] text-muted-foreground">
-                <CalendarClock className="h-3.5 w-3.5 text-primary" />
-                {backtest.timeframe}
-              </span>
-              <span className="inline-flex items-center gap-1 rounded-md border bg-muted px-2 py-1 text-[11px] text-muted-foreground">
-                <Clock3 className="h-3.5 w-3.5 text-primary" />
-                {formatDuration(result.duration)}
-              </span>
-              <span className="inline-flex items-center gap-1 rounded-md border bg-muted px-2 py-1 text-[11px] text-muted-foreground">
-                <UserRound className="h-3.5 w-3.5 text-primary" />@
-                {backtest.user?.username || "unknown"}
-              </span>
-              <span className="inline-flex items-center gap-1 rounded-md border bg-muted px-2 py-1 text-[11px] text-muted-foreground">
-                <Target className="h-3.5 w-3.5 text-primary" />
-                <span className="max-w-[170px] truncate">
-                  {backtest.strategy?.name || "Strategy"}
+                <span className="inline-flex items-center gap-1.5">
+                  <ChevronLeft className="h-4 w-4" />
+                  Back
                 </span>
-              </span>
+              </Button>
+
+              <ButtonGroup className="shrink-0">
+                <Button
+                  type="button"
+                  size="icon-sm"
+                  variant="ghost"
+                  className="rounded-r-none border-transparent bg-transparent text-muted-foreground shadow-none hover:bg-background/60 hover:text-foreground"
+                  aria-label={isBacktestBookmarked ? "Bookmarked" : "Bookmark"}
+                  title={isBacktestBookmarked ? "Bookmarked" : "Bookmark"}
+                  disabled={isBacktestBookmarkUpdating}
+                  onClick={() => {
+                    void onToggleBacktestBookmark();
+                  }}
+                >
+                  {isBacktestBookmarkUpdating ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : isBacktestBookmarked ? (
+                    <BookmarkCheck className="h-3.5 w-3.5 text-primary" />
+                  ) : (
+                    <Bookmark className="h-3.5 w-3.5" />
+                  )}
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      size="icon-sm"
+                      variant="ghost"
+                      className="-ml-px rounded-l-none border-transparent bg-transparent text-muted-foreground shadow-none hover:bg-background/60 hover:text-foreground"
+                      aria-label="More actions"
+                      title="More actions"
+                    >
+                      <MoreHorizontal className="h-3.5 w-3.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-44 min-w-44">
+                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        void onCopyResultLink();
+                      }}
+                    >
+                      <Copy className="h-4 w-4" />
+                      Copy link
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        void onToggleBacktestBookmark();
+                      }}
+                      disabled={isBacktestBookmarkUpdating}
+                    >
+                      {isBacktestBookmarked ? (
+                        <BookmarkCheck className="h-4 w-4" />
+                      ) : (
+                        <Bookmark className="h-4 w-4" />
+                      )}
+                      {isBacktestBookmarked ? "Bookmarked" : "Bookmark"}
+                    </DropdownMenuItem>
+                    {isBacktestOwner ? (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem asChild>
+                          <Link
+                            to={`/backtest/${backtestId}/edit`}
+                            className="flex items-center gap-2"
+                          >
+                            <Pencil className="h-4 w-4" />
+                            Edit
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          variant="destructive"
+                          onSelect={() => {
+                            setIsDeleteConfirmOpen(true);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </>
+                    ) : null}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </ButtonGroup>
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/8 px-2.5 py-1 text-[11px] font-medium tracking-[0.16em] text-primary uppercase">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Backtest Result
+                </span>
+              </div>
+              <CardTitle className="text-xl tracking-tight md:text-2xl">
+                {backtest.symbol} backtest result
+              </CardTitle>
+              <CardDescription className="max-w-3xl text-sm leading-6">
+                Review the full result with performance metrics, equity
+                movement, and detailed trade history.
+              </CardDescription>
+              <div className="pt-1">
+                <div className="flex flex-wrap gap-2">
+                  <span className="inline-flex items-center gap-1 rounded-full border bg-muted/30 px-2 py-0.5 text-[11px] text-muted-foreground">
+                    <CalendarClock className="h-3.5 w-3.5 text-primary" />
+                    {backtest.timeframe}
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-full border bg-muted/30 px-2 py-0.5 text-[11px] text-muted-foreground">
+                    <Clock3 className="h-3.5 w-3.5 text-primary" />
+                    {formatDuration(result.duration)}
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-full border bg-muted/30 px-2 py-0.5 text-[11px] text-muted-foreground">
+                    <UserRound className="h-3.5 w-3.5 text-primary" />@
+                    {backtest.user?.username || "unknown"}
+                  </span>
+                  <span className="inline-flex max-w-full items-center gap-1 rounded-full border bg-muted/30 px-2 py-0.5 text-[11px] text-muted-foreground">
+                    <Target className="h-3.5 w-3.5 text-primary" />
+                    <span className="max-w-[170px] truncate">
+                      {backtest.strategy?.name || "Strategy"}
+                    </span>
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
-        </CardContent>
+        </CardHeader>
       </Card>
 
       <AlertDialog

@@ -286,10 +286,18 @@ export default function StrategyPage() {
 
     observer.observe(node);
     return () => observer.disconnect();
-  }, [debouncedSearch, hasNextPage, isAppending, isLoading, isSearching, search]);
+  }, [
+    debouncedSearch,
+    hasNextPage,
+    isAppending,
+    isLoading,
+    isSearching,
+    search,
+  ]);
 
   const isSearchPending = search.trim() !== debouncedSearch;
-  const listStatus = isSearchPending || isSearching ? "searching" : isLoading ? "loading" : null;
+  const listStatus =
+    isSearchPending || isSearching ? "searching" : isLoading ? "loading" : null;
 
   const onToggleBookmark = async (strategyId: string) => {
     if (!user?._id) {
@@ -649,7 +657,7 @@ export default function StrategyPage() {
               return (
                 <Card
                   key={item._id}
-                  className="theme-hover-surface min-w-0 cursor-pointer border-border/70 py-0"
+                  className="min-w-0 cursor-pointer overflow-hidden border-border/70 py-0 transition-colors hover:bg-muted/60"
                   role="link"
                   tabIndex={0}
                   onClick={(event) => {
@@ -1890,9 +1898,10 @@ function DropdownField<T extends string>({
             ref={scrollAreaRef}
             className="h-44"
             onWheelCapture={(event) => {
-              const viewport = scrollAreaRef.current?.querySelector<HTMLElement>(
-                '[data-slot="scroll-area-viewport"]',
-              );
+              const viewport =
+                scrollAreaRef.current?.querySelector<HTMLElement>(
+                  '[data-slot="scroll-area-viewport"]',
+                );
 
               if (!viewport) {
                 return;
@@ -2129,9 +2138,7 @@ function DraftRiskTile({
     <div
       className={cn(
         "w-full rounded-xl px-2.5 py-2",
-        label === "Stop Loss"
-          ? "bg-destructive/8"
-          : "bg-info/8",
+        label === "Stop Loss" ? "bg-destructive/8" : "bg-info/8",
       )}
     >
       <div className="flex items-start justify-between gap-2">
@@ -3346,8 +3353,7 @@ export function StrategyBuilder({
     const loadIndicators = async () => {
       const trimmedIndicatorSearch = debouncedIndicatorSearch.trim();
       const isSearchTriggeredFetch =
-        trimmedIndicatorSearch !==
-        previousDebouncedIndicatorSearchRef.current;
+        trimmedIndicatorSearch !== previousDebouncedIndicatorSearchRef.current;
 
       if (indicatorPage === 1 && isSearchTriggeredFetch) {
         setIsSearchingIndicators(true);

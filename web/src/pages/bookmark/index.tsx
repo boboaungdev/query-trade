@@ -178,7 +178,7 @@ function renderBookmarkStrategyCard({
     <Card
       key={item._id}
       className={cn(
-        "theme-hover-surface min-w-0 border-border/70 py-0",
+        "min-w-0 overflow-hidden border-border/70 py-0 transition-colors hover:bg-muted/60",
         targetPath && "cursor-pointer",
       )}
       role={targetPath ? "link" : undefined}
@@ -355,7 +355,7 @@ function renderBookmarkBacktestCard({
   return (
     <Card
       key={item._id}
-      className="cursor-pointer overflow-hidden border-0 transition-colors hover:bg-primary/5"
+      className="cursor-pointer overflow-hidden border-0 transition-colors hover:bg-muted/60"
       role="link"
       tabIndex={0}
       onClick={(event) => {

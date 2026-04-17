@@ -280,10 +280,18 @@ export default function LeaderboardPage() {
 
     observer.observe(node);
     return () => observer.disconnect();
-  }, [debouncedSearch, hasNextPage, isAppending, isLoading, isSearching, search]);
+  }, [
+    debouncedSearch,
+    hasNextPage,
+    isAppending,
+    isLoading,
+    isSearching,
+    search,
+  ]);
 
   const isSearchPending = search.trim() !== debouncedSearch;
-  const listStatus = isSearchPending || isSearching ? "searching" : isLoading ? "loading" : null;
+  const listStatus =
+    isSearchPending || isSearching ? "searching" : isLoading ? "loading" : null;
 
   const onCopyResultLink = async (backtestId: string) => {
     const resultUrl = `${window.location.origin}/backtest/${backtestId}`;
@@ -582,7 +590,7 @@ export default function LeaderboardPage() {
             return (
               <Card
                 key={backtest._id}
-                className="cursor-pointer overflow-hidden border-0 transition-colors hover:bg-primary/5"
+                className="cursor-pointer overflow-hidden border-0 transition-colors hover:bg-muted/60"
                 role="link"
                 tabIndex={0}
                 onClick={(event) => {

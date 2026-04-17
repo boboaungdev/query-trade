@@ -1245,7 +1245,9 @@ export default function Auth() {
 
                     <div className="space-y-2">
                       <div className="flex items-center gap-1.5">
-                        <Label className="text-muted-foreground">Password</Label>
+                        <Label className="text-muted-foreground">
+                          Password
+                        </Label>
                       </div>
                       <AuthInput
                         icon={LockKeyhole}

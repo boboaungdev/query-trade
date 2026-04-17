@@ -347,12 +347,14 @@ export default function Profile() {
     strategies: 0,
     backtests: 0,
   });
-  const previousProfileListSearchRef = useRef<Record<ProfileDialogTab, string>>({
-    followers: "",
-    following: "",
-    strategies: "",
-    backtests: "",
-  });
+  const previousProfileListSearchRef = useRef<Record<ProfileDialogTab, string>>(
+    {
+      followers: "",
+      following: "",
+      strategies: "",
+      backtests: "",
+    },
+  );
 
   const initials =
     (canEditProfile ? form.name || user?.name : viewedUser?.name)
@@ -1812,11 +1814,12 @@ export default function Profile() {
                       const tabState = profileLists[tab];
                       const isTabSearchPending =
                         tabState.search.trim() !== tabState.debouncedSearch;
-                      const tabStatus = isTabSearchPending || tabState.isSearching
-                        ? "searching"
-                        : tabState.isLoading
-                          ? "loading"
-                          : null;
+                      const tabStatus =
+                        isTabSearchPending || tabState.isSearching
+                          ? "searching"
+                          : tabState.isLoading
+                            ? "loading"
+                            : null;
 
                       return (
                         <TabsContent
@@ -1875,158 +1878,111 @@ export default function Profile() {
                               >
                                 <CommandList className="max-h-none overflow-visible px-0 py-0">
                                   <CommandGroup className="space-y-1 p-0">
-                                {tab === "followers" || tab === "following"
-                                  ? (
-                                      tabState.items as ProfileFollowListItem[]
-                                    ).map((item) => (
-                                      <CommandItem
-                                        key={item._id}
-                                        value={`${item.name || ""} ${item.username || ""}`}
-                                        className="theme-hover-surface flex min-w-0 cursor-pointer items-center justify-between gap-3 rounded-md px-3 py-2 text-left hover:bg-muted/60 data-[selected=true]:bg-transparent data-[selected=true]:hover:bg-muted/60"
-                                      >
-                                        <Link
-                                          to={`/${item.username}`}
-                                          state={{
-                                            fromProfileUrl:
-                                              currentProfileDialogUrl,
-                                          }}
-                                          className="flex min-w-0 flex-1 items-center gap-3 transition hover:text-foreground"
-                                        >
-                                          <Avatar className="h-10 w-10">
-                                            <AvatarImage
-                                              src={item.avatar}
-                                              alt={item.name || item.username}
-                                            />
-                                            <AvatarFallback>
-                                              {(
-                                                item.name ||
-                                                item.username ||
-                                                "U"
-                                              )
-                                                .slice(0, 2)
-                                                .toUpperCase()}
-                                            </AvatarFallback>
-                                          </Avatar>
-                                          <div className="min-w-0 space-y-1">
-                                            <p className="truncate font-medium">
-                                              {item.name || "Unknown"}
-                                            </p>
-                                            <p className="truncate text-xs text-muted-foreground">
-                                              @{item.username || "unknown"}
-                                            </p>
-                                            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-                                              {[
-                                                {
-                                                  key: "followers",
-                                                  value:
-                                                    item.stats?.followerCount,
-                                                  icon: Users,
-                                                },
-                                                {
-                                                  key: "following",
-                                                  value:
-                                                    item.stats?.followingCount,
-                                                  icon: UserCheck,
-                                                },
-                                                {
-                                                  key: "strategies",
-                                                  value:
-                                                    item.stats?.strategyCount,
-                                                  icon: Target,
-                                                },
-                                                {
-                                                  key: "backtests",
-                                                  value:
-                                                    item.stats?.backtestCount,
-                                                  icon: CandlestickChart,
-                                                },
-                                              ].map((stat) => (
-                                                <span
-                                                  key={stat.key}
-                                                  className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5"
-                                                >
-                                                  <stat.icon className="h-3.5 w-3.5" />
-                                                  <span className="font-medium text-foreground">
-                                                    {compactNumber.format(
-                                                      stat.value ?? 0,
-                                                    )}
-                                                  </span>
-                                                </span>
-                                              ))}
-                                            </div>
-                                          </div>
-                                        </Link>
-
-                                        {(tab === "followers" ||
-                                          tab === "following") &&
-                                        item._id !== user?._id ? (
-                                          <ButtonGroup
-                                            aria-label={`Follow actions for ${item.username || item.name || "user"}`}
-                                            className="min-w-0 shrink-0"
+                                    {tab === "followers" || tab === "following"
+                                      ? (
+                                          tabState.items as ProfileFollowListItem[]
+                                        ).map((item) => (
+                                          <CommandItem
+                                            key={item._id}
+                                            value={`${item.name || ""} ${item.username || ""}`}
+                                            className="theme-hover-surface flex min-w-0 cursor-pointer items-center justify-between gap-3 rounded-md px-3 py-2 text-left hover:bg-muted/60 data-[selected=true]:bg-transparent data-[selected=true]:hover:bg-muted/60"
                                           >
-                                            <Button
-                                              type="button"
-                                              size="icon-sm"
-                                              variant="ghost"
-                                              className={cn(
-                                                "rounded-r-none border-transparent shadow-none",
-                                                item.isFollowing
-                                                  ? "text-primary"
-                                                  : "text-muted-foreground",
-                                              )}
-                                              disabled={
-                                                !isAuthenticated ||
-                                                followListUpdatingIds.has(
-                                                  item._id,
-                                                )
-                                              }
-                                              onClick={() => {
-                                                onFollowListActionClick(item);
+                                            <Link
+                                              to={`/${item.username}`}
+                                              state={{
+                                                fromProfileUrl:
+                                                  currentProfileDialogUrl,
                                               }}
+                                              className="flex min-w-0 flex-1 items-center gap-3 transition hover:text-foreground"
                                             >
-                                              {followListUpdatingIds.has(
-                                                item._id,
-                                              ) ? (
-                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                              ) : item.isFollowing ? (
-                                                <>
-                                                  <UserCheck className="h-4 w-4" />
-                                                </>
-                                              ) : (
-                                                <>
-                                                  <UserPlus className="h-4 w-4" />
-                                                </>
-                                              )}
-                                            </Button>
-                                            <DropdownMenu>
-                                              <DropdownMenuTrigger asChild>
+                                              <Avatar className="h-10 w-10">
+                                                <AvatarImage
+                                                  src={item.avatar}
+                                                  alt={
+                                                    item.name || item.username
+                                                  }
+                                                />
+                                                <AvatarFallback>
+                                                  {(
+                                                    item.name ||
+                                                    item.username ||
+                                                    "U"
+                                                  )
+                                                    .slice(0, 2)
+                                                    .toUpperCase()}
+                                                </AvatarFallback>
+                                              </Avatar>
+                                              <div className="min-w-0 space-y-1">
+                                                <p className="truncate font-medium">
+                                                  {item.name || "Unknown"}
+                                                </p>
+                                                <p className="truncate text-xs text-muted-foreground">
+                                                  @{item.username || "unknown"}
+                                                </p>
+                                                <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                                                  {[
+                                                    {
+                                                      key: "followers",
+                                                      value:
+                                                        item.stats
+                                                          ?.followerCount,
+                                                      icon: Users,
+                                                    },
+                                                    {
+                                                      key: "following",
+                                                      value:
+                                                        item.stats
+                                                          ?.followingCount,
+                                                      icon: UserCheck,
+                                                    },
+                                                    {
+                                                      key: "strategies",
+                                                      value:
+                                                        item.stats
+                                                          ?.strategyCount,
+                                                      icon: Target,
+                                                    },
+                                                    {
+                                                      key: "backtests",
+                                                      value:
+                                                        item.stats
+                                                          ?.backtestCount,
+                                                      icon: CandlestickChart,
+                                                    },
+                                                  ].map((stat) => (
+                                                    <span
+                                                      key={stat.key}
+                                                      className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5"
+                                                    >
+                                                      <stat.icon className="h-3.5 w-3.5" />
+                                                      <span className="font-medium text-foreground">
+                                                        {compactNumber.format(
+                                                          stat.value ?? 0,
+                                                        )}
+                                                      </span>
+                                                    </span>
+                                                  ))}
+                                                </div>
+                                              </div>
+                                            </Link>
+
+                                            {(tab === "followers" ||
+                                              tab === "following") &&
+                                            item._id !== user?._id ? (
+                                              <ButtonGroup
+                                                aria-label={`Follow actions for ${item.username || item.name || "user"}`}
+                                                className="min-w-0 shrink-0"
+                                              >
                                                 <Button
                                                   type="button"
                                                   size="icon-sm"
                                                   variant="ghost"
-                                                  className="-ml-px rounded-l-none border-transparent text-muted-foreground shadow-none"
-                                                  aria-label={`More actions for ${item.username || item.name || "user"}`}
-                                                >
-                                                  <MoreHorizontal className="h-4 w-4" />
-                                                </Button>
-                                              </DropdownMenuTrigger>
-                                              <DropdownMenuContent
-                                                align="end"
-                                                collisionPadding={16}
-                                                className="w-44"
-                                              >
-                                                <DropdownMenuItem
-                                                  onClick={() =>
-                                                    void onCopyProfileLink(
-                                                      item.username,
-                                                    )
-                                                  }
-                                                >
-                                                  <Copy className="h-4 w-4" />
-                                                  Copy link
-                                                </DropdownMenuItem>
-                                                <DropdownMenuSeparator />
-                                                <DropdownMenuItem
+                                                  className={cn(
+                                                    "rounded-r-none border-transparent shadow-none",
+                                                    item.isFollowing
+                                                      ? "text-primary"
+                                                      : "text-muted-foreground",
+                                                  )}
                                                   disabled={
                                                     !isAuthenticated ||
                                                     followListUpdatingIds.has(
@@ -2039,141 +1995,145 @@ export default function Profile() {
                                                     );
                                                   }}
                                                 >
-                                                  {item.isFollowing ? (
+                                                  {followListUpdatingIds.has(
+                                                    item._id,
+                                                  ) ? (
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                  ) : item.isFollowing ? (
                                                     <>
                                                       <UserCheck className="h-4 w-4" />
-                                                      Unfollow
                                                     </>
                                                   ) : (
                                                     <>
                                                       <UserPlus className="h-4 w-4" />
-                                                      Follow
                                                     </>
                                                   )}
-                                                </DropdownMenuItem>
-                                              </DropdownMenuContent>
-                                            </DropdownMenu>
-                                          </ButtonGroup>
-                                        ) : null}
-                                      </CommandItem>
-                                    ))
-                                  : tab === "strategies"
-                                    ? (
-                                        tabState.items as ProfileStrategyListItem[]
-                                      ).map((item) => (
-                                        <CommandItem
-                                          key={item._id}
-                                          value={`${item.name || ""} ${item.description || ""}`}
-                                          className="theme-hover-surface flex min-w-0 overflow-hidden cursor-pointer items-center justify-between gap-3 rounded-md py-2 pl-3 pr-0 text-left hover:bg-muted/60 data-[selected=true]:bg-transparent data-[selected=true]:hover:bg-muted/60"
-                                        >
-                                          <Link
-                                            to={`/strategy/${item._id}`}
-                                            state={{
-                                              fromProfileUrl:
-                                                currentProfileDialogUrl,
-                                              fromProfileUsername:
-                                                routeUsername,
-                                            }}
-                                            className="w-0 min-w-0 flex-1 basis-0 overflow-hidden transition hover:text-foreground"
-                                          >
-                                            <div className="min-w-0 w-full max-w-full overflow-hidden">
-                                              <p className="block w-full truncate font-medium">
-                                                {item.name || "Strategy"}
-                                              </p>
-                                              <p className="block w-full truncate text-xs text-muted-foreground">
-                                                {item.description ||
-                                                  "No description provided."}
-                                              </p>
-                                              <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-                                                <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
-                                                  <TrendingUp className="h-3.5 w-3.5" />
-                                                  {item.stats?.viewCount ?? "-"}
-                                                </span>
-                                                <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
-                                                  <Bookmark className="h-3.5 w-3.5" />
-                                                  {item.stats?.bookmarkCount ??
-                                                    "-"}
-                                                </span>
-                                                <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
-                                                  {item.isPublic ? (
-                                                    <Globe className="h-3.5 w-3.5" />
-                                                  ) : (
-                                                    <Lock className="h-3.5 w-3.5" />
-                                                  )}
-                                                  {item.isPublic
-                                                    ? "Public"
-                                                    : "Private"}
-                                                </span>
-                                              </div>
-                                            </div>
-                                          </Link>
-
-                                          <ButtonGroup
-                                            aria-label={`Bookmark actions for ${item.name || "strategy"}`}
-                                            className="min-w-0 shrink-0"
-                                          >
-                                            <Button
-                                              type="button"
-                                              size="icon-sm"
-                                              variant="ghost"
-                                              className={cn(
-                                                "rounded-r-none border-transparent shadow-none",
-                                                item.isBookmarked
-                                                  ? "text-primary"
-                                                  : "text-muted-foreground",
-                                              )}
-                                              disabled={updatingStrategyIds.has(
-                                                item._id,
-                                              )}
-                                              onClick={() => {
-                                                void onToggleProfileStrategyBookmark(
-                                                  item._id,
-                                                );
-                                              }}
+                                                </Button>
+                                                <DropdownMenu>
+                                                  <DropdownMenuTrigger asChild>
+                                                    <Button
+                                                      type="button"
+                                                      size="icon-sm"
+                                                      variant="ghost"
+                                                      className="-ml-px rounded-l-none border-transparent text-muted-foreground shadow-none"
+                                                      aria-label={`More actions for ${item.username || item.name || "user"}`}
+                                                    >
+                                                      <MoreHorizontal className="h-4 w-4" />
+                                                    </Button>
+                                                  </DropdownMenuTrigger>
+                                                  <DropdownMenuContent
+                                                    align="end"
+                                                    collisionPadding={16}
+                                                    className="w-44"
+                                                  >
+                                                    <DropdownMenuItem
+                                                      onClick={() =>
+                                                        void onCopyProfileLink(
+                                                          item.username,
+                                                        )
+                                                      }
+                                                    >
+                                                      <Copy className="h-4 w-4" />
+                                                      Copy link
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem
+                                                      disabled={
+                                                        !isAuthenticated ||
+                                                        followListUpdatingIds.has(
+                                                          item._id,
+                                                        )
+                                                      }
+                                                      onClick={() => {
+                                                        onFollowListActionClick(
+                                                          item,
+                                                        );
+                                                      }}
+                                                    >
+                                                      {item.isFollowing ? (
+                                                        <>
+                                                          <UserCheck className="h-4 w-4" />
+                                                          Unfollow
+                                                        </>
+                                                      ) : (
+                                                        <>
+                                                          <UserPlus className="h-4 w-4" />
+                                                          Follow
+                                                        </>
+                                                      )}
+                                                    </DropdownMenuItem>
+                                                  </DropdownMenuContent>
+                                                </DropdownMenu>
+                                              </ButtonGroup>
+                                            ) : null}
+                                          </CommandItem>
+                                        ))
+                                      : tab === "strategies"
+                                        ? (
+                                            tabState.items as ProfileStrategyListItem[]
+                                          ).map((item) => (
+                                            <CommandItem
+                                              key={item._id}
+                                              value={`${item.name || ""} ${item.description || ""}`}
+                                              className="theme-hover-surface flex min-w-0 overflow-hidden cursor-pointer items-center justify-between gap-3 rounded-md py-2 pl-3 pr-0 text-left hover:bg-muted/60 data-[selected=true]:bg-transparent data-[selected=true]:hover:bg-muted/60"
                                             >
-                                              {updatingStrategyIds.has(
-                                                item._id,
-                                              ) ? (
-                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                              ) : item.isBookmarked ? (
-                                                <>
-                                                  <BookmarkCheck className="h-4 w-4" />
-                                                </>
-                                              ) : (
-                                                <>
-                                                  <Bookmark className="h-4 w-4" />
-                                                </>
-                                              )}
-                                            </Button>
-                                            <DropdownMenu>
-                                              <DropdownMenuTrigger asChild>
+                                              <Link
+                                                to={`/strategy/${item._id}`}
+                                                state={{
+                                                  fromProfileUrl:
+                                                    currentProfileDialogUrl,
+                                                  fromProfileUsername:
+                                                    routeUsername,
+                                                }}
+                                                className="w-0 min-w-0 flex-1 basis-0 overflow-hidden transition hover:text-foreground"
+                                              >
+                                                <div className="min-w-0 w-full max-w-full overflow-hidden">
+                                                  <p className="block w-full truncate font-medium">
+                                                    {item.name || "Strategy"}
+                                                  </p>
+                                                  <p className="block w-full truncate text-xs text-muted-foreground">
+                                                    {item.description ||
+                                                      "No description provided."}
+                                                  </p>
+                                                  <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                                                    <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                                                      <TrendingUp className="h-3.5 w-3.5" />
+                                                      {item.stats?.viewCount ??
+                                                        "-"}
+                                                    </span>
+                                                    <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                                                      <Bookmark className="h-3.5 w-3.5" />
+                                                      {item.stats
+                                                        ?.bookmarkCount ?? "-"}
+                                                    </span>
+                                                    <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                                                      {item.isPublic ? (
+                                                        <Globe className="h-3.5 w-3.5" />
+                                                      ) : (
+                                                        <Lock className="h-3.5 w-3.5" />
+                                                      )}
+                                                      {item.isPublic
+                                                        ? "Public"
+                                                        : "Private"}
+                                                    </span>
+                                                  </div>
+                                                </div>
+                                              </Link>
+
+                                              <ButtonGroup
+                                                aria-label={`Bookmark actions for ${item.name || "strategy"}`}
+                                                className="min-w-0 shrink-0"
+                                              >
                                                 <Button
                                                   type="button"
                                                   size="icon-sm"
                                                   variant="ghost"
-                                                  className="-ml-px rounded-l-none border-transparent text-muted-foreground shadow-none"
-                                                  aria-label={`More actions for ${item.name || "strategy"}`}
-                                                >
-                                                  <MoreHorizontal className="h-4 w-4" />
-                                                </Button>
-                                              </DropdownMenuTrigger>
-                                              <DropdownMenuContent
-                                                align="end"
-                                                collisionPadding={16}
-                                                className="w-44"
-                                              >
-                                                <DropdownMenuItem
-                                                  onClick={() =>
-                                                    void onCopyAbsoluteLink(
-                                                      `/strategy/${item._id}`,
-                                                    )
-                                                  }
-                                                >
-                                                  <Copy className="h-4 w-4" />
-                                                  Copy link
-                                                </DropdownMenuItem>
-                                                <DropdownMenuSeparator />
-                                                <DropdownMenuItem
+                                                  className={cn(
+                                                    "rounded-r-none border-transparent shadow-none",
+                                                    item.isBookmarked
+                                                      ? "text-primary"
+                                                      : "text-muted-foreground",
+                                                  )}
                                                   disabled={updatingStrategyIds.has(
                                                     item._id,
                                                   )}
@@ -2183,148 +2143,150 @@ export default function Profile() {
                                                     );
                                                   }}
                                                 >
-                                                  {item.isBookmarked ? (
+                                                  {updatingStrategyIds.has(
+                                                    item._id,
+                                                  ) ? (
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                  ) : item.isBookmarked ? (
                                                     <>
                                                       <BookmarkCheck className="h-4 w-4" />
-                                                      Bookmarked
                                                     </>
                                                   ) : (
                                                     <>
                                                       <Bookmark className="h-4 w-4" />
-                                                      Bookmark
                                                     </>
                                                   )}
-                                                </DropdownMenuItem>
-                                              </DropdownMenuContent>
-                                            </DropdownMenu>
-                                          </ButtonGroup>
-                                        </CommandItem>
-                                      ))
-                                    : (
-                                        tabState.items as ProfileBacktestListItem[]
-                                      ).map((item) => {
-                                        const summaryMetrics =
-                                          getProfileBacktestSummaryMetrics(
-                                            item,
-                                          );
+                                                </Button>
+                                                <DropdownMenu>
+                                                  <DropdownMenuTrigger asChild>
+                                                    <Button
+                                                      type="button"
+                                                      size="icon-sm"
+                                                      variant="ghost"
+                                                      className="-ml-px rounded-l-none border-transparent text-muted-foreground shadow-none"
+                                                      aria-label={`More actions for ${item.name || "strategy"}`}
+                                                    >
+                                                      <MoreHorizontal className="h-4 w-4" />
+                                                    </Button>
+                                                  </DropdownMenuTrigger>
+                                                  <DropdownMenuContent
+                                                    align="end"
+                                                    collisionPadding={16}
+                                                    className="w-44"
+                                                  >
+                                                    <DropdownMenuItem
+                                                      onClick={() =>
+                                                        void onCopyAbsoluteLink(
+                                                          `/strategy/${item._id}`,
+                                                        )
+                                                      }
+                                                    >
+                                                      <Copy className="h-4 w-4" />
+                                                      Copy link
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem
+                                                      disabled={updatingStrategyIds.has(
+                                                        item._id,
+                                                      )}
+                                                      onClick={() => {
+                                                        void onToggleProfileStrategyBookmark(
+                                                          item._id,
+                                                        );
+                                                      }}
+                                                    >
+                                                      {item.isBookmarked ? (
+                                                        <>
+                                                          <BookmarkCheck className="h-4 w-4" />
+                                                          Bookmarked
+                                                        </>
+                                                      ) : (
+                                                        <>
+                                                          <Bookmark className="h-4 w-4" />
+                                                          Bookmark
+                                                        </>
+                                                      )}
+                                                    </DropdownMenuItem>
+                                                  </DropdownMenuContent>
+                                                </DropdownMenu>
+                                              </ButtonGroup>
+                                            </CommandItem>
+                                          ))
+                                        : (
+                                            tabState.items as ProfileBacktestListItem[]
+                                          ).map((item) => {
+                                            const summaryMetrics =
+                                              getProfileBacktestSummaryMetrics(
+                                                item,
+                                              );
 
-                                        return (
-                                          <CommandItem
-                                            key={item._id}
-                                            value={`${item.symbol || ""} ${item.timeframe || ""} ${item.strategy?.name || ""}`}
-                                            className="theme-hover-surface flex min-w-0 cursor-pointer items-center justify-between gap-3 rounded-md px-3 py-2 text-left hover:bg-muted/60 data-[selected=true]:bg-transparent data-[selected=true]:hover:bg-muted/60"
-                                          >
-                                            <Link
-                                              to={`/backtest/${item._id}`}
-                                              className="min-w-0 flex-1 transition hover:text-foreground"
-                                            >
-                                              <div className="min-w-0">
-                                                <p className="truncate font-medium">
-                                                  {item.symbol || "-"} /{" "}
-                                                  {item.timeframe || "-"}
-                                                </p>
-                                                <p className="truncate text-xs text-muted-foreground">
-                                                  {item.strategy?.name ||
-                                                    "Strategy"}
-                                                </p>
-                                                <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-                                                  {summaryMetrics.map(
-                                                    (metric) => (
-                                                      <span
-                                                        key={metric.key}
-                                                        className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5"
-                                                      >
-                                                        <metric.icon
-                                                          className={cn(
-                                                            "h-3.5 w-3.5",
-                                                            metric.key === "roi"
-                                                              ? metric.valueClassName
-                                                              : "text-muted-foreground",
-                                                          )}
-                                                        />
-                                                        <span
-                                                          className={cn(
-                                                            "font-medium",
-                                                            metric.key === "roi"
-                                                              ? metric.valueClassName
-                                                              : "text-muted-foreground",
-                                                          )}
-                                                        >
-                                                          {metric.value}
-                                                        </span>
-                                                      </span>
-                                                    ),
-                                                  )}
-                                                </div>
-                                              </div>
-                                            </Link>
-
-                                            <ButtonGroup
-                                              aria-label={`Bookmark actions for ${item.symbol || "backtest"}`}
-                                              className="min-w-0 shrink-0"
-                                            >
-                                              <Button
-                                                type="button"
-                                                size="icon-sm"
-                                                variant="ghost"
-                                                className={cn(
-                                                  "rounded-r-none border-transparent shadow-none",
-                                                  item.isBookmarked
-                                                    ? "text-primary"
-                                                    : "text-muted-foreground",
-                                                )}
-                                                disabled={updatingBacktestIds.has(
-                                                  item._id,
-                                                )}
-                                                onClick={() => {
-                                                  void onToggleProfileBacktestBookmark(
-                                                    item._id,
-                                                  );
-                                                }}
+                                            return (
+                                              <CommandItem
+                                                key={item._id}
+                                                value={`${item.symbol || ""} ${item.timeframe || ""} ${item.strategy?.name || ""}`}
+                                                className="theme-hover-surface flex min-w-0 cursor-pointer items-center justify-between gap-3 rounded-md px-3 py-2 text-left hover:bg-muted/60 data-[selected=true]:bg-transparent data-[selected=true]:hover:bg-muted/60"
                                               >
-                                                {updatingBacktestIds.has(
-                                                  item._id,
-                                                ) ? (
-                                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                                ) : item.isBookmarked ? (
-                                                  <>
-                                                    <BookmarkCheck className="h-4 w-4" />
-                                                  </>
-                                                ) : (
-                                                  <>
-                                                    <Bookmark className="h-4 w-4" />
-                                                  </>
-                                                )}
-                                              </Button>
-                                              <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
+                                                <Link
+                                                  to={`/backtest/${item._id}`}
+                                                  className="min-w-0 flex-1 transition hover:text-foreground"
+                                                >
+                                                  <div className="min-w-0">
+                                                    <p className="truncate font-medium">
+                                                      {item.symbol || "-"} /{" "}
+                                                      {item.timeframe || "-"}
+                                                    </p>
+                                                    <p className="truncate text-xs text-muted-foreground">
+                                                      {item.strategy?.name ||
+                                                        "Strategy"}
+                                                    </p>
+                                                    <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                                                      {summaryMetrics.map(
+                                                        (metric) => (
+                                                          <span
+                                                            key={metric.key}
+                                                            className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5"
+                                                          >
+                                                            <metric.icon
+                                                              className={cn(
+                                                                "h-3.5 w-3.5",
+                                                                metric.key ===
+                                                                  "roi"
+                                                                  ? metric.valueClassName
+                                                                  : "text-muted-foreground",
+                                                              )}
+                                                            />
+                                                            <span
+                                                              className={cn(
+                                                                "font-medium",
+                                                                metric.key ===
+                                                                  "roi"
+                                                                  ? metric.valueClassName
+                                                                  : "text-muted-foreground",
+                                                              )}
+                                                            >
+                                                              {metric.value}
+                                                            </span>
+                                                          </span>
+                                                        ),
+                                                      )}
+                                                    </div>
+                                                  </div>
+                                                </Link>
+
+                                                <ButtonGroup
+                                                  aria-label={`Bookmark actions for ${item.symbol || "backtest"}`}
+                                                  className="min-w-0 shrink-0"
+                                                >
                                                   <Button
                                                     type="button"
                                                     size="icon-sm"
                                                     variant="ghost"
-                                                    className="-ml-px rounded-l-none border-transparent text-muted-foreground shadow-none"
-                                                    aria-label={`More actions for ${item.symbol || "backtest"}`}
-                                                  >
-                                                    <MoreHorizontal className="h-4 w-4" />
-                                                  </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent
-                                                  align="end"
-                                                  collisionPadding={16}
-                                                  className="w-44"
-                                                >
-                                                  <DropdownMenuItem
-                                                    onClick={() =>
-                                                      void onCopyAbsoluteLink(
-                                                        `/backtest/${item._id}`,
-                                                      )
-                                                    }
-                                                  >
-                                                    <Copy className="h-4 w-4" />
-                                                    Copy link
-                                                  </DropdownMenuItem>
-                                                  <DropdownMenuSeparator />
-                                                  <DropdownMenuItem
+                                                    className={cn(
+                                                      "rounded-r-none border-transparent shadow-none",
+                                                      item.isBookmarked
+                                                        ? "text-primary"
+                                                        : "text-muted-foreground",
+                                                    )}
                                                     disabled={updatingBacktestIds.has(
                                                       item._id,
                                                     )}
@@ -2334,45 +2296,99 @@ export default function Profile() {
                                                       );
                                                     }}
                                                   >
-                                                    {item.isBookmarked ? (
+                                                    {updatingBacktestIds.has(
+                                                      item._id,
+                                                    ) ? (
+                                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                                    ) : item.isBookmarked ? (
                                                       <>
                                                         <BookmarkCheck className="h-4 w-4" />
-                                                        Bookmarked
                                                       </>
                                                     ) : (
                                                       <>
                                                         <Bookmark className="h-4 w-4" />
-                                                        Bookmark
                                                       </>
                                                     )}
-                                                  </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                              </DropdownMenu>
-                                            </ButtonGroup>
-                                          </CommandItem>
-                                        );
-                                      })}
+                                                  </Button>
+                                                  <DropdownMenu>
+                                                    <DropdownMenuTrigger
+                                                      asChild
+                                                    >
+                                                      <Button
+                                                        type="button"
+                                                        size="icon-sm"
+                                                        variant="ghost"
+                                                        className="-ml-px rounded-l-none border-transparent text-muted-foreground shadow-none"
+                                                        aria-label={`More actions for ${item.symbol || "backtest"}`}
+                                                      >
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                      </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent
+                                                      align="end"
+                                                      collisionPadding={16}
+                                                      className="w-44"
+                                                    >
+                                                      <DropdownMenuItem
+                                                        onClick={() =>
+                                                          void onCopyAbsoluteLink(
+                                                            `/backtest/${item._id}`,
+                                                          )
+                                                        }
+                                                      >
+                                                        <Copy className="h-4 w-4" />
+                                                        Copy link
+                                                      </DropdownMenuItem>
+                                                      <DropdownMenuSeparator />
+                                                      <DropdownMenuItem
+                                                        disabled={updatingBacktestIds.has(
+                                                          item._id,
+                                                        )}
+                                                        onClick={() => {
+                                                          void onToggleProfileBacktestBookmark(
+                                                            item._id,
+                                                          );
+                                                        }}
+                                                      >
+                                                        {item.isBookmarked ? (
+                                                          <>
+                                                            <BookmarkCheck className="h-4 w-4" />
+                                                            Bookmarked
+                                                          </>
+                                                        ) : (
+                                                          <>
+                                                            <Bookmark className="h-4 w-4" />
+                                                            Bookmark
+                                                          </>
+                                                        )}
+                                                      </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                  </DropdownMenu>
+                                                </ButtonGroup>
+                                              </CommandItem>
+                                            );
+                                          })}
 
-                                {tabState.hasNextPage ? (
-                                  <div
-                                    ref={
-                                      tab === activeProfileTab
-                                        ? profileListLoadMoreRef
-                                        : null
-                                    }
-                                    className="flex h-10 items-center justify-center"
-                                  >
-                                    {tabState.isAppending &&
-                                    tabStatus !== "searching" ? (
-                                      <>
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin text-muted-foreground" />
-                                        <span className="text-sm text-muted-foreground">
-                                          Loading...
-                                        </span>
-                                      </>
+                                    {tabState.hasNextPage ? (
+                                      <div
+                                        ref={
+                                          tab === activeProfileTab
+                                            ? profileListLoadMoreRef
+                                            : null
+                                        }
+                                        className="flex h-10 items-center justify-center"
+                                      >
+                                        {tabState.isAppending &&
+                                        tabStatus !== "searching" ? (
+                                          <>
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin text-muted-foreground" />
+                                            <span className="text-sm text-muted-foreground">
+                                              Loading...
+                                            </span>
+                                          </>
+                                        ) : null}
+                                      </div>
                                     ) : null}
-                                  </div>
-                                ) : null}
                                   </CommandGroup>
                                 </CommandList>
                               </Command>
