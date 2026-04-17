@@ -170,6 +170,7 @@ export default function StrategyPage() {
   const [hasNextPage, setHasNextPage] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isAppending, setIsAppending] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const [strategyIdPendingDelete, setStrategyIdPendingDelete] = useState("");
   const [isDeletingStrategy, setIsDeletingStrategy] = useState(false);
   const [updatingStrategyIds, setUpdatingStrategyIds] = useState<Set<string>>(
@@ -184,6 +185,7 @@ export default function StrategyPage() {
   const [createSheetControls, setCreateSheetControls] =
     useState<StrategyBuilderFooterControls | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const previousDebouncedSearchRef = useRef(debouncedSearch);
 
   const shouldOpenStrategyBuilder =
     typeof location.state === "object" &&
@@ -202,14 +204,19 @@ export default function StrategyPage() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search.trim());
-    }, 500);
+    }, 250);
 
     return () => clearTimeout(timer);
   }, [search]);
 
   useEffect(() => {
     const loadStrategies = async () => {
-      if (page === 1) {
+      const isSearchTriggeredFetch =
+        debouncedSearch !== previousDebouncedSearchRef.current;
+
+      if (page === 1 && isSearchTriggeredFetch) {
+        setIsSearching(true);
+      } else if (page === 1) {
         setIsLoading(true);
       } else {
         setIsAppending(true);
@@ -238,9 +245,11 @@ export default function StrategyPage() {
 
         setTotalCount(result?.total ?? 0);
         setHasNextPage(Boolean(result?.hasNextPage));
+        previousDebouncedSearchRef.current = debouncedSearch;
       } catch (error) {
         toast.error(getApiErrorMessage(error, "Failed to load strategies"));
       } finally {
+        setIsSearching(false);
         setIsLoading(false);
         setIsAppending(false);
       }
@@ -251,12 +260,20 @@ export default function StrategyPage() {
 
   useEffect(() => {
     const node = loadMoreRef.current;
-    if (!node || !hasNextPage || isLoading || isAppending) return;
+    if (!node || !hasNextPage || isLoading || isAppending || isSearching) {
+      return;
+    }
 
     const observer = new IntersectionObserver(
       (entries) => {
         const firstEntry = entries[0];
-        if (firstEntry?.isIntersecting && !isAppending && !isLoading) {
+        if (
+          firstEntry?.isIntersecting &&
+          !isAppending &&
+          !isLoading &&
+          !isSearching &&
+          search.trim() === debouncedSearch
+        ) {
           setPage((prev) => prev + 1);
         }
       },
@@ -269,7 +286,10 @@ export default function StrategyPage() {
 
     observer.observe(node);
     return () => observer.disconnect();
-  }, [hasNextPage, isAppending, isLoading]);
+  }, [debouncedSearch, hasNextPage, isAppending, isLoading, isSearching, search]);
+
+  const isSearchPending = search.trim() !== debouncedSearch;
+  const listStatus = isSearchPending || isSearching ? "searching" : isLoading ? "loading" : null;
 
   const onToggleBookmark = async (strategyId: string) => {
     if (!user?._id) {
@@ -597,10 +617,19 @@ export default function StrategyPage() {
       </Card>
 
       <div className="space-y-4">
-        {isLoading ? (
+        {listStatus ? (
           <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span>Loading strategies...</span>
+            {listStatus === "searching" ? (
+              <>
+                <Search className="h-4 w-4 animate-pulse" />
+                <span>Searching strategy....</span>
+              </>
+            ) : (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Loading strategy....</span>
+              </>
+            )}
           </div>
         ) : strategies.length === 0 ? (
           <div className="flex items-center justify-center py-6 text-center text-sm text-muted-foreground">
@@ -1386,6 +1415,9 @@ function getParamHelpText(paramKey: string) {
       return "";
   }
 }
+
+const STRATEGY_NAME_MAX_LENGTH = 50;
+const STRATEGY_DESCRIPTION_MAX_LENGTH = 200;
 
 function ParamHelpTooltip({
   label: _label,
@@ -3280,6 +3312,7 @@ export function StrategyBuilder({
   const [indicatorOptions, setIndicatorOptions] = useState<
     IndicatorDefinition[]
   >([]);
+  const [isSearchingIndicators, setIsSearchingIndicators] = useState(false);
   const [indicatorDrafts, setIndicatorDrafts] = useState<IndicatorDraft[]>([]);
   const [buyDraft, setBuyDraft] = useState<LogicBlockDraft>(
     createLogicBlockDraft(),
@@ -3291,6 +3324,9 @@ export function StrategyBuilder({
   const [isLoadingStrategy, setIsLoadingStrategy] = useState(isEditing);
   const [initialPayloadSnapshot, setInitialPayloadSnapshot] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const previousDebouncedIndicatorSearchRef = useRef(
+    debouncedIndicatorSearch.trim(),
+  );
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -3308,7 +3344,14 @@ export function StrategyBuilder({
     }
 
     const loadIndicators = async () => {
-      if (indicatorPage === 1) {
+      const trimmedIndicatorSearch = debouncedIndicatorSearch.trim();
+      const isSearchTriggeredFetch =
+        trimmedIndicatorSearch !==
+        previousDebouncedIndicatorSearchRef.current;
+
+      if (indicatorPage === 1 && isSearchTriggeredFetch) {
+        setIsSearchingIndicators(true);
+      } else if (indicatorPage === 1) {
         setIsLoadingIndicators(true);
       } else {
         setIsAppendingIndicators(true);
@@ -3317,7 +3360,7 @@ export function StrategyBuilder({
       try {
         const response = await fetchIndicatorsOnce({
           page: indicatorPage,
-          search: debouncedIndicatorSearch.trim(),
+          search: trimmedIndicatorSearch,
           sortBy: indicatorSortBy,
           order: indicatorOrder,
           category: indicatorCategory === "all" ? undefined : indicatorCategory,
@@ -3336,9 +3379,11 @@ export function StrategyBuilder({
           );
         });
         setIndicatorHasNextPage(Boolean(response?.result?.hasNextPage));
+        previousDebouncedIndicatorSearchRef.current = trimmedIndicatorSearch;
       } catch (error) {
         toast.error(getApiErrorMessage(error, "Failed to load indicators"));
       } finally {
+        setIsSearchingIndicators(false);
         setIsLoadingIndicators(false);
         setIsAppendingIndicators(false);
       }
@@ -3353,6 +3398,15 @@ export function StrategyBuilder({
     indicatorPage,
     indicatorSortBy,
   ]);
+
+  const isIndicatorSearchPending =
+    indicatorSearch.trim() !== debouncedIndicatorSearch.trim();
+  const indicatorStatus =
+    isIndicatorSearchPending || isSearchingIndicators
+      ? "searching"
+      : isLoadingIndicators
+        ? "loading"
+        : null;
 
   useEffect(() => {
     const sourceStrategyId = strategyId || duplicateStrategyId;
@@ -3634,6 +3688,14 @@ export function StrategyBuilder({
       return "Strategy name must be at least 2 characters";
     }
 
+    if (name.trim().length > STRATEGY_NAME_MAX_LENGTH) {
+      return `Strategy name must be ${STRATEGY_NAME_MAX_LENGTH} characters or fewer`;
+    }
+
+    if (description.trim().length > STRATEGY_DESCRIPTION_MAX_LENGTH) {
+      return `Strategy description must be ${STRATEGY_DESCRIPTION_MAX_LENGTH} characters or fewer`;
+    }
+
     try {
       indicatorDrafts.forEach((draft) => {
         if (!draft.indicator) {
@@ -3838,16 +3900,23 @@ export function StrategyBuilder({
               <Input
                 id="strategy-name"
                 value={name}
+                maxLength={STRATEGY_NAME_MAX_LENGTH}
                 onChange={(event) => setName(event.target.value)}
                 placeholder="Enter strategy name"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="strategy-description">Description</Label>
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="strategy-description">Description</Label>
+                <span className="text-xs text-muted-foreground">
+                  {description.length}/{STRATEGY_DESCRIPTION_MAX_LENGTH}
+                </span>
+              </div>
               <Textarea
                 id="strategy-description"
                 value={description}
+                maxLength={STRATEGY_DESCRIPTION_MAX_LENGTH}
                 onChange={(event) => setDescription(event.target.value)}
                 placeholder="Buy on bullish EMA crossover with RSI confirmation, sell on bearish crossover."
                 className="h-24 field-sizing-fixed resize-none overflow-y-auto"
@@ -4070,16 +4139,25 @@ export function StrategyBuilder({
                     </div>
                   </div>
                   <DropdownMenuSeparator />
-                  {isLoadingIndicators ? (
-                    <div className="flex items-center justify-center gap-2 px-4 pb-4 text-sm text-muted-foreground">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Loading indicators...</span>
+                  {indicatorStatus ? (
+                    <div className="flex items-center justify-center gap-2 px-4 pt-3 pb-4 text-sm text-muted-foreground">
+                      {indicatorStatus === "searching" ? (
+                        <>
+                          <Search className="h-4 w-4 animate-pulse" />
+                          <span>Searching indicator....</span>
+                        </>
+                      ) : (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>Loading indicator....</span>
+                        </>
+                      )}
                     </div>
                   ) : indicatorOptions.length === 0 ? (
-                    <p className="px-4 pb-4 text-center text-sm text-muted-foreground">
+                    <p className="flex items-center justify-center px-4 pt-3 pb-4 text-center text-sm text-muted-foreground">
                       No indicators found.
                     </p>
-                  ) : (
+                  ) : indicatorOptions.length > 0 ? (
                     <Command
                       shouldFilter={false}
                       className="rounded-none bg-transparent p-0"
@@ -4099,7 +4177,7 @@ export function StrategyBuilder({
                           if (
                             distanceToBottom < 24 &&
                             indicatorHasNextPage &&
-                            !isLoadingIndicators &&
+                            !indicatorStatus &&
                             !isAppendingIndicators
                           ) {
                             setIndicatorPage((prev) => prev + 1);
@@ -4144,7 +4222,7 @@ export function StrategyBuilder({
                         </CommandList>
                       </ScrollArea>
                     </Command>
-                  )}
+                  ) : null}
                 </DialogContent>
               </Dialog>
             </div>

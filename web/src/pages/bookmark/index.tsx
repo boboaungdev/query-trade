@@ -565,12 +565,14 @@ export default function BookmarkPage() {
   const [bookmarks, setBookmarks] = useState<BookmarkItem[]>([]);
   const [filter, setFilter] = useState<BookmarkFilter>("all");
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sortBy, setSortBy] = useState<"createdAt" | "updatedAt">("updatedAt");
   const [order, setOrder] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
   const [hasNextPage, setHasNextPage] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isAppending, setIsAppending] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const hasNextPageRef = useRef(false);
@@ -578,6 +580,7 @@ export default function BookmarkPage() {
   const isAppendingRef = useRef(false);
   const totalCountRef = useRef(0);
   const loadedCountRef = useRef(0);
+  const previousDebouncedSearchRef = useRef(debouncedSearch);
   const [removingBookmarkIds, setRemovingBookmarkIds] = useState<Set<string>>(
     new Set(),
   );
@@ -586,80 +589,92 @@ export default function BookmarkPage() {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      const loadBookmarks = async () => {
-        if (
-          page > 1 &&
-          totalCountRef.current > 0 &&
-          loadedCountRef.current >= totalCountRef.current
-        ) {
-          hasNextPageRef.current = false;
-          isAppendingRef.current = false;
-          setHasNextPage(false);
-          setIsAppending(false);
-          return;
-        }
-
-        if (page === 1) {
-          isLoadingRef.current = true;
-          setIsLoading(true);
-        } else {
-          isAppendingRef.current = true;
-          setIsAppending(true);
-        }
-
-        try {
-          const response = (await fetchBookmarks({
-            page,
-            targetType: filter === "all" ? undefined : filter,
-            search: search.trim(),
-            sortBy,
-            order,
-          })) as BookmarkListResponse;
-
-          const nextItems = (response?.result?.bookmarks ?? []).filter(
-            hasBookmarkTarget,
-          );
-
-          setBookmarks((prev) => {
-            if (page === 1) {
-              return nextItems;
-            }
-            return mergeBookmarks(prev, nextItems);
-          });
-
-          const nextTotalCount = response?.result?.total ?? 0;
-          const nextLoadedCount =
-            page === 1
-              ? nextItems.length
-              : Math.min(
-                  totalCountRef.current || nextTotalCount,
-                  loadedCountRef.current + nextItems.length,
-                );
-          const nextHasNextPage =
-            Boolean(response?.result?.hasNextPage) &&
-            nextLoadedCount < nextTotalCount &&
-            nextItems.length > 0;
-
-          loadedCountRef.current = nextLoadedCount;
-          totalCountRef.current = nextTotalCount;
-          setTotalCount(nextTotalCount);
-          hasNextPageRef.current = nextHasNextPage;
-          setHasNextPage(nextHasNextPage);
-        } catch (error) {
-          toast.error(getApiErrorMessage(error, "Failed to load bookmarks"));
-        } finally {
-          isLoadingRef.current = false;
-          isAppendingRef.current = false;
-          setIsLoading(false);
-          setIsAppending(false);
-        }
-      };
-
-      void loadBookmarks();
-    }, 180);
+      setDebouncedSearch(search.trim());
+    }, 250);
 
     return () => clearTimeout(timer);
-  }, [filter, order, page, search, sortBy]);
+  }, [search]);
+
+  useEffect(() => {
+    const loadBookmarks = async () => {
+      if (
+        page > 1 &&
+        totalCountRef.current > 0 &&
+        loadedCountRef.current >= totalCountRef.current
+      ) {
+        hasNextPageRef.current = false;
+        isAppendingRef.current = false;
+        setHasNextPage(false);
+        setIsAppending(false);
+        return;
+      }
+
+      const isSearchTriggeredFetch =
+        debouncedSearch !== previousDebouncedSearchRef.current;
+
+      if (page === 1 && isSearchTriggeredFetch) {
+        isLoadingRef.current = false;
+        setIsSearching(true);
+      } else if (page === 1) {
+        isLoadingRef.current = true;
+        setIsLoading(true);
+      } else {
+        isAppendingRef.current = true;
+        setIsAppending(true);
+      }
+
+      try {
+        const response = (await fetchBookmarks({
+          page,
+          targetType: filter === "all" ? undefined : filter,
+          search: debouncedSearch,
+          sortBy,
+          order,
+        })) as BookmarkListResponse;
+
+        const nextItems = (response?.result?.bookmarks ?? []).filter(
+          hasBookmarkTarget,
+        );
+
+        setBookmarks((prev) => {
+          if (page === 1) {
+            return nextItems;
+          }
+          return mergeBookmarks(prev, nextItems);
+        });
+
+        const nextTotalCount = response?.result?.total ?? 0;
+        const nextLoadedCount =
+          page === 1
+            ? nextItems.length
+            : Math.min(
+                totalCountRef.current || nextTotalCount,
+                loadedCountRef.current + nextItems.length,
+              );
+        const nextHasNextPage =
+          Boolean(response?.result?.hasNextPage) &&
+          nextLoadedCount < nextTotalCount &&
+          nextItems.length > 0;
+
+        loadedCountRef.current = nextLoadedCount;
+        totalCountRef.current = nextTotalCount;
+        setTotalCount(nextTotalCount);
+        hasNextPageRef.current = nextHasNextPage;
+        setHasNextPage(nextHasNextPage);
+        previousDebouncedSearchRef.current = debouncedSearch;
+      } catch (error) {
+        toast.error(getApiErrorMessage(error, "Failed to load bookmarks"));
+      } finally {
+        isLoadingRef.current = false;
+        isAppendingRef.current = false;
+        setIsSearching(false);
+        setIsLoading(false);
+        setIsAppending(false);
+      }
+    };
+
+    void loadBookmarks();
+  }, [debouncedSearch, filter, order, page, sortBy]);
 
   useEffect(() => {
     hasNextPageRef.current = hasNextPage;
@@ -683,7 +698,9 @@ export default function BookmarkPage() {
 
   useEffect(() => {
     const node = loadMoreRef.current;
-    if (!node || !hasNextPage || isLoading || isAppending) return;
+    if (!node || !hasNextPage || isLoading || isAppending || isSearching) {
+      return;
+    }
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -692,7 +709,9 @@ export default function BookmarkPage() {
           firstEntry?.isIntersecting &&
           hasNextPageRef.current &&
           !isAppendingRef.current &&
-          !isLoadingRef.current
+          !isLoadingRef.current &&
+          !isSearching &&
+          search.trim() === debouncedSearch
         ) {
           isAppendingRef.current = true;
           setPage((prev) => prev + 1);
@@ -707,7 +726,11 @@ export default function BookmarkPage() {
 
     observer.observe(node);
     return () => observer.disconnect();
-  }, [hasNextPage, isAppending, isLoading]);
+  }, [debouncedSearch, hasNextPage, isAppending, isLoading, isSearching, search]);
+
+  const isSearchPending = search.trim() !== debouncedSearch;
+  const listStatus =
+    isSearchPending || isSearching ? "searching" : isLoading ? "loading" : null;
 
   const onCopyBookmarkLink = async (bookmark: BookmarkItem) => {
     const targetId = bookmark.target?._id;
@@ -914,10 +937,19 @@ export default function BookmarkPage() {
         </CardHeader>
       </Card>
 
-      {isLoading ? (
+      {listStatus ? (
         <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          <span>Loading bookmarks...</span>
+          {listStatus === "searching" ? (
+            <>
+              <Search className="h-4 w-4 animate-pulse" />
+              <span>Searching bookmarks....</span>
+            </>
+          ) : (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Loading bookmarks....</span>
+            </>
+          )}
         </div>
       ) : totalCount === 0 ? (
         <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
@@ -956,7 +988,7 @@ export default function BookmarkPage() {
       )}
 
       <div className="flex h-10 items-center justify-center">
-        {isAppending ? (
+        {isAppending && !listStatus ? (
           <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
             Loading more bookmarks...

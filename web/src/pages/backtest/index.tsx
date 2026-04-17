@@ -11,13 +11,13 @@ import {
   ChevronDown,
   ChevronsUpDown,
   Clock3,
+  CircleHelp,
   HandCoins,
   Loader2,
   Percent,
   Play,
   Bookmark,
   BookmarkCheck,
-  RefreshCcw,
   Search,
   ShieldAlert,
   ListFilter,
@@ -25,6 +25,7 @@ import {
   Target,
   TrendingUp,
   Wallet,
+  type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -40,6 +41,11 @@ import { fetchStrategies, type StrategySource } from "@/api/strategy";
 
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@/components/ui/avatar";
 import {
   Card,
   CardContent,
@@ -76,6 +82,11 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import {
   Popover,
   PopoverContent,
@@ -174,6 +185,7 @@ type BacktestDraftSnapshot = {
 type StrategyItem = {
   _id: string;
   name: string;
+  description?: string;
   isBookmarked?: boolean;
   isPublic?: boolean;
   stats?: {
@@ -183,6 +195,7 @@ type StrategyItem = {
   user?: {
     _id?: string;
     username?: string;
+    avatar?: string;
   };
 };
 
@@ -202,6 +215,15 @@ type StrategyListResponse = {
   message: string;
   result: StrategyListResult;
 };
+
+const strategySourceOptions: Array<{
+  label: string;
+  value: StrategySource;
+}> = [
+  { label: "All", value: "all" },
+  { label: "Bookmarked", value: "bookmarked" },
+  { label: "My Strategy", value: "mine" },
+];
 
 const inFlightRequestMap = new Map<string, Promise<unknown>>();
 
@@ -243,6 +265,54 @@ function sanitizeNumericInput(value: string, allowDecimal = true) {
 const disabledFieldSurfaceClass =
   "disabled:bg-input/50 dark:disabled:bg-input/80";
 const defaultFieldSurfaceClass = "bg-background";
+const capitalPlanLabelClass = "text-xs font-medium text-muted-foreground";
+const capitalPlanFieldClass = cn(
+  "h-8 rounded-lg",
+  defaultFieldSurfaceClass,
+  disabledFieldSurfaceClass,
+);
+
+type CapitalPlanInputProps = {
+  id: string;
+  label: string;
+  ariaLabel: string;
+  value: string;
+  placeholder: string;
+  icon: LucideIcon;
+  onChange: (value: string) => void;
+};
+
+function CapitalPlanInput({
+  id,
+  label,
+  ariaLabel,
+  value,
+  placeholder,
+  icon: Icon,
+  onChange,
+}: CapitalPlanInputProps) {
+  return (
+    <div className="space-y-2">
+      <label htmlFor={id} className={capitalPlanLabelClass}>
+        {label}
+      </label>
+      <InputGroup className={capitalPlanFieldClass}>
+        <InputGroupAddon className="text-muted-foreground">
+          <Icon className="h-4 w-4" />
+        </InputGroupAddon>
+        <InputGroupInput
+          id={id}
+          type="text"
+          inputMode="decimal"
+          aria-label={ariaLabel}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+        />
+      </InputGroup>
+    </div>
+  );
+}
 
 export default function BacktestPage() {
   const { backtestId = "" } = useParams();
@@ -264,6 +334,7 @@ export default function BacktestPage() {
 
   const [strategies, setStrategies] = useState<StrategyItem[]>([]);
   const [strategySearch, setStrategySearch] = useState("");
+  const [debouncedStrategySearch, setDebouncedStrategySearch] = useState("");
   const [isStrategyMenuOpen, setIsStrategyMenuOpen] = useState(false);
   const strategySearchInputRef = useRef<HTMLInputElement | null>(null);
   const [strategyPage, setStrategyPage] = useState(1);
@@ -278,6 +349,9 @@ export default function BacktestPage() {
   const [selectedStrategyName, setSelectedStrategyName] = useState("");
   const [strategyId, setStrategyId] = useState("");
   const strategyIdRef = useRef("");
+  const previousStrategySearchRef = useRef(strategySearch.trim());
+  const hasLoadedStrategiesRef = useRef(false);
+  const [isSearchingStrategies, setIsSearchingStrategies] = useState(false);
   const [startDate, setStartDate] = useState<Date | undefined>(
     new Date("2025-01-01T00:00:00Z"),
   );
@@ -297,7 +371,6 @@ export default function BacktestPage() {
   const [isLoadingBacktest, setIsLoadingBacktest] = useState(isEditing);
   const [isRunning, setIsRunning] = useState(false);
   const [exchangeRefreshTick] = useState(0);
-  const [strategyRefreshTick, setStrategyRefreshTick] = useState(0);
   const [hasHydratedFromBacktest, setHasHydratedFromBacktest] = useState(false);
   const [initialSnapshot, setInitialSnapshot] =
     useState<BacktestDraftSnapshot | null>(null);
@@ -472,76 +545,95 @@ export default function BacktestPage() {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      const loadStrategiesPage = async () => {
-        setIsLoadingStrategies(true);
-
-        try {
-          const queryKey = [
-            "strategies",
-            strategyPage,
-            12,
-            strategySearch.trim(),
-            strategySortBy,
-            strategyOrder,
-            strategySource,
-            strategyPublicOnly,
-          ].join(":");
-
-          const response = (await dedupeRequest(queryKey, () =>
-            fetchStrategies({
-              page: strategyPage,
-              search: strategySearch.trim(),
-              sortBy: strategySortBy,
-              order: strategyOrder,
-              source: strategySource,
-              isPublic:
-                strategySource === "all" ? strategyPublicOnly : undefined,
-            }),
-          )) as StrategyListResponse;
-
-          const result = response?.result;
-          const pageItems = result?.strategies ?? result?.indicators ?? [];
-          setStrategies((prev) => {
-            if (strategyPage === 1) {
-              return pageItems;
-            }
-            const merged = [...prev, ...pageItems];
-            return Array.from(
-              new Map(merged.map((item) => [item._id, item])).values(),
-            );
-          });
-          setStrategyHasNextPage(Boolean(result?.hasNextPage));
-          setIsAppendingStrategies(false);
-
-          const matchedCurrent = pageItems.find(
-            (item) => item._id === strategyIdRef.current,
-          );
-
-          if (matchedCurrent) {
-            setSelectedStrategyName(matchedCurrent.name);
-          } else if (!strategyIdRef.current) {
-            setSelectedStrategyName("");
-          }
-        } catch (error) {
-          toast.error(getApiErrorMessage(error, "Failed to fetch strategies"));
-          setIsAppendingStrategies(false);
-        } finally {
-          setIsLoadingStrategies(false);
-        }
-      };
-
-      void loadStrategiesPage();
+      setDebouncedStrategySearch(strategySearch.trim());
     }, 250);
 
     return () => clearTimeout(timer);
+  }, [strategySearch]);
+
+  useEffect(() => {
+    const loadStrategiesPage = async () => {
+      const isInitialStrategiesLoad = !hasLoadedStrategiesRef.current;
+      const isSearchTriggeredFetch =
+        debouncedStrategySearch !== previousStrategySearchRef.current;
+      const isAppendFetch = strategyPage > 1;
+
+      if (isSearchTriggeredFetch) {
+        setIsSearchingStrategies(true);
+      } else if (!isAppendFetch) {
+        setIsLoadingStrategies(true);
+      }
+
+      try {
+        const queryKey = [
+          "strategies",
+          strategyPage,
+          12,
+          debouncedStrategySearch,
+          strategySortBy,
+          strategyOrder,
+          strategySource,
+          strategyPublicOnly,
+        ].join(":");
+
+        const response = (await dedupeRequest(queryKey, () =>
+          fetchStrategies({
+            page: strategyPage,
+            search: debouncedStrategySearch,
+            sortBy: strategySortBy,
+            order: strategyOrder,
+            source: strategySource,
+            isPublic:
+              strategySource === "all" ? strategyPublicOnly : undefined,
+          }),
+        )) as StrategyListResponse;
+
+        const result = response?.result;
+        const pageItems = result?.strategies ?? result?.indicators ?? [];
+        setStrategies((prev) => {
+          if (strategyPage === 1) {
+            return pageItems;
+          }
+          const merged = [...prev, ...pageItems];
+          return Array.from(
+            new Map(merged.map((item) => [item._id, item])).values(),
+          );
+        });
+        setStrategyHasNextPage(Boolean(result?.hasNextPage));
+        setIsAppendingStrategies(false);
+
+        const matchedCurrent = pageItems.find(
+          (item) => item._id === strategyIdRef.current,
+        );
+
+        if (matchedCurrent) {
+          setSelectedStrategyName(matchedCurrent.name);
+        } else if (!strategyIdRef.current) {
+          setSelectedStrategyName("");
+        }
+
+        hasLoadedStrategiesRef.current = true;
+        previousStrategySearchRef.current = debouncedStrategySearch;
+      } catch (error) {
+        toast.error(getApiErrorMessage(error, "Failed to fetch strategies"));
+        setIsAppendingStrategies(false);
+      } finally {
+        if (isSearchTriggeredFetch) {
+          setIsSearchingStrategies(false);
+        } else if (!isAppendFetch || isInitialStrategiesLoad) {
+          setIsLoadingStrategies(false);
+        }
+      }
+    };
+
+    void loadStrategiesPage();
   }, [
-    strategyRefreshTick,
-    strategySource,
-    strategyPublicOnly,
+    debouncedStrategySearch,
     strategyOrder,
     strategyPage,
-    strategySearch,
+    strategyPublicOnly,
     strategySortBy,
+    strategySource,
   ]);
 
   const timeframeOptions = Object.keys(timeframes);
@@ -569,6 +661,15 @@ export default function BacktestPage() {
     setVisibleSymbolCount(20);
   }, [symbolSearch, isSymbolMenuOpen]);
 
+  const isStrategySearchPending =
+    strategySearch.trim() !== debouncedStrategySearch;
+  const strategyStatus =
+    isStrategySearchPending || isSearchingStrategies
+      ? "searching"
+      : isLoadingStrategies
+        ? "loading"
+        : null;
+
   const selectedStrategy = useMemo(
     () => strategies.find((item) => item._id === strategyId),
     [strategies, strategyId],
@@ -585,6 +686,7 @@ export default function BacktestPage() {
   }, [endDate, startDate]);
   const selectedStrategyLabel =
     selectedStrategy?.name || selectedStrategyName || "No strategy selected";
+  const firstVisibleStrategy = strategies[0];
   const currentStartDateIso = startDate ? toUtcStartOfDayIso(startDate) : "";
   const currentEndDateIso = endDate ? toUtcStartOfDayIso(endDate) : "";
   const isSetupReady =
@@ -686,10 +788,6 @@ export default function BacktestPage() {
           ),
         );
         updateStrategyBookmarkCount(1);
-        if (strategySource === "bookmarked") {
-          setStrategyPage(1);
-          setStrategyRefreshTick((prev) => prev + 1);
-        }
         toast.success(response?.message || "Bookmarked successfully.");
       }
     } catch (error) {
@@ -724,6 +822,12 @@ export default function BacktestPage() {
         return next;
       });
     }
+  };
+
+  const selectStrategy = (item: StrategyItem) => {
+    setStrategyId(item._id);
+    setSelectedStrategyName(item.name);
+    setIsStrategyMenuOpen(false);
   };
 
   const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -865,11 +969,10 @@ export default function BacktestPage() {
                     <div>
                       <div>
                         <p className="text-base font-semibold text-foreground">
-                          Market & timing
+                          Market setup
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          Choose the pair, candle interval, and historical
-                          range.
+                          Choose the pair, timeframe, and backtest range.
                         </p>
                       </div>
                     </div>
@@ -1136,9 +1239,8 @@ export default function BacktestPage() {
                                 type="button"
                                 variant="outline"
                                 className={cn(
-                                  "relative w-full justify-start overflow-hidden pl-9 text-left",
+                                  "relative w-full justify-start overflow-hidden pr-0 pl-9 text-left",
                                   disabledFieldSurfaceClass,
-                                  strategyId ? "pr-28 md:pr-36" : "pr-10",
                                   !isLoadingStrategies &&
                                     !selectedStrategy?.name &&
                                     !selectedStrategyName &&
@@ -1172,326 +1274,341 @@ export default function BacktestPage() {
                                 </DialogDescription>
                               </DialogHeader>
                               <div className="space-y-3 px-4 py-4">
-                                <div className="relative">
-                                  <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                                  <Input
-                                    ref={strategySearchInputRef}
-                                    value={strategySearch}
+                                <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                                  <div className="relative min-w-0 flex-1">
+                                    <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                    <Input
+                                      ref={strategySearchInputRef}
+                                      value={strategySearch}
                                     onChange={(event) => {
                                       setStrategySearch(event.target.value);
                                       setStrategyPage(1);
                                     }}
+                                    onKeyDown={(event) => {
+                                      if (event.key !== "Enter") {
+                                        return;
+                                      }
+
+                                      if (!firstVisibleStrategy) {
+                                        return;
+                                      }
+
+                                      event.preventDefault();
+                                      selectStrategy(firstVisibleStrategy);
+                                    }}
                                     aria-label="Search strategy"
-                                    placeholder="Search"
-                                    className={cn(
-                                      "h-9 w-full pr-14 pl-9",
-                                      defaultFieldSurfaceClass,
-                                    )}
-                                  />
-                                  <div className="absolute top-1/2 right-1.5 flex -translate-y-1/2 items-center gap-0.5">
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="icon-sm"
-                                      className="h-6 w-6"
-                                      disabled={isLoadingStrategies}
-                                      onClick={() => {
-                                        setIsAppendingStrategies(false);
-                                        setStrategyPage(1);
-                                        setStrategyRefreshTick(
-                                          (prev) => prev + 1,
-                                        );
-                                      }}
-                                    >
-                                      <RefreshCcw
-                                        className={cn(
-                                          "h-3.5 w-3.5",
-                                          isLoadingStrategies && "animate-spin",
-                                        )}
-                                      />
-                                    </Button>
+                                    placeholder="Search strategy"
+                                      className={cn(
+                                        "rounded-md border-0 border-b-2 border-foreground/15 pr-10 pl-9 focus-visible:border-primary focus-visible:ring-0",
+                                        defaultFieldSurfaceClass,
+                                      )}
+                                    />
+                                    <div className="absolute top-1/2 right-1.5 flex -translate-y-1/2 items-center gap-0.5">
+                                      <DropdownMenu modal={false}>
+                                        <DropdownMenuTrigger asChild>
+                                          <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon-sm"
+                                            className="h-6 w-6"
+                                          >
+                                            <ListFilter className="h-3.5 w-3.5" />
+                                          </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent
+                                          align="end"
+                                          className="w-52"
+                                          onClick={(event) =>
+                                            event.stopPropagation()
+                                          }
+                                        >
+                                          <DropdownMenuLabel>
+                                            Sort By
+                                          </DropdownMenuLabel>
+                                          <DropdownMenuRadioGroup
+                                            value={strategySortBy}
+                                            onValueChange={(value) => {
+                                              const nextSortBy = value as
+                                                | "name"
+                                                | "createdAt"
+                                                | "updatedAt"
+                                                | "popular";
+                                              setStrategySortBy(nextSortBy);
+                                              if (nextSortBy === "popular") {
+                                                setStrategyOrder("desc");
+                                              }
+                                              if (nextSortBy === "name") {
+                                                setStrategyOrder("asc");
+                                              }
+                                              if (
+                                                nextSortBy === "createdAt" ||
+                                                nextSortBy === "updatedAt"
+                                              ) {
+                                                setStrategyOrder("desc");
+                                              }
+                                              setStrategyPage(1);
+                                            }}
+                                          >
+                                            <DropdownMenuRadioItem value="updatedAt">
+                                              Last updated
+                                            </DropdownMenuRadioItem>
+                                            <DropdownMenuRadioItem value="name">
+                                              Name
+                                            </DropdownMenuRadioItem>
+                                            <DropdownMenuRadioItem value="createdAt">
+                                              Newest
+                                            </DropdownMenuRadioItem>
+                                            <DropdownMenuRadioItem value="popular">
+                                              Popular
+                                            </DropdownMenuRadioItem>
+                                          </DropdownMenuRadioGroup>
+                                          <DropdownMenuSeparator />
+                                          <DropdownMenuLabel>
+                                            Order
+                                          </DropdownMenuLabel>
+                                          <DropdownMenuRadioGroup
+                                            value={strategyOrder}
+                                            onValueChange={(value) => {
+                                              setStrategyOrder(
+                                                value as "asc" | "desc",
+                                              );
+                                              setStrategyPage(1);
+                                            }}
+                                          >
+                                            <DropdownMenuRadioItem value="asc">
+                                              Asc
+                                            </DropdownMenuRadioItem>
+                                            <DropdownMenuRadioItem value="desc">
+                                              Desc
+                                            </DropdownMenuRadioItem>
+                                          </DropdownMenuRadioGroup>
+                                        </DropdownMenuContent>
+                                      </DropdownMenu>
+                                    </div>
+                                  </div>
+                                  <div className="flex w-full md:w-[180px] md:flex-none">
                                     <DropdownMenu modal={false}>
                                       <DropdownMenuTrigger asChild>
                                         <Button
                                           type="button"
-                                          variant="ghost"
-                                          size="icon-sm"
-                                          className="h-6 w-6"
+                                          variant="outline"
+                                          className="h-8 w-full justify-between gap-2"
                                         >
-                                          <ListFilter className="h-3.5 w-3.5" />
+                                          {
+                                            strategySourceOptions.find(
+                                              (option) =>
+                                                option.value === strategySource,
+                                            )?.label
+                                          }
+                                          <ChevronsUpDown className="h-3.5 w-3.5 opacity-60" />
                                         </Button>
                                       </DropdownMenuTrigger>
                                       <DropdownMenuContent
-                                        align="end"
-                                        className="w-52"
+                                        align="start"
                                         onClick={(event) =>
                                           event.stopPropagation()
                                         }
                                       >
                                         <DropdownMenuLabel>
-                                          Sort By
+                                          Category
                                         </DropdownMenuLabel>
                                         <DropdownMenuRadioGroup
-                                          value={strategySortBy}
+                                          value={strategySource}
                                           onValueChange={(value) => {
-                                            const nextSortBy = value as
-                                              | "name"
-                                              | "createdAt"
-                                              | "updatedAt"
-                                              | "popular";
-                                            setStrategySortBy(nextSortBy);
-                                            if (nextSortBy === "popular") {
-                                              setStrategyOrder("desc");
-                                            }
-                                            if (nextSortBy === "name") {
-                                              setStrategyOrder("asc");
-                                            }
-                                            if (
-                                              nextSortBy === "createdAt" ||
-                                              nextSortBy === "updatedAt"
-                                            ) {
-                                              setStrategyOrder("desc");
-                                            }
-                                            setStrategyPage(1);
-                                          }}
-                                        >
-                                          <DropdownMenuRadioItem value="updatedAt">
-                                            Last updated
-                                          </DropdownMenuRadioItem>
-                                          <DropdownMenuRadioItem value="name">
-                                            Name
-                                          </DropdownMenuRadioItem>
-                                          <DropdownMenuRadioItem value="createdAt">
-                                            Newest
-                                          </DropdownMenuRadioItem>
-                                          <DropdownMenuRadioItem value="popular">
-                                            Popular
-                                          </DropdownMenuRadioItem>
-                                        </DropdownMenuRadioGroup>
-                                        <DropdownMenuSeparator />
-                                        <DropdownMenuLabel>
-                                          Order
-                                        </DropdownMenuLabel>
-                                        <DropdownMenuRadioGroup
-                                          value={strategyOrder}
-                                          onValueChange={(value) => {
-                                            setStrategyOrder(
-                                              value as "asc" | "desc",
+                                            const nextSource =
+                                              value as StrategySource;
+                                            setStrategySource(nextSource);
+                                            setStrategyPublicOnly(
+                                              nextSource === "all",
                                             );
                                             setStrategyPage(1);
                                           }}
                                         >
-                                          <DropdownMenuRadioItem value="asc">
-                                            Asc
-                                          </DropdownMenuRadioItem>
-                                          <DropdownMenuRadioItem value="desc">
-                                            Desc
-                                          </DropdownMenuRadioItem>
+                                          {strategySourceOptions.map(
+                                            (option) => (
+                                              <DropdownMenuRadioItem
+                                                key={option.value}
+                                                value={option.value}
+                                              >
+                                                {option.label}
+                                              </DropdownMenuRadioItem>
+                                            ),
+                                          )}
                                         </DropdownMenuRadioGroup>
                                       </DropdownMenuContent>
                                     </DropdownMenu>
                                   </div>
                                 </div>
-                                <div className="mt-2 flex flex-wrap gap-1">
-                                  <Button
-                                    type="button"
-                                    variant={
-                                      strategySource === "all" &&
-                                      strategyPublicOnly
-                                        ? "default"
-                                        : "outline"
-                                    }
-                                    className="h-7 rounded-md px-2.5 text-[11px]"
-                                    onClick={(event) => {
-                                      event.preventDefault();
-                                      event.stopPropagation();
-                                      setStrategySource("all");
-                                      setStrategyPublicOnly(true);
-                                      setStrategyPage(1);
-                                    }}
-                                  >
-                                    All
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    variant={
-                                      strategySource === "bookmarked"
-                                        ? "default"
-                                        : "outline"
-                                    }
-                                    className="h-7 rounded-md px-2.5 text-[11px]"
-                                    onClick={(event) => {
-                                      event.preventDefault();
-                                      event.stopPropagation();
-                                      setStrategySource("bookmarked");
-                                      setStrategyPublicOnly(false);
-                                      setStrategyPage(1);
-                                    }}
-                                  >
-                                    Bookmarked
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    variant={
-                                      strategySource === "mine"
-                                        ? "default"
-                                        : "outline"
-                                    }
-                                    className="h-7 rounded-md px-2.5 text-[11px]"
-                                    onClick={(event) => {
-                                      event.preventDefault();
-                                      event.stopPropagation();
-                                      setStrategySource("mine");
-                                      setStrategyPublicOnly(false);
-                                      setStrategyPage(1);
-                                    }}
-                                  >
-                                    My Strategy
-                                  </Button>
-                                </div>
                               </div>
-                              <DropdownMenuSeparator />
-                              {strategies.length === 0 ? (
-                                <p className="px-4 pb-4 text-xs text-muted-foreground">
+                              <div className="border-t" />
+                              {strategyStatus ? (
+                                <div className="flex items-center justify-center gap-2 px-4 pt-3 pb-4 text-sm text-muted-foreground">
+                                  {strategyStatus === "searching" ? (
+                                    <>
+                                      <Search className="h-4 w-4 animate-pulse" />
+                                      <span>Searching strategy....</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                      <span>Loading strategy....</span>
+                                    </>
+                                  )}
+                                </div>
+                              ) : null}
+                              {!strategyStatus && strategies.length === 0 ? (
+                                <p className="flex items-center justify-center px-4 pt-3 pb-4 text-sm text-muted-foreground">
                                   No strategies found.
                                 </p>
-                              ) : (
-                                <ScrollArea
-                                  className={cn(
-                                    "px-4 pb-4",
-                                    strategies.length > 4 && "h-[320px]",
-                                  )}
-                                  onScrollCapture={(event) => {
-                                    const node = event.target as HTMLElement;
-                                    const distanceToBottom =
-                                      node.scrollHeight -
-                                      node.scrollTop -
-                                      node.clientHeight;
-
-                                    if (
-                                      distanceToBottom < 24 &&
-                                      strategyHasNextPage &&
-                                      !isLoadingStrategies &&
-                                      !isAppendingStrategies
-                                    ) {
-                                      setIsAppendingStrategies(true);
-                                      setStrategyPage((prev) => prev + 1);
-                                    }
-                                  }}
+                              ) : !strategyStatus && strategies.length > 0 ? (
+                                <Command
+                                  shouldFilter={false}
+                                  className="rounded-none bg-transparent p-0"
                                 >
-                                  <div className="space-y-1">
-                                    {strategies.map((item) => {
-                                      const isSelected =
-                                        item._id === strategyId;
+                                  <ScrollArea
+                                    className="h-[320px] px-4 py-3"
+                                    onScrollCapture={(event) => {
+                                      const node = event.target as HTMLElement;
+                                      const distanceToBottom =
+                                        node.scrollHeight -
+                                        node.scrollTop -
+                                        node.clientHeight;
 
-                                      return (
-                                        <div
-                                          key={item._id}
-                                          role="button"
-                                          tabIndex={0}
-                                          className={cn(
-                                            "flex w-full overflow-hidden rounded-lg border px-3.5 py-2 text-left transition-colors",
-                                            isSelected
-                                              ? "border-primary/40 bg-muted"
-                                              : "border-border/70 bg-muted/40 hover:bg-accent",
-                                          )}
-                                          onClick={() => {
-                                            setStrategyId(item._id);
-                                            setSelectedStrategyName(item.name);
-                                            setIsStrategyMenuOpen(false);
-                                          }}
-                                          onKeyDown={(event) => {
-                                            if (
-                                              event.key !== "Enter" &&
-                                              event.key !== " "
-                                            ) {
-                                              return;
-                                            }
+                                      if (
+                                        distanceToBottom < 24 &&
+                                        strategyHasNextPage &&
+                                        !isLoadingStrategies &&
+                                        !isAppendingStrategies
+                                      ) {
+                                        setIsAppendingStrategies(true);
+                                        setStrategyPage((prev) => prev + 1);
+                                      }
+                                    }}
+                                  >
+                                    <CommandList className="max-h-none overflow-visible px-0 py-0">
+                                      <CommandGroup className="space-y-1 p-0">
+                                        {strategies.map((item) => {
+                                          const isSelected =
+                                            item._id === strategyId;
 
-                                            event.preventDefault();
-                                            setStrategyId(item._id);
-                                            setSelectedStrategyName(item.name);
-                                            setIsStrategyMenuOpen(false);
-                                          }}
-                                        >
-                                          <div className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-2 text-[11px] text-muted-foreground md:items-center">
-                                            <span className="min-w-0 overflow-hidden">
-                                              <span className="block w-full truncate text-sm font-medium whitespace-nowrap text-foreground">
-                                                {item.name}
-                                              </span>
-                                              <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
-                                                @
-                                                {item.user?.username ||
-                                                  "unknown"}
-                                              </span>
-                                            </span>
-                                            <span className="inline-flex shrink-0 flex-col items-end gap-1 pr-2 pl-2 md:flex-row md:items-center md:gap-2 md:pr-3">
-                                              <span className="inline-flex items-center gap-1">
-                                                <TrendingUp className="h-3 w-3" />
-                                                {item.stats?.viewCount ?? 0}
-                                              </span>
-                                              <span className="inline-flex items-center gap-1">
-                                                <button
-                                                  type="button"
-                                                  className={cn(
-                                                    "inline-flex h-4 w-4 items-center justify-center rounded-sm",
-                                                    item.isBookmarked
-                                                      ? "text-primary"
-                                                      : "text-muted-foreground",
-                                                  )}
-                                                  aria-label={
-                                                    item.isBookmarked
-                                                      ? "Remove bookmark"
-                                                      : "Add bookmark"
-                                                  }
-                                                  title={
-                                                    item.isBookmarked
-                                                      ? "Remove bookmark"
-                                                      : "Add bookmark"
-                                                  }
-                                                  disabled={updatingStrategyIds.has(
-                                                    item._id,
-                                                  )}
-                                                  onClick={(event) => {
-                                                    event.preventDefault();
-                                                    event.stopPropagation();
-                                                    void onToggleStrategyBookmark(
-                                                      item._id,
-                                                    );
-                                                  }}
-                                                >
-                                                  {updatingStrategyIds.has(
-                                                    item._id,
-                                                  ) ? (
-                                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                                  ) : item.isBookmarked ? (
-                                                    <BookmarkCheck className="h-3 w-3" />
-                                                  ) : (
-                                                    <Bookmark className="h-3 w-3" />
-                                                  )}
-                                                </button>
-                                                {item.stats?.bookmarkCount ?? 0}
-                                              </span>
-                                            </span>
+                                          return (
+                                            <CommandItem
+                                              key={item._id}
+                                              value={item._id}
+                                              className={cn(
+                                                "theme-hover-surface flex min-w-0 cursor-pointer items-center justify-between gap-3 rounded-md pl-3 pr-0 py-2 text-left hover:bg-muted/60 data-[selected=true]:bg-transparent data-[selected=true]:hover:bg-muted/60",
+                                                isSelected &&
+                                                  "bg-muted text-foreground",
+                                              )}
+                                              onSelect={() =>
+                                                selectStrategy(item)
+                                              }
+                                            >
+                                                <div className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-2 text-[11px] text-muted-foreground md:items-center">
+                                                  <span className="flex min-w-0 items-start gap-3">
+                                                    <Avatar className="mt-0.5 h-8 w-8 shrink-0">
+                                                      <AvatarImage
+                                                        src={item.user?.avatar}
+                                                        alt={
+                                                          item.user?.username ||
+                                                          item.name
+                                                        }
+                                                      />
+                                                      <AvatarFallback>
+                                                        {(
+                                                          item.user?.username ||
+                                                          item.name ||
+                                                          "U"
+                                                        )
+                                                          .slice(0, 2)
+                                                          .toUpperCase()}
+                                                      </AvatarFallback>
+                                                    </Avatar>
+                                                    <span className="min-w-0 overflow-hidden">
+                                                      <span className="block w-full truncate text-sm font-medium whitespace-nowrap text-foreground">
+                                                        {item.name}
+                                                      </span>
+                                                      <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+                                                        @
+                                                        {item.user?.username ||
+                                                          "unknown"}
+                                                        {" · "}
+                                                        {item.description?.trim() ||
+                                                          "No description provided."}
+                                                      </span>
+                                                    </span>
+                                                  </span>
+                                                  <span className="inline-flex shrink-0 flex-col items-end gap-1 pl-2 pr-0 md:flex-row md:items-center md:gap-2">
+                                                    <span className="inline-flex items-center gap-1">
+                                                      <TrendingUp className="h-3 w-3" />
+                                                      {item.stats?.viewCount ??
+                                                        0}
+                                                    </span>
+                                                    <span className="inline-flex items-center gap-1">
+                                                      <button
+                                                        type="button"
+                                                        className={cn(
+                                                          "inline-flex h-4 w-4 items-center justify-center rounded-sm",
+                                                          item.isBookmarked
+                                                            ? "text-primary"
+                                                            : "text-muted-foreground",
+                                                        )}
+                                                        aria-label={
+                                                          item.isBookmarked
+                                                            ? "Remove bookmark"
+                                                            : "Add bookmark"
+                                                        }
+                                                        title={
+                                                          item.isBookmarked
+                                                            ? "Remove bookmark"
+                                                            : "Add bookmark"
+                                                        }
+                                                        disabled={updatingStrategyIds.has(
+                                                          item._id,
+                                                        )}
+                                                        onClick={(event) => {
+                                                          event.preventDefault();
+                                                          event.stopPropagation();
+                                                          void onToggleStrategyBookmark(
+                                                            item._id,
+                                                          );
+                                                        }}
+                                                      >
+                                                        {updatingStrategyIds.has(
+                                                          item._id,
+                                                        ) ? (
+                                                          <Loader2 className="h-3 w-3 animate-spin" />
+                                                        ) : item.isBookmarked ? (
+                                                          <BookmarkCheck className="h-3 w-3" />
+                                                        ) : (
+                                                          <Bookmark className="h-3 w-3" />
+                                                        )}
+                                                      </button>
+                                                      {item.stats
+                                                        ?.bookmarkCount ?? 0}
+                                                    </span>
+                                                  </span>
+                                                </div>
+                                            </CommandItem>
+                                          );
+                                        })}
+                                        {strategyHasNextPage ? (
+                                          <div className="flex h-10 items-center justify-center">
+                                            {isAppendingStrategies ? (
+                                              <>
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin text-muted-foreground" />
+                                                <span className="text-sm text-muted-foreground">
+                                                  Loading...
+                                                </span>
+                                              </>
+                                            ) : null}
                                           </div>
-                                        </div>
-                                      );
-                                    })}
-                                    {strategyHasNextPage ? (
-                                      <div className="flex h-10 items-center justify-center">
-                                        {isAppendingStrategies ? (
-                                          <>
-                                            <Loader2 className="mr-2 h-4 w-4 animate-spin text-muted-foreground" />
-                                            <span className="text-sm text-muted-foreground">
-                                              Loading...
-                                            </span>
-                                          </>
                                         ) : null}
-                                      </div>
-                                    ) : null}
-                                  </div>
-                                </ScrollArea>
-                              )}
+                                      </CommandGroup>
+                                    </CommandList>
+                                  </ScrollArea>
+                                </Command>
+                              ) : null}
                             </DialogContent>
                           </Dialog>
                         </div>
@@ -1512,111 +1629,55 @@ export default function BacktestPage() {
                     </div>
 
                     <div className="grid gap-4 md:grid-cols-2">
-                      <div className="space-y-2">
-                        <label
-                          htmlFor="initialBalance"
-                          className="text-xs font-medium text-foreground"
-                        >
-                          Initial balance
-                        </label>
-                        <div className="relative">
-                          <Wallet className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                          <Input
-                            id="initialBalance"
-                            type="text"
-                            inputMode="decimal"
-                            aria-label="Initial balance"
-                            value={initialBalance}
-                            onChange={(event) =>
-                              setInitialBalance(
-                                sanitizeNumericInput(event.target.value, true),
-                              )
-                            }
-                            placeholder="10000"
-                            className={cn("pl-9", defaultFieldSurfaceClass)}
-                          />
-                        </div>
-                      </div>
+                      <CapitalPlanInput
+                        id="initialBalance"
+                        label="Initial balance"
+                        ariaLabel="Initial balance"
+                        value={initialBalance}
+                        placeholder="10000"
+                        icon={Wallet}
+                        onChange={(value) =>
+                          setInitialBalance(sanitizeNumericInput(value, true))
+                        }
+                      />
 
-                      <div className="space-y-2">
-                        <label
-                          htmlFor="amountPerTrade"
-                          className="text-xs font-medium text-foreground"
-                        >
-                          Amount per trade
-                        </label>
-                        <div className="relative">
-                          <HandCoins className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                          <Input
-                            id="amountPerTrade"
-                            type="text"
-                            inputMode="decimal"
-                            aria-label="Amount per trade"
-                            value={amountPerTrade}
-                            onChange={(event) =>
-                              setAmountPerTrade(
-                                sanitizeNumericInput(event.target.value, true),
-                              )
-                            }
-                            placeholder="1000"
-                            className={cn("pl-9", defaultFieldSurfaceClass)}
-                          />
-                        </div>
-                      </div>
+                      <CapitalPlanInput
+                        id="amountPerTrade"
+                        label="Amount per trade"
+                        ariaLabel="Amount per trade"
+                        value={amountPerTrade}
+                        placeholder="1000"
+                        icon={HandCoins}
+                        onChange={(value) =>
+                          setAmountPerTrade(sanitizeNumericInput(value, true))
+                        }
+                      />
                     </div>
 
                     <div className="grid gap-4 md:grid-cols-2">
-                      <div className="space-y-2">
-                        <label
-                          htmlFor="entryFeeRate"
-                          className="text-xs font-medium text-foreground"
-                        >
-                          Entry fee rate (%)
-                        </label>
-                        <div className="relative">
-                          <Percent className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                          <Input
-                            id="entryFeeRate"
-                            type="text"
-                            inputMode="decimal"
-                            aria-label="Entry fee percentage"
-                            value={entryFeeRate}
-                            onChange={(event) =>
-                              setEntryFeeRate(
-                                sanitizeNumericInput(event.target.value, true),
-                              )
-                            }
-                            placeholder="0.00"
-                            className={cn("pl-9", defaultFieldSurfaceClass)}
-                          />
-                        </div>
-                      </div>
+                      <CapitalPlanInput
+                        id="entryFeeRate"
+                        label="Entry fee rate (%)"
+                        ariaLabel="Entry fee percentage"
+                        value={entryFeeRate}
+                        placeholder="0.00"
+                        icon={Percent}
+                        onChange={(value) =>
+                          setEntryFeeRate(sanitizeNumericInput(value, true))
+                        }
+                      />
 
-                      <div className="space-y-2">
-                        <label
-                          htmlFor="exitFeeRate"
-                          className="text-xs font-medium text-foreground"
-                        >
-                          Exit fee rate (%)
-                        </label>
-                        <div className="relative">
-                          <Percent className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                          <Input
-                            id="exitFeeRate"
-                            type="text"
-                            inputMode="decimal"
-                            aria-label="Exit fee percentage"
-                            value={exitFeeRate}
-                            onChange={(event) =>
-                              setExitFeeRate(
-                                sanitizeNumericInput(event.target.value, true),
-                              )
-                            }
-                            placeholder="0.00"
-                            className={cn("pl-9", defaultFieldSurfaceClass)}
-                          />
-                        </div>
-                      </div>
+                      <CapitalPlanInput
+                        id="exitFeeRate"
+                        label="Exit fee rate (%)"
+                        ariaLabel="Exit fee percentage"
+                        value={exitFeeRate}
+                        placeholder="0.00"
+                        icon={Percent}
+                        onChange={(value) =>
+                          setExitFeeRate(sanitizeNumericInput(value, true))
+                        }
+                      />
                     </div>
                   </CardContent>
                 </Card>
@@ -1659,9 +1720,40 @@ export default function BacktestPage() {
                       <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0">
                         <div className="rounded-xl border bg-muted/30 p-3">
                           <div className="flex flex-wrap items-center justify-between gap-2">
-                            <p className="text-sm font-medium text-foreground">
-                              Position mode
-                            </p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-medium text-foreground">
+                                Position mode
+                              </p>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <button
+                                    type="button"
+                                    aria-label="Learn about position mode"
+                                    className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-border/70 text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
+                                  >
+                                    <CircleHelp className="h-4 w-4" />
+                                  </button>
+                                </PopoverTrigger>
+                                <PopoverContent
+                                  side="top"
+                                  align="start"
+                                  sideOffset={8}
+                                  className="w-64"
+                                >
+                                  <div className="space-y-1 text-sm leading-relaxed">
+                                    <p>
+                                      <span className="font-semibold">One-way</span>{" "}
+                                      keeps a single net position per market.
+                                    </p>
+                                    <p>
+                                      <span className="font-semibold">Hedge</span>{" "}
+                                      lets long and short positions exist at the
+                                      same time.
+                                    </p>
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            </div>
                             <ToggleGroup
                               type="single"
                               value={hedgeMode ? "hedge" : "one-way"}

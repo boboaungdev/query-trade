@@ -60,6 +60,12 @@ import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { Card, CardContent } from "@/components/ui/card";
 import {
+  Command,
+  CommandGroup,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -69,6 +75,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Sheet,
@@ -180,6 +187,7 @@ type ProfileListState = {
   page: number;
   hasNextPage: boolean;
   isLoading: boolean;
+  isSearching: boolean;
   isAppending: boolean;
   error: string;
   search: string;
@@ -197,6 +205,7 @@ const defaultProfileListState = (
   page: 1,
   hasNextPage: false,
   isLoading: false,
+  isSearching: false,
   isAppending: false,
   error: "",
   search: "",
@@ -329,6 +338,12 @@ export default function Profile() {
     following: 0,
     strategies: 0,
     backtests: 0,
+  });
+  const previousProfileListSearchRef = useRef<Record<ProfileDialogTab, string>>({
+    followers: "",
+    following: "",
+    strategies: "",
+    backtests: "",
   });
 
   const initials =
@@ -490,13 +505,16 @@ export default function Profile() {
     const tab = activeProfileTab;
     const requestId = profileListRequestIdRef.current[tab] + 1;
     profileListRequestIdRef.current[tab] = requestId;
+    const isSearchTriggeredFetch =
+      activeListSearch !== previousProfileListSearchRef.current[tab];
 
     setProfileLists((prev) => ({
       ...prev,
       [tab]: {
         ...prev[tab],
         error: "",
-        isLoading: prev[tab].page === 1,
+        isLoading: prev[tab].page === 1 && !isSearchTriggeredFetch,
+        isSearching: prev[tab].page === 1 && isSearchTriggeredFetch,
         isAppending: prev[tab].page > 1,
       },
     }));
@@ -564,10 +582,12 @@ export default function Profile() {
             total: result?.result?.total ?? 0,
             hasNextPage: Boolean(result?.result?.hasNextPage),
             isLoading: false,
+            isSearching: false,
             isAppending: false,
             error: "",
           },
         }));
+        previousProfileListSearchRef.current[tab] = activeListSearch;
       } catch (error) {
         if (profileListRequestIdRef.current[tab] !== requestId) return;
 
@@ -576,6 +596,7 @@ export default function Profile() {
           [tab]: {
             ...prev[tab],
             isLoading: false,
+            isSearching: false,
             isAppending: false,
             error: getApiErrorMessage(error, "Failed to load items"),
           },
@@ -597,14 +618,18 @@ export default function Profile() {
 
   useEffect(() => {
     const node = profileListLoadMoreRef.current;
-    const root = profileListScrollRef.current;
+    const root = profileListScrollRef.current?.querySelector<HTMLDivElement>(
+      "[data-slot='scroll-area-viewport']",
+    );
 
     if (
       !node ||
       !root ||
       !activeListState.hasNextPage ||
       activeListState.isLoading ||
-      activeListState.isAppending
+      activeListState.isAppending ||
+      activeListState.isSearching ||
+      activeListState.search.trim() !== activeListState.debouncedSearch
     ) {
       return;
     }
@@ -613,7 +638,11 @@ export default function Profile() {
       (entries) => {
         const firstEntry = entries[0];
 
-        if (firstEntry?.isIntersecting) {
+        if (
+          firstEntry?.isIntersecting &&
+          !activeListState.isSearching &&
+          activeListState.search.trim() === activeListState.debouncedSearch
+        ) {
           updateProfileListState(activeProfileTab, (state) => ({
             ...state,
             page: state.page + 1,
@@ -633,6 +662,9 @@ export default function Profile() {
     activeListState.hasNextPage,
     activeListState.isAppending,
     activeListState.isLoading,
+    activeListState.isSearching,
+    activeListState.search,
+    activeListState.debouncedSearch,
     activeProfileTab,
   ]);
 
@@ -1756,6 +1788,13 @@ export default function Profile() {
                       Object.keys(dialogTabLabels) as Array<ProfileDialogTab>
                     ).map((tab) => {
                       const tabState = profileLists[tab];
+                      const isTabSearchPending =
+                        tabState.search.trim() !== tabState.debouncedSearch;
+                      const tabStatus = isTabSearchPending || tabState.isSearching
+                        ? "searching"
+                        : tabState.isLoading
+                          ? "loading"
+                          : null;
 
                       return (
                         <TabsContent
@@ -1763,24 +1802,35 @@ export default function Profile() {
                           value={tab}
                           className="min-h-0 flex-1 overflow-hidden"
                         >
-                          <div
+                          <ScrollArea
                             ref={
                               tab === activeProfileTab
                                 ? profileListScrollRef
                                 : null
                             }
-                            className="max-h-[720px] min-w-0 overflow-x-hidden overflow-y-auto px-4 pt-4"
+                            className="h-[720px] min-w-0 px-4 pt-4 pb-4"
                           >
-                            {tabState.isLoading ? (
+                            {tabStatus === "searching" ? (
+                              <div className="flex min-h-16 items-center justify-center py-2 text-sm text-muted-foreground">
+                                <Search className="mr-2 h-4 w-4 animate-pulse" />
+                                {tab === "following"
+                                  ? "Searching following users...."
+                                  : tab === "followers"
+                                    ? "Searching followers...."
+                                    : tab === "strategies"
+                                      ? "Searching strategy...."
+                                      : "Searching backtests...."}
+                              </div>
+                            ) : tabStatus === "loading" ? (
                               <div className="flex min-h-16 items-center justify-center py-2 text-sm text-muted-foreground">
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                 {tab === "following"
-                                  ? "Loading following users..."
+                                  ? "Loading following users...."
                                   : tab === "followers"
-                                    ? "Loading followers..."
+                                    ? "Loading followers...."
                                     : tab === "strategies"
-                                      ? "Loading strategies..."
-                                      : "Loading backtests..."}
+                                      ? "Loading strategy...."
+                                      : "Loading backtests...."}
                               </div>
                             ) : tabState.error ? (
                               <div className="flex min-h-16 items-center justify-center py-2 text-sm text-destructive">
@@ -1797,14 +1847,20 @@ export default function Profile() {
                                       : "No backtests found."}
                               </div>
                             ) : (
-                              <div>
+                              <Command
+                                shouldFilter={false}
+                                className="rounded-none bg-transparent p-0"
+                              >
+                                <CommandList className="max-h-none overflow-visible px-0 py-0">
+                                  <CommandGroup className="space-y-1 p-0">
                                 {tab === "followers" || tab === "following"
                                   ? (
                                       tabState.items as ProfileFollowListItem[]
                                     ).map((item) => (
-                                      <div
+                                      <CommandItem
                                         key={item._id}
-                                        className="theme-hover-surface flex min-w-0 items-center justify-between gap-3 border-b border-border/60 px-2 py-2 last:border-b-0"
+                                        value={`${item.name || ""} ${item.username || ""}`}
+                                        className="theme-hover-surface flex min-w-0 cursor-pointer items-center justify-between gap-3 rounded-md px-3 py-2 text-left hover:bg-muted/60 data-[selected=true]:bg-transparent data-[selected=true]:hover:bg-muted/60"
                                       >
                                         <Link
                                           to={`/${item.username}`}
@@ -1977,15 +2033,16 @@ export default function Profile() {
                                             </DropdownMenu>
                                           </ButtonGroup>
                                         ) : null}
-                                      </div>
+                                      </CommandItem>
                                     ))
                                   : tab === "strategies"
                                     ? (
                                         tabState.items as ProfileStrategyListItem[]
                                       ).map((item) => (
-                                        <div
+                                        <CommandItem
                                           key={item._id}
-                                          className="theme-hover-surface flex min-w-0 items-center justify-between gap-3 border-b border-border/60 px-2 py-2 last:border-b-0"
+                                          value={`${item.name || ""} ${item.description || ""}`}
+                                          className="theme-hover-surface flex min-w-0 cursor-pointer items-center justify-between gap-3 rounded-md px-3 py-2 text-left hover:bg-muted/60 data-[selected=true]:bg-transparent data-[selected=true]:hover:bg-muted/60"
                                         >
                                           <Link
                                             to={`/strategy/${item._id}`}
@@ -2122,7 +2179,7 @@ export default function Profile() {
                                               </DropdownMenuContent>
                                             </DropdownMenu>
                                           </ButtonGroup>
-                                        </div>
+                                        </CommandItem>
                                       ))
                                     : (
                                         tabState.items as ProfileBacktestListItem[]
@@ -2133,9 +2190,10 @@ export default function Profile() {
                                           );
 
                                         return (
-                                          <div
+                                          <CommandItem
                                             key={item._id}
-                                            className="theme-hover-surface flex min-w-0 items-center justify-between gap-3 border-b border-border/60 px-2 py-2 last:border-b-0"
+                                            value={`${item.symbol || ""} ${item.timeframe || ""} ${item.strategy?.name || ""}`}
+                                            className="theme-hover-surface flex min-w-0 cursor-pointer items-center justify-between gap-3 rounded-md px-3 py-2 text-left hover:bg-muted/60 data-[selected=true]:bg-transparent data-[selected=true]:hover:bg-muted/60"
                                           >
                                             <Link
                                               to={`/backtest/${item._id}`}
@@ -2272,7 +2330,7 @@ export default function Profile() {
                                                 </DropdownMenuContent>
                                               </DropdownMenu>
                                             </ButtonGroup>
-                                          </div>
+                                          </CommandItem>
                                         );
                                       })}
 
@@ -2285,7 +2343,8 @@ export default function Profile() {
                                     }
                                     className="flex h-10 items-center justify-center"
                                   >
-                                    {tabState.isAppending ? (
+                                    {tabState.isAppending &&
+                                    tabStatus !== "searching" ? (
                                       <>
                                         <Loader2 className="mr-2 h-4 w-4 animate-spin text-muted-foreground" />
                                         <span className="text-sm text-muted-foreground">
@@ -2295,9 +2354,11 @@ export default function Profile() {
                                     ) : null}
                                   </div>
                                 ) : null}
-                              </div>
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
                             )}
-                          </div>
+                          </ScrollArea>
                         </TabsContent>
                       );
                     })}

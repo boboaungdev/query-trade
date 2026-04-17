@@ -95,10 +95,12 @@ const strategyIndicatorSchema = Joi.object({
   params: Joi.object().unknown(true).default({}),
 });
 
+const strategyDescriptionSchema = Joi.string().trim().max(200).allow("");
+
 export const StrategySchema = {
   create: Joi.object({
     name: Joi.string().trim().min(2).max(50).required(),
-    description: Joi.string().trim().allow(""),
+    description: strategyDescriptionSchema,
     isPublic: Joi.boolean().default(true),
     indicators: Joi.array().items(strategyIndicatorSchema),
     entry: Joi.object({
@@ -109,7 +111,7 @@ export const StrategySchema = {
 
   update: Joi.object({
     name: Joi.string().trim().min(2).max(50),
-    description: Joi.string().trim().allow(""),
+    description: strategyDescriptionSchema,
     isPublic: Joi.boolean(),
     indicators: Joi.array().items(strategyIndicatorSchema),
     entry: Joi.object({

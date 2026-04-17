@@ -171,6 +171,7 @@ export default function LeaderboardPage() {
   const [hasNextPage, setHasNextPage] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isAppending, setIsAppending] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const [sortBy, setSortBy] = useState<BacktestSortBy>("roi");
   const [order, setOrder] = useState<"asc" | "desc">("desc");
   const [backtestIdPendingDelete, setBacktestIdPendingDelete] = useState("");
@@ -180,11 +181,12 @@ export default function LeaderboardPage() {
   );
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const requestIdRef = useRef(0);
+  const previousDebouncedSearchRef = useRef(debouncedSearch);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search.trim());
-    }, 500);
+    }, 250);
 
     return () => clearTimeout(timer);
   }, [search]);
@@ -193,8 +195,12 @@ export default function LeaderboardPage() {
     const loadLeaderboard = async () => {
       const requestId = requestIdRef.current + 1;
       requestIdRef.current = requestId;
+      const isSearchTriggeredFetch =
+        debouncedSearch !== previousDebouncedSearchRef.current;
 
-      if (page === 1) {
+      if (page === 1 && isSearchTriggeredFetch) {
+        setIsSearching(true);
+      } else if (page === 1) {
         setIsLoading(true);
       } else {
         setIsAppending(true);
@@ -227,6 +233,7 @@ export default function LeaderboardPage() {
 
         setTotalCount(result?.total ?? 0);
         setHasNextPage(Boolean(result?.hasNextPage));
+        previousDebouncedSearchRef.current = debouncedSearch;
       } catch (error) {
         if (requestIdRef.current !== requestId) {
           return;
@@ -235,6 +242,7 @@ export default function LeaderboardPage() {
         toast.error(getApiErrorMessage(error, "Failed to load leaderboard"));
       } finally {
         if (requestIdRef.current === requestId) {
+          setIsSearching(false);
           setIsLoading(false);
           setIsAppending(false);
         }
@@ -246,12 +254,20 @@ export default function LeaderboardPage() {
 
   useEffect(() => {
     const node = loadMoreRef.current;
-    if (!node || !hasNextPage || isLoading || isAppending) return;
+    if (!node || !hasNextPage || isLoading || isAppending || isSearching) {
+      return;
+    }
 
     const observer = new IntersectionObserver(
       (entries) => {
         const firstEntry = entries[0];
-        if (firstEntry?.isIntersecting && !isAppending && !isLoading) {
+        if (
+          firstEntry?.isIntersecting &&
+          !isAppending &&
+          !isLoading &&
+          !isSearching &&
+          search.trim() === debouncedSearch
+        ) {
           setPage((prev) => prev + 1);
         }
       },
@@ -264,7 +280,10 @@ export default function LeaderboardPage() {
 
     observer.observe(node);
     return () => observer.disconnect();
-  }, [hasNextPage, isAppending, isLoading]);
+  }, [debouncedSearch, hasNextPage, isAppending, isLoading, isSearching, search]);
+
+  const isSearchPending = search.trim() !== debouncedSearch;
+  const listStatus = isSearchPending || isSearching ? "searching" : isLoading ? "loading" : null;
 
   const onCopyResultLink = async (backtestId: string) => {
     const resultUrl = `${window.location.origin}/backtest/${backtestId}`;
@@ -536,10 +555,19 @@ export default function LeaderboardPage() {
         </CardHeader>
       </Card>
 
-      {isLoading ? (
+      {listStatus ? (
         <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          <span>Loading leaderboard...</span>
+          {listStatus === "searching" ? (
+            <>
+              <Search className="h-4 w-4 animate-pulse" />
+              <span>Searching leaderboard....</span>
+            </>
+          ) : (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Loading leaderboard....</span>
+            </>
+          )}
         </div>
       ) : backtests.length === 0 ? (
         <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
@@ -784,7 +812,7 @@ export default function LeaderboardPage() {
       )}
 
       <div ref={loadMoreRef} className="flex h-10 items-center justify-center">
-        {isAppending ? (
+        {isAppending && !listStatus ? (
           <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
             Loading more results...
