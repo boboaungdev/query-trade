@@ -7,6 +7,7 @@ import {
   ArrowLeftRight,
   ArrowRight,
   Bitcoin,
+  Copy,
   CalendarRange,
   ChevronDown,
   ChevronsUpDown,
@@ -14,6 +15,7 @@ import {
   CircleHelp,
   HandCoins,
   Loader2,
+  MoreHorizontal,
   Percent,
   Play,
   Bookmark,
@@ -24,6 +26,7 @@ import {
   Sparkles,
   Target,
   TrendingUp,
+  UserRound,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
@@ -40,8 +43,8 @@ import {
 import { fetchStrategies, type StrategySource } from "@/api/strategy";
 
 import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { Calendar } from "@/components/ui/calendar";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Card,
   CardContent,
@@ -64,6 +67,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuLabel,
+  DropdownMenuItem,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
@@ -819,6 +823,17 @@ export default function BacktestPage() {
     }
   };
 
+  const onCopyStrategyLink = async (strategyIdToCopy: string) => {
+    const strategyUrl = `${window.location.origin}/strategy/${strategyIdToCopy}`;
+
+    try {
+      await navigator.clipboard.writeText(strategyUrl);
+      toast.success("Link copied");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Failed to copy link"));
+    }
+  };
+
   const selectStrategy = (item: StrategyItem) => {
     setStrategyId(item._id);
     setSelectedStrategyName(item.name);
@@ -1491,7 +1506,7 @@ export default function BacktestPage() {
                                               key={item._id}
                                               value={item._id}
                                               className={cn(
-                                                "theme-hover-surface flex min-w-0 cursor-pointer items-center justify-between gap-3 rounded-md pl-3 pr-0 py-2 text-left hover:bg-muted/60 data-[selected=true]:bg-transparent data-[selected=true]:hover:bg-muted/60",
+                                                "theme-hover-surface flex min-w-0 overflow-hidden cursor-pointer items-center justify-between gap-3 rounded-md py-2 pl-3 pr-0 text-left hover:bg-muted/60 data-[selected=true]:bg-transparent data-[selected=true]:hover:bg-muted/60",
                                                 isSelected &&
                                                   "bg-muted text-foreground",
                                               )}
@@ -1499,90 +1514,129 @@ export default function BacktestPage() {
                                                 selectStrategy(item)
                                               }
                                             >
-                                              <div className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-2 text-[11px] text-muted-foreground md:items-center">
-                                                <span className="flex min-w-0 items-start gap-3">
-                                                  <Avatar className="mt-0.5 h-8 w-8 shrink-0">
-                                                    <AvatarImage
-                                                      src={item.user?.avatar}
-                                                      alt={
-                                                        item.user?.username ||
-                                                        item.name
-                                                      }
-                                                    />
-                                                    <AvatarFallback>
-                                                      {(
-                                                        item.user?.username ||
-                                                        item.name ||
-                                                        "U"
-                                                      )
-                                                        .slice(0, 2)
-                                                        .toUpperCase()}
-                                                    </AvatarFallback>
-                                                  </Avatar>
-                                                  <span className="min-w-0 overflow-hidden">
-                                                    <span className="block w-full truncate text-sm font-medium whitespace-nowrap text-foreground">
-                                                      {item.name}
-                                                    </span>
-                                                    <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+                                              <div className="w-0 min-w-0 flex-1 overflow-hidden">
+                                                <p className="block w-full truncate font-medium">
+                                                  {item.name}
+                                                </p>
+                                                <p className="block w-full truncate text-xs text-muted-foreground">
+                                                  {item.description?.trim() ||
+                                                    "No description provided."}
+                                                </p>
+                                                <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                                                  <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                                                    <UserRound className="h-3.5 w-3.5" />
+                                                    <span className="truncate">
                                                       @
                                                       {item.user?.username ||
                                                         "unknown"}
-                                                      {" · "}
-                                                      {item.description?.trim() ||
-                                                        "No description provided."}
                                                     </span>
                                                   </span>
-                                                </span>
-                                                <span className="inline-flex shrink-0 flex-col items-end gap-1 pl-2 pr-0 md:flex-row md:items-center md:gap-2">
-                                                  <span className="inline-flex items-center gap-1">
-                                                    <TrendingUp className="h-3 w-3" />
+                                                  <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                                                    <TrendingUp className="h-3.5 w-3.5" />
                                                     {item.stats?.viewCount ?? 0}
                                                   </span>
-                                                  <span className="inline-flex items-center gap-1">
-                                                    <button
+                                                  <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                                                    <Bookmark className="h-3.5 w-3.5" />
+                                                    {item.stats
+                                                      ?.bookmarkCount ?? 0}
+                                                  </span>
+                                                </div>
+                                              </div>
+                                              <ButtonGroup
+                                                aria-label={`Bookmark actions for ${item.name || "strategy"}`}
+                                                className="min-w-0 shrink-0"
+                                              >
+                                                <Button
+                                                  type="button"
+                                                  size="icon-sm"
+                                                  variant="ghost"
+                                                  className={cn(
+                                                    "rounded-r-none border-transparent shadow-none",
+                                                    item.isBookmarked
+                                                      ? "text-primary"
+                                                      : "text-muted-foreground",
+                                                  )}
+                                                  disabled={updatingStrategyIds.has(
+                                                    item._id,
+                                                  )}
+                                                  onClick={(event) => {
+                                                    event.preventDefault();
+                                                    event.stopPropagation();
+                                                    void onToggleStrategyBookmark(
+                                                      item._id,
+                                                    );
+                                                  }}
+                                                >
+                                                  {updatingStrategyIds.has(
+                                                    item._id,
+                                                  ) ? (
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                  ) : item.isBookmarked ? (
+                                                    <BookmarkCheck className="h-4 w-4" />
+                                                  ) : (
+                                                    <Bookmark className="h-4 w-4" />
+                                                  )}
+                                                </Button>
+                                                <DropdownMenu>
+                                                  <DropdownMenuTrigger asChild>
+                                                    <Button
                                                       type="button"
-                                                      className={cn(
-                                                        "inline-flex h-4 w-4 items-center justify-center rounded-sm",
-                                                        item.isBookmarked
-                                                          ? "text-primary"
-                                                          : "text-muted-foreground",
-                                                      )}
-                                                      aria-label={
-                                                        item.isBookmarked
-                                                          ? "Remove bookmark"
-                                                          : "Add bookmark"
-                                                      }
-                                                      title={
-                                                        item.isBookmarked
-                                                          ? "Remove bookmark"
-                                                          : "Add bookmark"
-                                                      }
-                                                      disabled={updatingStrategyIds.has(
-                                                        item._id,
-                                                      )}
+                                                      size="icon-sm"
+                                                      variant="ghost"
+                                                      className="-ml-px rounded-l-none border-transparent text-muted-foreground shadow-none"
+                                                      aria-label={`More actions for ${item.name || "strategy"}`}
                                                       onClick={(event) => {
                                                         event.preventDefault();
                                                         event.stopPropagation();
+                                                      }}
+                                                    >
+                                                      <MoreHorizontal className="h-4 w-4" />
+                                                    </Button>
+                                                  </DropdownMenuTrigger>
+                                                  <DropdownMenuContent
+                                                    align="end"
+                                                    collisionPadding={16}
+                                                    className="w-44"
+                                                    onClick={(event) =>
+                                                      event.stopPropagation()
+                                                    }
+                                                  >
+                                                    <DropdownMenuItem
+                                                      onClick={() =>
+                                                        void onCopyStrategyLink(
+                                                          item._id,
+                                                        )
+                                                      }
+                                                    >
+                                                      <Copy className="h-4 w-4" />
+                                                      Copy link
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem
+                                                      disabled={updatingStrategyIds.has(
+                                                        item._id,
+                                                      )}
+                                                      onClick={() => {
                                                         void onToggleStrategyBookmark(
                                                           item._id,
                                                         );
                                                       }}
                                                     >
-                                                      {updatingStrategyIds.has(
-                                                        item._id,
-                                                      ) ? (
-                                                        <Loader2 className="h-3 w-3 animate-spin" />
-                                                      ) : item.isBookmarked ? (
-                                                        <BookmarkCheck className="h-3 w-3" />
+                                                      {item.isBookmarked ? (
+                                                        <>
+                                                          <BookmarkCheck className="h-4 w-4" />
+                                                          Bookmarked
+                                                        </>
                                                       ) : (
-                                                        <Bookmark className="h-3 w-3" />
+                                                        <>
+                                                          <Bookmark className="h-4 w-4" />
+                                                          Bookmark
+                                                        </>
                                                       )}
-                                                    </button>
-                                                    {item.stats
-                                                      ?.bookmarkCount ?? 0}
-                                                  </span>
-                                                </span>
-                                              </div>
+                                                    </DropdownMenuItem>
+                                                  </DropdownMenuContent>
+                                                </DropdownMenu>
+                                              </ButtonGroup>
                                             </CommandItem>
                                           );
                                         })}
@@ -1734,17 +1788,17 @@ export default function BacktestPage() {
                                   sideOffset={8}
                                   className="w-64"
                                 >
-                                  <div className="space-y-1 text-sm leading-relaxed">
+                                  <div className="space-y-1 text-sm leading-relaxed text-muted-foreground">
                                     <p>
-                                      <span className="font-semibold">
+                                      <span className="font-semibold text-foreground">
                                         One-way
-                                      </span>{" "}
+                                      </span>{" - "}
                                       keeps a single net position per market.
                                     </p>
                                     <p>
-                                      <span className="font-semibold">
+                                      <span className="font-semibold text-foreground">
                                         Hedge
-                                      </span>{" "}
+                                      </span>{" - "}
                                       lets long and short positions exist at the
                                       same time.
                                     </p>
@@ -1933,15 +1987,11 @@ export default function BacktestPage() {
                     {isRunning ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
-                      <Play className="h-4 w-4" />
+                      <>
+                        <Play className="h-4 w-4" />
+                        {isEditing ? "Update Backtest" : "Run Backtest"}
+                      </>
                     )}
-                    {isRunning
-                      ? isEditing
-                        ? "Updating Backtest..."
-                        : "Running Backtest..."
-                      : isEditing
-                        ? "Update Backtest"
-                        : "Run Backtest"}
                   </Button>
                 </CardContent>
               </Card>
@@ -1952,3 +2002,4 @@ export default function BacktestPage() {
     </div>
   );
 }
+

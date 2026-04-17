@@ -33,6 +33,7 @@ import {
   Users,
   UserRound,
   X,
+  type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -219,6 +220,13 @@ const dialogTabLabels: Record<ProfileDialogTab, string> = {
   following: "Following",
   strategies: "Strategies",
   backtests: "Backtests",
+};
+
+const dialogTabIcons: Record<ProfileDialogTab, LucideIcon> = {
+  followers: Users,
+  following: UserCheck,
+  strategies: Target,
+  backtests: CandlestickChart,
 };
 
 const backtestSortDefaultOrder: Record<string, "asc" | "desc"> = {
@@ -1683,16 +1691,30 @@ export default function Profile() {
                             Object.keys(
                               dialogTabLabels,
                             ) as Array<ProfileDialogTab>
-                          ).map((tab) => (
-                            <TabsTrigger
-                              key={tab}
-                              value={tab}
-                              disabled={activeProfileTab === tab}
-                              className="data-[state=active]:cursor-default data-[state=active]:text-primary data-[state=active]:after:bg-primary disabled:pointer-events-none disabled:opacity-100 dark:data-[state=active]:text-primary dark:data-[state=active]:after:bg-primary"
-                            >
-                              {dialogTabLabels[tab]}
-                            </TabsTrigger>
-                          ))}
+                          ).map((tab) => {
+                            const Icon = dialogTabIcons[tab];
+                            const isActive = activeProfileTab === tab;
+
+                            return (
+                              <TabsTrigger
+                                key={tab}
+                                value={tab}
+                                disabled={isActive}
+                                aria-label={dialogTabLabels[tab]}
+                                title={dialogTabLabels[tab]}
+                                className="gap-2 data-[state=active]:cursor-default data-[state=active]:text-primary data-[state=active]:after:bg-primary disabled:pointer-events-none disabled:opacity-100 dark:data-[state=active]:text-primary dark:data-[state=active]:after:bg-primary"
+                              >
+                                <Icon className="h-4 w-4 shrink-0" />
+                                {isActive ? (
+                                  <span>{dialogTabLabels[tab]}</span>
+                                ) : (
+                                  <span className="sr-only">
+                                    {dialogTabLabels[tab]}
+                                  </span>
+                                )}
+                              </TabsTrigger>
+                            );
+                          })}
                         </TabsList>
 
                         <div className="relative min-w-0 w-full md:max-w-[320px] md:flex-1">
@@ -1889,7 +1911,7 @@ export default function Profile() {
                                             <p className="truncate font-medium">
                                               {item.name || "Unknown"}
                                             </p>
-                                            <p className="truncate text-sm text-muted-foreground">
+                                            <p className="truncate text-xs text-muted-foreground">
                                               @{item.username || "unknown"}
                                             </p>
                                             <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
@@ -2042,7 +2064,7 @@ export default function Profile() {
                                         <CommandItem
                                           key={item._id}
                                           value={`${item.name || ""} ${item.description || ""}`}
-                                          className="theme-hover-surface flex min-w-0 cursor-pointer items-center justify-between gap-3 rounded-md px-3 py-2 text-left hover:bg-muted/60 data-[selected=true]:bg-transparent data-[selected=true]:hover:bg-muted/60"
+                                          className="theme-hover-surface flex min-w-0 overflow-hidden cursor-pointer items-center justify-between gap-3 rounded-md py-2 pl-3 pr-0 text-left hover:bg-muted/60 data-[selected=true]:bg-transparent data-[selected=true]:hover:bg-muted/60"
                                         >
                                           <Link
                                             to={`/strategy/${item._id}`}
@@ -2052,39 +2074,36 @@ export default function Profile() {
                                               fromProfileUsername:
                                                 routeUsername,
                                             }}
-                                            className="min-w-0 flex-1 transition hover:text-foreground"
+                                            className="w-0 min-w-0 flex-1 basis-0 overflow-hidden transition hover:text-foreground"
                                           >
-                                            <div className="flex items-start justify-between gap-3">
-                                              <div className="min-w-0">
-                                                <p className="truncate font-medium">
-                                                  {item.name || "Strategy"}
-                                                </p>
-                                                <p className="truncate text-sm text-muted-foreground">
-                                                  {item.description ||
-                                                    "No description provided."}
-                                                </p>
-                                                <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-                                                  <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
-                                                    <TrendingUp className="h-3.5 w-3.5" />
-                                                    {item.stats?.viewCount ??
-                                                      "-"}
-                                                  </span>
-                                                  <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
-                                                    <Bookmark className="h-3.5 w-3.5" />
-                                                    {item.stats
-                                                      ?.bookmarkCount ?? "-"}
-                                                  </span>
-                                                  <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
-                                                    {item.isPublic ? (
-                                                      <Globe className="h-3.5 w-3.5" />
-                                                    ) : (
-                                                      <Lock className="h-3.5 w-3.5" />
-                                                    )}
-                                                    {item.isPublic
-                                                      ? "Public"
-                                                      : "Private"}
-                                                  </span>
-                                                </div>
+                                            <div className="min-w-0 w-full max-w-full overflow-hidden">
+                                              <p className="block w-full truncate font-medium">
+                                                {item.name || "Strategy"}
+                                              </p>
+                                              <p className="block w-full truncate text-xs text-muted-foreground">
+                                                {item.description ||
+                                                  "No description provided."}
+                                              </p>
+                                              <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                                                <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                                                  <TrendingUp className="h-3.5 w-3.5" />
+                                                  {item.stats?.viewCount ?? "-"}
+                                                </span>
+                                                <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                                                  <Bookmark className="h-3.5 w-3.5" />
+                                                  {item.stats?.bookmarkCount ??
+                                                    "-"}
+                                                </span>
+                                                <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                                                  {item.isPublic ? (
+                                                    <Globe className="h-3.5 w-3.5" />
+                                                  ) : (
+                                                    <Lock className="h-3.5 w-3.5" />
+                                                  )}
+                                                  {item.isPublic
+                                                    ? "Public"
+                                                    : "Private"}
+                                                </span>
                                               </div>
                                             </div>
                                           </Link>
@@ -2204,7 +2223,7 @@ export default function Profile() {
                                                   {item.symbol || "-"} /{" "}
                                                   {item.timeframe || "-"}
                                                 </p>
-                                                <p className="truncate text-sm text-muted-foreground">
+                                                <p className="truncate text-xs text-muted-foreground">
                                                   {item.strategy?.name ||
                                                     "Strategy"}
                                                 </p>

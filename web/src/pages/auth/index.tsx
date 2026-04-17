@@ -45,6 +45,7 @@ import {
   Loader2,
   LockKeyhole,
   Mail,
+  RefreshCw,
   UserRound,
   XCircle,
 } from "lucide-react";
@@ -418,6 +419,7 @@ export default function Auth() {
         setResendTimer(60);
         setCanResend(false);
         setCode("");
+        toast.success("Verification code sent");
       })
       .catch((error: unknown) => {
         markSignupErrorFields(error);
@@ -591,6 +593,7 @@ export default function Auth() {
           setVerifyStep(true);
           setResendTimer(60);
           setCanResend(false);
+          toast.success("Verification code sent");
         })
         .catch((error: unknown) => {
           markSignupErrorFields(error);
@@ -679,6 +682,7 @@ export default function Auth() {
         setForgotStep(true);
         setResendTimer(60);
         setCanResend(false);
+        toast.success("Verification code sent");
       })
       .catch((error: unknown) => {
         if (shouldMarkInvalidFromError(error)) {
@@ -768,6 +772,7 @@ export default function Auth() {
         setResendTimer(60);
         setCanResend(false);
         setCode("");
+        toast.success("Verification code sent");
       })
       .catch((error: unknown) => {
         if (shouldMarkInvalidFromError(error)) {
@@ -982,7 +987,7 @@ export default function Auth() {
 
                 {/* EMAIL */}
                 <div className="space-y-2">
-                  <Label>Email</Label>
+                  <Label className="text-muted-foreground">Email</Label>
                   <AuthInput
                     icon={Mail}
                     type="email"
@@ -1003,7 +1008,7 @@ export default function Auth() {
                 {showPassword && !forgotStep && (
                   <div className="space-y-2">
                     <div className="flex items-center gap-1.5">
-                      <Label>Password</Label>
+                      <Label className="text-muted-foreground">Password</Label>
                     </div>
                     <AuthInput
                       icon={LockKeyhole}
@@ -1049,43 +1054,54 @@ export default function Auth() {
                 {forgotStep && !resetStep && (
                   <div className="space-y-2">
                     <div className="flex items-center gap-1.5">
-                      <Label>Email verification code</Label>
+                      <Label className="text-muted-foreground">
+                        Email verification code
+                      </Label>
                     </div>
-                    <AuthInput
-                      icon={KeyRound}
-                      placeholder="Enter 6 digit code"
-                      aria-label="Email verification code"
-                      value={code}
-                      maxLength={6}
-                      aria-invalid={invalidFields.code}
-                      disabled={loading}
-                      onChange={(e) => {
-                        clearInvalidField("code");
-                        setCode(e.target.value.replace(/[^0-9]/g, ""));
-                      }}
-                      onKeyDown={handleSubmitKeyDown}
-                    />
-
-                    <div className="flex justify-end">
+                    <div className="flex items-start gap-2">
+                      <div className="min-w-0 flex-1">
+                        <AuthInput
+                          icon={KeyRound}
+                          placeholder="Enter 6 digit code"
+                          aria-label="Email verification code"
+                          value={code}
+                          maxLength={6}
+                          aria-invalid={invalidFields.code}
+                          disabled={loading}
+                          onChange={(e) => {
+                            clearInvalidField("code");
+                            setCode(e.target.value.replace(/[^0-9]/g, ""));
+                          }}
+                          onKeyDown={handleSubmitKeyDown}
+                        />
+                      </div>
                       {canResend ? (
-                        <button
+                        <Button
                           type="button"
+                          variant="outline"
+                          className="h-8 w-18 shrink-0 px-3 text-xs disabled:bg-input/50 dark:disabled:bg-input/80"
                           disabled={loading || !canResend}
                           onClick={handleResendCode}
-                          className={`text-xs ${
-                            loading && loadingSource === "resend"
-                              ? "text-muted-foreground"
-                              : "text-primary hover:text-primary/80"
-                          }`}
+                          aria-label="Resend code"
+                          title="Resend code"
                         >
-                          {loading && loadingSource === "resend"
-                            ? "Resending code..."
-                            : "Resend code"}
-                        </button>
+                          {loading && loadingSource === "resend" ? (
+                            <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <span>Resend</span>
+                          )}
+                        </Button>
                       ) : (
-                        <span className="text-xs text-muted-foreground">
-                          Resend in {resendTimer}s
-                        </span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="h-8 w-10 shrink-0 px-0 text-xs disabled:bg-input/50 dark:disabled:bg-input/80"
+                          disabled
+                          aria-label={`Resend available in ${resendTimer} seconds`}
+                          title={`Resend available in ${resendTimer} seconds`}
+                        >
+                          {resendTimer}s
+                        </Button>
                       )}
                     </div>
                   </div>
@@ -1094,7 +1110,9 @@ export default function Auth() {
                 {resetStep && (
                   <>
                     <div className="space-y-2">
-                      <Label>New password</Label>
+                      <Label className="text-muted-foreground">
+                        New password
+                      </Label>
                       <AuthInput
                         icon={LockKeyhole}
                         type={isNewPasswordVisible ? "text" : "password"}
@@ -1117,7 +1135,9 @@ export default function Auth() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Confirm new password</Label>
+                      <Label className="text-muted-foreground">
+                        Confirm new password
+                      </Label>
                       <AuthInput
                         icon={LockKeyhole}
                         type={isConfirmPasswordVisible ? "text" : "password"}
@@ -1146,7 +1166,7 @@ export default function Auth() {
                   <>
                     <div className="space-y-2">
                       <div className="flex items-center gap-1.5">
-                        <Label>Name</Label>
+                        <Label className="text-muted-foreground">Name</Label>
                       </div>
                       <AuthInput
                         icon={UserRound}
@@ -1165,7 +1185,9 @@ export default function Auth() {
 
                     <div className="space-y-2">
                       <div className="flex items-center gap-1.5">
-                        <Label>Username</Label>
+                        <Label className="text-muted-foreground">
+                          Username
+                        </Label>
                       </div>
                       <div className="space-y-2">
                         <div className="relative">
@@ -1223,7 +1245,7 @@ export default function Auth() {
 
                     <div className="space-y-2">
                       <div className="flex items-center gap-1.5">
-                        <Label>Password</Label>
+                        <Label className="text-muted-foreground">Password</Label>
                       </div>
                       <AuthInput
                         icon={LockKeyhole}
@@ -1252,43 +1274,54 @@ export default function Auth() {
                 {verifyStep && (
                   <div className="space-y-2">
                     <div className="flex items-center gap-1.5">
-                      <Label>Email verification code</Label>
+                      <Label className="text-muted-foreground">
+                        Email verification code
+                      </Label>
                     </div>
-                    <AuthInput
-                      icon={KeyRound}
-                      placeholder="Enter 6 digit code"
-                      aria-label="Email verification code"
-                      value={code}
-                      maxLength={6}
-                      aria-invalid={invalidFields.code}
-                      disabled={loading}
-                      onChange={(e) => {
-                        clearInvalidField("code");
-                        setCode(e.target.value.replace(/[^0-9]/g, ""));
-                      }}
-                      onKeyDown={handleSubmitKeyDown}
-                    />
-
-                    <div className="flex justify-end">
+                    <div className="flex items-start gap-2">
+                      <div className="min-w-0 flex-1">
+                        <AuthInput
+                          icon={KeyRound}
+                          placeholder="Enter 6 digit code"
+                          aria-label="Email verification code"
+                          value={code}
+                          maxLength={6}
+                          aria-invalid={invalidFields.code}
+                          disabled={loading}
+                          onChange={(e) => {
+                            clearInvalidField("code");
+                            setCode(e.target.value.replace(/[^0-9]/g, ""));
+                          }}
+                          onKeyDown={handleSubmitKeyDown}
+                        />
+                      </div>
                       {canResend ? (
-                        <button
+                        <Button
                           type="button"
+                          variant="outline"
+                          className="h-8 w-18 shrink-0 px-3 text-xs disabled:bg-input/50 dark:disabled:bg-input/80"
                           disabled={loading || !canResend}
                           onClick={handleResendVerification}
-                          className={`text-xs ${
-                            loading && loadingSource === "resend"
-                              ? "text-muted-foreground"
-                              : "text-primary hover:text-primary/80"
-                          }`}
+                          aria-label="Resend verification code"
+                          title="Resend verification code"
                         >
-                          {loading && loadingSource === "resend"
-                            ? "Resending code..."
-                            : "Resend code"}
-                        </button>
+                          {loading && loadingSource === "resend" ? (
+                            <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <span>Resend</span>
+                          )}
+                        </Button>
                       ) : (
-                        <span className="text-xs text-muted-foreground">
-                          Resend in {resendTimer}s
-                        </span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="h-8 w-10 shrink-0 px-0 text-xs disabled:bg-input/50 dark:disabled:bg-input/80"
+                          disabled
+                          aria-label={`Resend available in ${resendTimer} seconds`}
+                          title={`Resend available in ${resendTimer} seconds`}
+                        >
+                          {resendTimer}s
+                        </Button>
                       )}
                     </div>
                   </div>
