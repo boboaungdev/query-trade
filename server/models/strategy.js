@@ -126,7 +126,6 @@ const strategySchema = new Schema(
     user: {
       type: Schema.Types.ObjectId,
       ref: "user",
-      index: true,
     },
 
     stats: {
@@ -148,8 +147,6 @@ const strategySchema = new Schema(
   },
 );
 
-strategySchema.index({ "stats.viewCount": -1 });
-strategySchema.index({ "stats.bookmarkCount": -1 });
 strategySchema.index({ user: 1, isPublic: 1, createdAt: -1 });
 
 export const StrategyDB = mongoose.model("strategy", strategySchema);

@@ -102,13 +102,11 @@ const backtestSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "user",
       required: true,
-      index: true,
     },
     strategy: {
       type: Schema.Types.ObjectId,
       ref: "strategy",
       required: true,
-      index: true,
     },
     exchange: {
       type: String,
@@ -305,7 +303,6 @@ const backtestSchema = new Schema(
   },
 );
 
-backtestSchema.index({ createdAt: -1 });
 backtestSchema.index({ user: 1, createdAt: -1 });
 
 export const BacktestDB = mongoose.model("backtest", backtestSchema);

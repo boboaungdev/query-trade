@@ -3,7 +3,14 @@ import Joi from "joi";
 export const BacktestSchema = {
   create: Joi.object({
     exchange: Joi.string().default("binance"),
-    initialBalance: Joi.number().positive().default(10000),
+    initialBalance: Joi.number()
+      .positive()
+      .greater(Joi.ref("amountPerTrade"))
+      .default(10000)
+      .messages({
+        "number.greater":
+          "Initial balance must be greater than amount per trade",
+      }),
     amountPerTrade: Joi.number().positive().default(100),
     entryFeeRate: Joi.number().min(0).default(0),
     exitFeeRate: Joi.number().min(0).default(0),
@@ -18,7 +25,13 @@ export const BacktestSchema = {
 
   update: Joi.object({
     exchange: Joi.string(),
-    initialBalance: Joi.number().positive(),
+    initialBalance: Joi.number()
+      .positive()
+      .greater(Joi.ref("amountPerTrade"))
+      .messages({
+        "number.greater":
+          "Initial balance must be greater than amount per trade",
+      }),
     amountPerTrade: Joi.number().positive(),
     entryFeeRate: Joi.number().min(0),
     exitFeeRate: Joi.number().min(0),

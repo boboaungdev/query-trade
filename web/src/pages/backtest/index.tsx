@@ -13,6 +13,7 @@ import {
   ChevronsUpDown,
   Clock3,
   CircleHelp,
+  Eye,
   HandCoins,
   Loader2,
   MoreHorizontal,
@@ -266,6 +267,12 @@ const disabledFieldSurfaceClass =
   "disabled:bg-input/50 dark:disabled:bg-input/80";
 const defaultFieldSurfaceClass = "bg-background";
 const capitalPlanLabelClass = "text-xs font-medium text-muted-foreground";
+const defaultInitialBalanceValue = "10000";
+const defaultAmountPerTradeValue = "100";
+const defaultEntryFeeRateValue = "0.00";
+const defaultExitFeeRateValue = "0.00";
+const helperPopoverClassName =
+  "w-52 rounded-md border-border/60 bg-popover px-3 py-2 text-xs leading-relaxed text-muted-foreground shadow-sm";
 const capitalPlanFieldClass = cn(
   "h-8 rounded-lg",
   defaultFieldSurfaceClass,
@@ -278,6 +285,7 @@ type CapitalPlanInputProps = {
   ariaLabel: string;
   value: string;
   placeholder: string;
+  defaultValue: string;
   icon: LucideIcon;
   onChange: (value: string) => void;
 };
@@ -288,6 +296,7 @@ function CapitalPlanInput({
   ariaLabel,
   value,
   placeholder,
+  defaultValue,
   icon: Icon,
   onChange,
 }: CapitalPlanInputProps) {
@@ -307,10 +316,243 @@ function CapitalPlanInput({
           aria-label={ariaLabel}
           value={value}
           onChange={(event) => onChange(event.target.value)}
+          onBlur={(event) => {
+            if (!event.target.value.trim()) {
+              onChange(defaultValue);
+            }
+          }}
           placeholder={placeholder}
         />
       </InputGroup>
     </div>
+  );
+}
+
+type RunSummaryCardProps = {
+  symbol: string;
+  timeframe: string;
+  selectedStrategyLabel: string;
+  startDate?: Date;
+  endDate?: Date;
+  durationLabel: string;
+  initialBalance: string;
+  amountPerTrade: string;
+  entryFeeRate: string;
+  exitFeeRate: string;
+  hedgeMode: boolean;
+  isSetupReady: boolean;
+  isRunning: boolean;
+  isLoadingBacktest: boolean;
+  isEditing: boolean;
+  hasChanges: boolean;
+  bare?: boolean;
+  hideHeader?: boolean;
+};
+
+function RunSummaryCard({
+  symbol,
+  timeframe,
+  selectedStrategyLabel,
+  startDate,
+  endDate,
+  durationLabel,
+  initialBalance,
+  amountPerTrade,
+  entryFeeRate,
+  exitFeeRate,
+  hedgeMode,
+  isSetupReady,
+  isRunning,
+  isLoadingBacktest,
+  isEditing,
+  hasChanges,
+  bare = false,
+  hideHeader = false,
+}: RunSummaryCardProps) {
+  const isSymbolPlaceholder = !symbol;
+  const isTimeframePlaceholder = !timeframe;
+  const isStrategyPlaceholder =
+    selectedStrategyLabel === "No strategy selected";
+  const isStartDatePlaceholder = !startDate;
+  const isEndDatePlaceholder = !endDate;
+  const isDurationPlaceholder = durationLabel === "-";
+
+  const content = (
+    <div className="min-w-0 space-y-4">
+      {hideHeader ? null : (
+        <div>
+          <p className="text-base font-semibold text-foreground">Run summary</p>
+          <p className="text-xs text-muted-foreground">
+            Review the setup you have added before launching.
+          </p>
+        </div>
+      )}
+
+      <div className="grid gap-2">
+        <div className="flex items-start justify-between gap-4 text-sm">
+          <p className="text-muted-foreground">Market</p>
+          <div className="min-w-0 text-right">
+            <p
+              className={cn(
+                "font-medium",
+                isSymbolPlaceholder
+                  ? "text-muted-foreground"
+                  : "text-foreground",
+              )}
+            >
+              {symbol || "Select symbol"}
+            </p>
+            <p
+              className={cn(
+                "text-xs",
+                isTimeframePlaceholder
+                  ? "text-muted-foreground"
+                  : "text-foreground",
+              )}
+            >
+              {timeframe || "Select timeframe"}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-start justify-between gap-4 text-sm">
+          <p className="text-muted-foreground">Strategy</p>
+          <p
+            className={cn(
+              "min-w-0 max-w-[180px] break-words text-right font-medium",
+              isStrategyPlaceholder
+                ? "text-muted-foreground"
+                : "text-foreground",
+            )}
+          >
+            {selectedStrategyLabel}
+          </p>
+        </div>
+
+        <div className="flex items-center justify-between gap-4 text-sm">
+          <p className="text-muted-foreground">Start Date</p>
+          <p
+            className={cn(
+              "text-right font-medium",
+              isStartDatePlaceholder
+                ? "text-muted-foreground"
+                : "text-foreground",
+            )}
+          >
+            {startDate ? format(startDate, "PPP") : "Pick a date"}
+          </p>
+        </div>
+
+        <div className="flex items-center justify-between gap-4 text-sm">
+          <p className="text-muted-foreground">End Date</p>
+          <p
+            className={cn(
+              "text-right font-medium",
+              isEndDatePlaceholder
+                ? "text-muted-foreground"
+                : "text-foreground",
+            )}
+          >
+            {endDate ? format(endDate, "PPP") : "Pick a date"}
+          </p>
+        </div>
+
+        <div className="flex items-center justify-between gap-4 text-sm">
+          <p className="text-muted-foreground">Duration</p>
+          <p
+            className={cn(
+              "text-right font-medium",
+              isDurationPlaceholder
+                ? "text-muted-foreground"
+                : "text-foreground",
+            )}
+          >
+            {durationLabel}
+          </p>
+        </div>
+
+        <div className="flex items-center justify-between gap-4 text-sm">
+          <p className="text-muted-foreground">Balance</p>
+          <p className="text-right font-medium text-foreground">
+            ${initialBalance || "0"}
+          </p>
+        </div>
+
+        <div className="flex items-center justify-between gap-4 text-sm">
+          <p className="text-muted-foreground">Per Trade</p>
+          <p className="text-right font-medium text-foreground">
+            ${amountPerTrade || "0"}
+          </p>
+        </div>
+
+        <div className="flex items-center justify-between gap-4 text-sm">
+          <p className="text-muted-foreground">Entry Fee</p>
+          <p className="text-right font-medium text-foreground">
+            {entryFeeRate || "0"}%
+          </p>
+        </div>
+
+        <div className="flex items-center justify-between gap-4 text-sm">
+          <p className="text-muted-foreground">Exit Fee</p>
+          <p className="text-right font-medium text-foreground">
+            {exitFeeRate || "0"}%
+          </p>
+        </div>
+
+        <div className="flex items-center justify-between gap-4 text-sm">
+          <p className="text-muted-foreground">Position Mode</p>
+          <p className="text-right font-medium text-foreground">
+            {hedgeMode ? "Hedge" : "One-way"}
+          </p>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-dashed bg-muted/20 px-3 py-2.5 text-xs text-muted-foreground">
+        {isSetupReady
+          ? "Setup looks ready to run."
+          : "Complete the required fields to enable the backtest run."}
+      </div>
+
+      <div className="flex items-start gap-2 rounded-xl border border-dashed bg-muted/30 px-3 py-2.5 text-xs text-muted-foreground">
+        <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+        <div>
+          <p>
+            Review your setup before running. Results will vary based on your
+            strategy rules and the available market data.
+          </p>
+        </div>
+      </div>
+
+      <Button
+        type="submit"
+        className="w-full gap-2 rounded-lg"
+        disabled={
+          isRunning ||
+          isLoadingBacktest ||
+          !isSetupReady ||
+          (isEditing && !hasChanges)
+        }
+      >
+        {isRunning ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <>
+            <Play className="h-4 w-4" />
+            {isEditing ? "Update Backtest" : "Run Backtest"}
+          </>
+        )}
+      </Button>
+    </div>
+  );
+
+  if (bare) {
+    return content;
+  }
+
+  return (
+    <Card className="min-w-0 border-border/70 text-sm">
+      <CardContent className="min-w-0 space-y-4">{content}</CardContent>
+    </Card>
   );
 }
 
@@ -359,10 +601,14 @@ export default function BacktestPage() {
     new Date("2025-03-01T00:00:00Z"),
   );
   const [isDateRangeOpen, setIsDateRangeOpen] = useState(false);
-  const [initialBalance, setInitialBalance] = useState("10000");
-  const [amountPerTrade, setAmountPerTrade] = useState("100");
-  const [entryFeeRate, setEntryFeeRate] = useState("0.00");
-  const [exitFeeRate, setExitFeeRate] = useState("0.00");
+  const [initialBalance, setInitialBalance] = useState(
+    defaultInitialBalanceValue,
+  );
+  const [amountPerTrade, setAmountPerTrade] = useState(
+    defaultAmountPerTradeValue,
+  );
+  const [entryFeeRate, setEntryFeeRate] = useState(defaultEntryFeeRateValue);
+  const [exitFeeRate, setExitFeeRate] = useState(defaultExitFeeRateValue);
   const [hedgeMode, setHedgeMode] = useState(false);
   const [isAdvancedOptionsOpen, setIsAdvancedOptionsOpen] = useState(false);
 
@@ -688,6 +934,13 @@ export default function BacktestPage() {
   const firstVisibleStrategy = strategies[0];
   const currentStartDateIso = startDate ? toUtcStartOfDayIso(startDate) : "";
   const currentEndDateIso = endDate ? toUtcStartOfDayIso(endDate) : "";
+  const durationLabel =
+    startDate && endDate
+      ? `${Math.max(
+          1,
+          Math.ceil((endDate.getTime() - startDate.getTime()) / 86400000),
+        )} days`
+      : "-";
   const isSetupReady =
     !isLoadingExchange &&
     !isLoadingStrategies &&
@@ -843,10 +1096,16 @@ export default function BacktestPage() {
   const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const parsedInitialBalance = Number(initialBalance);
-    const parsedAmountPerTrade = Number(amountPerTrade);
-    const parsedEntryFee = Number(entryFeeRate);
-    const parsedExitFee = Number(exitFeeRate);
+    const parsedInitialBalance = Number(
+      initialBalance.trim() || defaultInitialBalanceValue,
+    );
+    const parsedAmountPerTrade = Number(
+      amountPerTrade.trim() || defaultAmountPerTradeValue,
+    );
+    const parsedEntryFee = Number(
+      entryFeeRate.trim() || defaultEntryFeeRateValue,
+    );
+    const parsedExitFee = Number(exitFeeRate.trim() || defaultExitFeeRateValue);
 
     if (!Number.isFinite(parsedInitialBalance) || parsedInitialBalance <= 0) {
       toast.error("Initial balance must be greater than 0");
@@ -1682,7 +1941,8 @@ export default function BacktestPage() {
                         label="Initial balance"
                         ariaLabel="Initial balance"
                         value={initialBalance}
-                        placeholder="10000"
+                        placeholder={defaultInitialBalanceValue}
+                        defaultValue={defaultInitialBalanceValue}
                         icon={Wallet}
                         onChange={(value) =>
                           setInitialBalance(sanitizeNumericInput(value, true))
@@ -1694,7 +1954,8 @@ export default function BacktestPage() {
                         label="Amount per trade"
                         ariaLabel="Amount per trade"
                         value={amountPerTrade}
-                        placeholder="1000"
+                        placeholder={defaultAmountPerTradeValue}
+                        defaultValue={defaultAmountPerTradeValue}
                         icon={HandCoins}
                         onChange={(value) =>
                           setAmountPerTrade(sanitizeNumericInput(value, true))
@@ -1708,7 +1969,8 @@ export default function BacktestPage() {
                         label="Entry fee rate (%)"
                         ariaLabel="Entry fee percentage"
                         value={entryFeeRate}
-                        placeholder="0.00"
+                        placeholder={defaultEntryFeeRateValue}
+                        defaultValue={defaultEntryFeeRateValue}
                         icon={Percent}
                         onChange={(value) =>
                           setEntryFeeRate(sanitizeNumericInput(value, true))
@@ -1720,7 +1982,8 @@ export default function BacktestPage() {
                         label="Exit fee rate (%)"
                         ariaLabel="Exit fee percentage"
                         value={exitFeeRate}
-                        placeholder="0.00"
+                        placeholder={defaultExitFeeRateValue}
+                        defaultValue={defaultExitFeeRateValue}
                         icon={Percent}
                         onChange={(value) =>
                           setExitFeeRate(sanitizeNumericInput(value, true))
@@ -1766,235 +2029,165 @@ export default function BacktestPage() {
                       </div>
 
                       <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0">
-                        <div className="rounded-xl border bg-muted/30 p-3">
-                          <div className="flex flex-wrap items-center justify-between gap-2">
-                            <div className="flex items-center gap-2">
-                              <p className="text-sm font-medium text-foreground">
-                                Position mode
-                              </p>
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <button
-                                    type="button"
-                                    aria-label="Learn about position mode"
-                                    className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-border/70 text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
-                                  >
-                                    <CircleHelp className="h-4 w-4" />
-                                  </button>
-                                </PopoverTrigger>
-                                <PopoverContent
-                                  side="top"
-                                  align="start"
-                                  sideOffset={8}
-                                  className="w-64"
+                        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/60 pt-3">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium text-foreground">
+                              Position mode
+                            </p>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <button
+                                  type="button"
+                                  aria-label="Learn about position mode"
+                                  className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-border/70 text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
                                 >
-                                  <div className="space-y-1 text-sm leading-relaxed text-muted-foreground">
-                                    <p>
-                                      <span className="font-semibold text-foreground">
-                                        One-way
-                                      </span>{" - "}
-                                      keeps a single net position per market.
-                                    </p>
-                                    <p>
-                                      <span className="font-semibold text-foreground">
-                                        Hedge
-                                      </span>{" - "}
-                                      lets long and short positions exist at the
-                                      same time.
-                                    </p>
-                                  </div>
-                                </PopoverContent>
-                              </Popover>
-                            </div>
-                            <ToggleGroup
-                              type="single"
-                              value={hedgeMode ? "hedge" : "one-way"}
-                              disabled={isRunning}
-                              onValueChange={(value) => {
-                                if (value === "one-way") {
-                                  setHedgeMode(false);
-                                } else if (value === "hedge") {
-                                  setHedgeMode(true);
-                                }
-                              }}
+                                  <CircleHelp className="h-3 w-3" />
+                                </button>
+                              </PopoverTrigger>
+                              <PopoverContent
+                                side="top"
+                                align="start"
+                                sideOffset={8}
+                                className={helperPopoverClassName}
+                              >
+                                <div className="space-y-1">
+                                  <p>
+                                    <span className="font-semibold text-foreground">
+                                      One-way
+                                    </span>
+                                    {" - "}
+                                    keeps a single net position per market.
+                                  </p>
+                                  <p>
+                                    <span className="font-semibold text-foreground">
+                                      Hedge
+                                    </span>
+                                    {" - "}
+                                    lets long and short positions exist at the
+                                    same time.
+                                  </p>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                          <ToggleGroup
+                            type="single"
+                            value={hedgeMode ? "hedge" : "one-way"}
+                            disabled={isRunning}
+                            onValueChange={(value) => {
+                              if (value === "one-way") {
+                                setHedgeMode(false);
+                              } else if (value === "hedge") {
+                                setHedgeMode(true);
+                              }
+                            }}
+                            className={cn(
+                              "inline-flex gap-0 overflow-hidden rounded-md border border-border/70 bg-background",
+                              (isRunning || isLoadingBacktest) &&
+                                "bg-input/50 dark:bg-input/80",
+                            )}
+                          >
+                            <ToggleGroupItem
+                              value="one-way"
+                              variant="outline"
+                              size="sm"
+                              aria-label="One-way mode"
                               className={cn(
-                                "inline-flex gap-0 overflow-hidden rounded-md border border-border/70 bg-background",
-                                (isRunning || isLoadingBacktest) &&
-                                  "bg-input/50 dark:bg-input/80",
+                                "h-7 rounded-none border-0 border-r border-border/70 bg-transparent px-2 text-[11px] data-[state=on]:bg-primary data-[state=on]:text-primary-foreground",
+                                disabledFieldSurfaceClass,
                               )}
                             >
-                              <ToggleGroupItem
-                                value="one-way"
-                                variant="outline"
-                                size="sm"
-                                aria-label="One-way mode"
-                                className={cn(
-                                  "h-7 rounded-none border-0 border-r border-border/70 bg-transparent px-2 text-[11px] data-[state=on]:bg-primary data-[state=on]:text-primary-foreground",
-                                  disabledFieldSurfaceClass,
-                                )}
-                              >
-                                <span className="inline-flex items-center gap-1.5">
-                                  <ArrowRight className="h-3 w-3" />
-                                  <span>One-way</span>
-                                </span>
-                              </ToggleGroupItem>
+                              <span className="inline-flex items-center gap-1.5">
+                                <ArrowRight className="h-3 w-3" />
+                                <span>One-way</span>
+                              </span>
+                            </ToggleGroupItem>
 
-                              <ToggleGroupItem
-                                value="hedge"
-                                variant="outline"
-                                size="sm"
-                                aria-label="Hedge mode"
-                                className={cn(
-                                  "h-7 rounded-none border-0 bg-transparent px-2 text-[11px] data-[state=on]:bg-primary data-[state=on]:text-primary-foreground",
-                                  disabledFieldSurfaceClass,
-                                )}
-                              >
-                                <span className="inline-flex items-center gap-1.5">
-                                  <ArrowLeftRight className="h-3 w-3" />
-                                  <span>Hedge</span>
-                                </span>
-                              </ToggleGroupItem>
-                            </ToggleGroup>
-                          </div>
+                            <ToggleGroupItem
+                              value="hedge"
+                              variant="outline"
+                              size="sm"
+                              aria-label="Hedge mode"
+                              className={cn(
+                                "h-7 rounded-none border-0 bg-transparent px-2 text-[11px] data-[state=on]:bg-primary data-[state=on]:text-primary-foreground",
+                                disabledFieldSurfaceClass,
+                              )}
+                            >
+                              <span className="inline-flex items-center gap-1.5">
+                                <ArrowLeftRight className="h-3 w-3" />
+                                <span>Hedge</span>
+                              </span>
+                            </ToggleGroupItem>
+                          </ToggleGroup>
                         </div>
                       </CollapsibleContent>
                     </Collapsible>
                   </CardContent>
                 </Card>
+
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button
+                      type="button"
+                      className="w-full gap-2 rounded-lg md:hidden"
+                    >
+                      <Eye className="h-4 w-4" />
+                      Show summary
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="top-[8vh] max-h-[calc(100vh-4rem)] -translate-y-0 gap-0 overflow-hidden p-0 sm:max-w-lg md:hidden">
+                    <DialogHeader className="border-b px-4 pt-4 pb-3">
+                      <DialogTitle>Run summary</DialogTitle>
+                      <DialogDescription>
+                        Review your setup before launching the backtest.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="p-4">
+                      <RunSummaryCard
+                        symbol={symbol}
+                        timeframe={timeframe}
+                        selectedStrategyLabel={selectedStrategyLabel}
+                        startDate={startDate}
+                        endDate={endDate}
+                        durationLabel={durationLabel}
+                        initialBalance={initialBalance}
+                        amountPerTrade={amountPerTrade}
+                        entryFeeRate={entryFeeRate}
+                        exitFeeRate={exitFeeRate}
+                        hedgeMode={hedgeMode}
+                        isSetupReady={isSetupReady}
+                        isRunning={isRunning}
+                        isLoadingBacktest={isLoadingBacktest}
+                        isEditing={isEditing}
+                        hasChanges={hasChanges}
+                        bare
+                        hideHeader
+                      />
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
 
-              <Card className="min-w-0 border-border/70 text-sm md:sticky md:top-6">
-                <CardContent className="min-w-0 space-y-4">
-                  <div>
-                    <p className="text-base font-semibold text-foreground">
-                      Run summary
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Review the setup you have added before launching.
-                    </p>
-                  </div>
-
-                  <div className="grid gap-2">
-                    <div className="flex items-start justify-between gap-4 text-sm">
-                      <p className="text-muted-foreground">Market</p>
-                      <div className="min-w-0 text-right">
-                        <p className="font-medium text-foreground">
-                          {symbol || "Select symbol"}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {timeframe || "Select timeframe"}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start justify-between gap-4 text-sm">
-                      <p className="text-muted-foreground">Strategy</p>
-                      <p className="min-w-0 max-w-[180px] break-words text-right font-medium text-foreground">
-                        {selectedStrategyLabel}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-4 text-sm">
-                      <p className="text-muted-foreground">Start Date</p>
-                      <p className="text-right font-medium text-foreground">
-                        {startDate ? format(startDate, "PPP") : "Pick a date"}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-4 text-sm">
-                      <p className="text-muted-foreground">End Date</p>
-                      <p className="text-right font-medium text-foreground">
-                        {endDate ? format(endDate, "PPP") : "Pick a date"}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-4 text-sm">
-                      <p className="text-muted-foreground">Duration</p>
-                      <p className="text-right font-medium text-foreground">
-                        {startDate && endDate
-                          ? `${Math.max(
-                              1,
-                              Math.ceil(
-                                (endDate.getTime() - startDate.getTime()) /
-                                  86400000,
-                              ),
-                            )} days`
-                          : "-"}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-4 text-sm">
-                      <p className="text-muted-foreground">Balance</p>
-                      <p className="text-right font-medium text-foreground">
-                        ${initialBalance || "0"}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-4 text-sm">
-                      <p className="text-muted-foreground">Per Trade</p>
-                      <p className="text-right font-medium text-foreground">
-                        ${amountPerTrade || "0"}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-4 text-sm">
-                      <p className="text-muted-foreground">Entry Fee</p>
-                      <p className="text-right font-medium text-foreground">
-                        {entryFeeRate || "0"}%
-                      </p>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-4 text-sm">
-                      <p className="text-muted-foreground">Exit Fee</p>
-                      <p className="text-right font-medium text-foreground">
-                        {exitFeeRate || "0"}%
-                      </p>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-4 text-sm">
-                      <p className="text-muted-foreground">Position Mode</p>
-                      <p className="text-right font-medium text-foreground">
-                        {hedgeMode ? "Hedge" : "One-way"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="rounded-xl border border-dashed bg-muted/20 px-3 py-2.5 text-xs text-muted-foreground">
-                    {isSetupReady
-                      ? "Setup looks ready to run."
-                      : "Complete the required fields to enable the backtest run."}
-                  </div>
-
-                  <div className="flex items-start gap-2 rounded-xl border border-dashed bg-muted/30 px-3 py-2.5 text-xs text-muted-foreground">
-                    <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                    <p>
-                      Double-check the symbol, timeframe, and strategy logic
-                      before running. Results still depend on the underlying
-                      rules and market data.
-                    </p>
-                  </div>
-
-                  <Button
-                    type="submit"
-                    className="w-full gap-2 rounded-lg"
-                    disabled={
-                      isRunning ||
-                      isLoadingBacktest ||
-                      !isSetupReady ||
-                      (isEditing && !hasChanges)
-                    }
-                  >
-                    {isRunning ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <>
-                        <Play className="h-4 w-4" />
-                        {isEditing ? "Update Backtest" : "Run Backtest"}
-                      </>
-                    )}
-                  </Button>
-                </CardContent>
-              </Card>
+              <div className="hidden md:sticky md:top-6 md:block">
+                <RunSummaryCard
+                  symbol={symbol}
+                  timeframe={timeframe}
+                  selectedStrategyLabel={selectedStrategyLabel}
+                  startDate={startDate}
+                  endDate={endDate}
+                  durationLabel={durationLabel}
+                  initialBalance={initialBalance}
+                  amountPerTrade={amountPerTrade}
+                  entryFeeRate={entryFeeRate}
+                  exitFeeRate={exitFeeRate}
+                  hedgeMode={hedgeMode}
+                  isSetupReady={isSetupReady}
+                  isRunning={isRunning}
+                  isLoadingBacktest={isLoadingBacktest}
+                  isEditing={isEditing}
+                  hasChanges={hasChanges}
+                />
+              </div>
             </div>
           </fieldset>
         </form>
@@ -2002,4 +2195,3 @@ export default function BacktestPage() {
     </div>
   );
 }
-

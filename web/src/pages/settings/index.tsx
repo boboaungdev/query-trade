@@ -2,7 +2,12 @@ import { useMemo, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useGoogleLogin } from "@react-oauth/google";
 import axios from "axios";
-import { Check, ChevronsUpDown } from "lucide-react";
+import {
+  Check,
+  ChevronsUpDown,
+  ShieldCheck,
+  SlidersHorizontal,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { getApiErrorMessage } from "@/api/axios";
@@ -34,15 +39,32 @@ import {
 import { Label } from "@/components/ui/label";
 import { useAuthStore } from "@/store/auth";
 import { cn } from "@/lib/utils";
-import { sections } from "./config";
-import { AccountSection, AppearanceSection } from "./sections";
+import { AccountSection } from "./sections/account-section";
+import { PreferencesSection } from "./sections/preferences-section";
+
+const sections = [
+  {
+    id: "account",
+    label: "Account & Security",
+    description: "Identity, login methods, and session protection.",
+    icon: ShieldCheck,
+  },
+  {
+    id: "preferences",
+    label: "Preferences",
+    description: "Theme and app-level preferences.",
+    icon: SlidersHorizontal,
+  },
+] as const;
 
 export default function Settings() {
   const user = useAuthStore((state) => state.user);
   const updateUser = useAuthStore((state) => state.updateUser);
   const logout = useAuthStore((state) => state.logout);
   const navigate = useNavigate();
-  const [activeSection, setActiveSection] = useState(sections[0].id);
+  const [activeSection, setActiveSection] = useState<
+    (typeof sections)[number]["id"]
+  >(sections[0].id);
   const [emailChangeStep, setEmailChangeStep] = useState<
     "idle" | "draft" | "verify"
   >("idle");
@@ -339,7 +361,7 @@ export default function Settings() {
                           className={cn(
                             "rounded-lg p-2",
                             isActive
-                              ? "bg-primary text-primary-foreground"
+                              ? "bg-muted text-foreground"
                               : "bg-muted text-foreground",
                           )}
                         >
@@ -354,7 +376,7 @@ export default function Settings() {
                           </span>
                         </span>
                         {isActive ? (
-                          <Check className="size-4 shrink-0 text-primary" />
+                          <Check className="size-4 shrink-0 text-foreground" />
                         ) : null}
                       </DropdownMenuItem>
                     );
@@ -444,7 +466,7 @@ export default function Settings() {
                   />
                 )}
 
-                {activeSection === "appearance" && <AppearanceSection />}
+                {activeSection === "preferences" && <PreferencesSection />}
               </CardContent>
             </Card>
           </div>

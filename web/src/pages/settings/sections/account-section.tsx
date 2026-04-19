@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-  CheckCircle2,
+  BadgeCheck,
   Loader2,
   LockKeyhole,
   Mail,
@@ -408,8 +408,8 @@ export function AccountSection({
       <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
         <div className="p-5 lg:p-6">
           <div className="min-w-0 space-y-4">
-            <div className="inline-flex w-fit items-center gap-2 rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-foreground">
-              <CheckCircle2 className="size-3.5" />
+            <div className="inline-flex w-fit items-center gap-2 rounded-full bg-emerald-100/80 px-3 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+              <BadgeCheck className="size-3.5" />
               Account verified
             </div>
             <div className="space-y-2">
@@ -432,7 +432,7 @@ export function AccountSection({
               {securityOverviewItems.map((item) => (
                 <div
                   key={item.label}
-                  className="rounded-xl border border-border bg-card px-4 py-3 shadow-sm"
+                  className="rounded-xl bg-muted/40 px-4 py-3"
                 >
                   <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
                     {item.label}
@@ -469,7 +469,7 @@ export function AccountSection({
             </div>
           </div>
           {emailChangeStep === "idle" ? (
-            <div className="mt-5 flex flex-col gap-3 rounded-xl border border-border bg-muted/40 px-4 py-4 md:flex-row md:items-center md:justify-between">
+            <div className="mt-5 flex flex-col gap-3 rounded-xl bg-muted/40 px-4 py-4 md:flex-row md:items-center md:justify-between">
               <div className="min-w-0">
                 <p className="font-medium break-all">{maskedEmail}</p>
                 <p className="mt-1 text-sm text-muted-foreground">
@@ -491,7 +491,7 @@ export function AccountSection({
               </Button>
             </div>
           ) : (
-            <div className="mt-5 rounded-xl border border-border bg-muted/40 px-4 py-3.5">
+            <div className="mt-5 rounded-xl bg-muted/40 px-4 py-3.5">
               <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
                 Current email
               </p>
@@ -660,7 +660,7 @@ export function AccountSection({
             </div>
           </div>
           {!isPasswordFormOpen ? (
-            <div className="mt-5 flex flex-col gap-3 rounded-xl border border-border bg-muted/40 px-4 py-4 md:flex-row md:items-center md:justify-between">
+            <div className="mt-5 flex flex-col gap-3 rounded-xl bg-muted/40 px-4 py-4 md:flex-row md:items-center md:justify-between">
               <div className="min-w-0">
                 <p className="font-medium">{passwordStatusLabel}</p>
                 <p className="mt-1 text-sm text-muted-foreground">
@@ -677,7 +677,7 @@ export function AccountSection({
             </div>
           ) : null}
           {isPasswordFormOpen ? (
-            <div className="mt-5 space-y-3 rounded-xl border border-border bg-muted/40 px-4 py-4">
+            <div className="mt-5 space-y-3 rounded-xl bg-muted/40 px-4 py-4">
               {hasServerProvider && !isForgotPasswordMode ? (
                 <>
                   <div className="space-y-2">
@@ -821,7 +821,7 @@ export function AccountSection({
             </div>
           </div>
           <div className="mt-5 space-y-3">
-            <div className="rounded-xl border border-border bg-card p-4">
+            <div className="rounded-xl bg-muted/30 p-4">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex items-start gap-3">
                   <span className="rounded-2xl bg-primary/10 p-2.5 text-primary">
@@ -858,8 +858,14 @@ export function AccountSection({
                     handleGoogleProviderAction();
                   }}
                 >
-                  <FcGoogle className="size-4" />
-                  {providerActionLabel}
+                  {isUpdatingGoogleProvider ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <>
+                      <FcGoogle className="size-4" />
+                      {providerActionLabel}
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
@@ -878,7 +884,7 @@ export function AccountSection({
               </p>
             </div>
           </div>
-          <div className="mt-5 rounded-xl border border-border bg-muted/40 px-4 py-4">
+          <div className="mt-5 rounded-xl bg-muted/40 px-4 py-4">
             <div className="space-y-3">
               <div>
                 <p className="font-medium text-destructive">Permanent action</p>

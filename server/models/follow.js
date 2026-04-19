@@ -8,7 +8,6 @@ const followSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "user",
       required: true,
-      index: true,
     },
     following: {
       type: Schema.Types.ObjectId,

@@ -7,21 +7,18 @@ const bookmarkSchema = new Schema(
       type: String,
       enum: ["strategy", "backtest"],
       required: true,
-      index: true,
     },
 
     target: {
       type: Schema.Types.ObjectId,
       required: true,
       refPath: "targetType",
-      index: true,
     },
 
     user: {
       type: Schema.Types.ObjectId,
       ref: "user",
       required: true,
-      index: true,
     },
   },
   {
