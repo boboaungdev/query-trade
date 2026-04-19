@@ -1,6 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ComponentProps } from "react";
 import {
   BadgeCheck,
+  Eye,
+  EyeOff,
+  KeyRound,
   Loader2,
   LockKeyhole,
   Mail,
@@ -19,7 +22,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,6 +34,50 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useAuthStore } from "@/store/auth";
 import { cn } from "@/lib/utils";
+
+type SettingsInputProps = ComponentProps<typeof Input> & {
+  icon: typeof Mail;
+  showPasswordToggle?: boolean;
+  isPasswordVisible?: boolean;
+  onTogglePasswordVisibility?: () => void;
+};
+
+function SettingsInput({
+  icon: Icon,
+  className,
+  disabled,
+  showPasswordToggle = false,
+  isPasswordVisible = false,
+  onTogglePasswordVisibility,
+  ...props
+}: SettingsInputProps) {
+  const ToggleIcon = isPasswordVisible ? EyeOff : Eye;
+
+  return (
+    <div className="relative">
+      <Icon
+        className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+        aria-hidden="true"
+      />
+      <Input
+        className={cn("pl-9", showPasswordToggle && "pr-10", className)}
+        disabled={disabled}
+        {...props}
+      />
+      {showPasswordToggle && onTogglePasswordVisibility ? (
+        <button
+          type="button"
+          onClick={onTogglePasswordVisibility}
+          disabled={disabled}
+          className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+          aria-label={isPasswordVisible ? "Hide password" : "Show password"}
+        >
+          <ToggleIcon className="h-4 w-4" />
+        </button>
+      ) : null}
+    </div>
+  );
+}
 
 type AccountSectionProps = {
   emailChangeStep: "idle" | "draft" | "verify";
@@ -108,10 +154,21 @@ export function AccountSection({
   const [currentTimeMs, setCurrentTimeMs] = useState(() => Date.now());
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteCode, setDeleteCode] = useState("");
+  const [isEmailChangePasswordVisible, setIsEmailChangePasswordVisible] =
+    useState(false);
+  const [isCurrentPasswordVisible, setIsCurrentPasswordVisible] =
+    useState(false);
+  const [isNewPasswordVisible, setIsNewPasswordVisible] = useState(false);
+  const [isConfirmNewPasswordVisible, setIsConfirmNewPasswordVisible] =
+    useState(false);
+  const [isDeletePasswordVisible, setIsDeletePasswordVisible] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [isDeleteAuthStepOpen, setIsDeleteAuthStepOpen] = useState(false);
   const [deleteCodeResendTimer, setDeleteCodeResendTimer] = useState(0);
   const [hasSentDeleteCode, setHasSentDeleteCode] = useState(false);
+  const [isDeleteCodeStepVisible, setIsDeleteCodeStepVisible] = useState(false);
+  const [deleteCodeError, setDeleteCodeError] = useState("");
+  const [deletePasswordError, setDeletePasswordError] = useState("");
 
   const normalizedEmailDraft = emailDraft.trim().toLowerCase();
   const isValidEmailDraft = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
@@ -223,6 +280,10 @@ export function AccountSection({
     },
   ] as const;
 
+  const resetEmailFieldState = () => {
+    setIsEmailChangePasswordVisible(false);
+  };
+
   const resetPasswordFlow = () => {
     setIsPasswordFormOpen(false);
     setIsForgotPasswordMode(false);
@@ -231,6 +292,9 @@ export function AccountSection({
     setNewPassword("");
     setConfirmNewPassword("");
     setPasswordResendTimer(0);
+    setIsCurrentPasswordVisible(false);
+    setIsNewPasswordVisible(false);
+    setIsConfirmNewPasswordVisible(false);
   };
 
   const resetDeleteFlow = () => {
@@ -240,12 +304,17 @@ export function AccountSection({
     setDeleteCode("");
     setDeleteCodeResendTimer(0);
     setHasSentDeleteCode(false);
+    setIsDeleteCodeStepVisible(false);
+    setDeleteCodeError("");
+    setDeletePasswordError("");
+    setIsDeletePasswordVisible(false);
   };
 
   const resetAllActionStates = (
     activeAction?: "email" | "password" | "delete",
   ) => {
     if (activeAction !== "email") {
+      resetEmailFieldState();
       cancelEmailChange();
     }
 
@@ -363,23 +432,31 @@ export function AccountSection({
   const isDeleteCredentialValid = hasServerProvider
     ? isDeletePasswordValid
     : isDeleteCodeValid;
-  const isDeleteStepBusy = isDeletingAccount || isSendingDeleteVerify;
+  const isDeleteStepBusy = isDeletingAccount;
+  const isDeleteFlowBusy = isDeletingAccount || isSendingDeleteVerify;
   const canContinueDelete = hasServerProvider
-    ? isDeleteCredentialValid
-    : hasSentDeleteCode && isDeleteCredentialValid;
+    ? isDeleteCredentialValid && !deletePasswordError
+    : isDeleteCodeStepVisible && isDeleteCredentialValid && !deleteCodeError;
 
   const requestDeleteAccountCode = () => {
-    if (deleteCodeResendTimer > 0 || isDeleteStepBusy) return;
+    if (deleteCodeResendTimer > 0 || isSendingDeleteVerify || isDeletingAccount)
+      return;
 
-    setDeleteCode("");
+    setDeleteCodeError("");
     setDeleteCodeResendTimer(60);
-    setHasSentDeleteCode(false);
 
     void handleDeleteAccountVerify()
       .then(() => {
+        setIsDeleteCodeStepVisible(true);
         setHasSentDeleteCode(true);
+        setDeleteCode("");
       })
-      .catch(() => {
+      .catch((error: unknown) => {
+        setDeleteCodeError(
+          error instanceof Error && error.message
+            ? error.message
+            : "Invalid input.",
+        );
         setDeleteCodeResendTimer(0);
       });
   };
@@ -387,6 +464,7 @@ export function AccountSection({
   const onOpenDeleteConfirm = async () => {
     if (hasServerProvider) {
       if (!isDeletePasswordValid) {
+        setDeletePasswordError("Please enter your account password.");
         toast.error("Please enter your account password.");
         return;
       }
@@ -405,8 +483,8 @@ export function AccountSection({
 
   return (
     <div className="space-y-6">
-      <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-        <div className="p-5 lg:p-6">
+      <div className="overflow-hidden rounded-xl bg-card shadow-sm">
+        <div className="p-5 md:p-6">
           <div className="min-w-0 space-y-4">
             <div className="inline-flex w-fit items-center gap-2 rounded-full bg-emerald-100/80 px-3 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
               <BadgeCheck className="size-3.5" />
@@ -456,7 +534,7 @@ export function AccountSection({
       </div>
 
       <div className="space-y-4">
-        <section className="rounded-xl border border-border bg-card p-4 shadow-sm md:p-5">
+        <section className="rounded-xl bg-card p-4 shadow-sm md:p-5">
           <div className="flex items-start gap-3">
             <span className="rounded-xl bg-muted p-2.5 text-foreground">
               <Mail className="size-4" />
@@ -484,6 +562,7 @@ export function AccountSection({
                 disabled={!hasServerProvider}
                 onClick={() => {
                   resetAllActionStates("email");
+                  resetEmailFieldState();
                   setEmailChangeStep("draft");
                 }}
               >
@@ -500,9 +579,12 @@ export function AccountSection({
           )}
           {emailChangeStep === "draft" || emailChangeStep === "verify" ? (
             <div className="mt-5 space-y-2">
-              <Label htmlFor="account-email">New email</Label>
-              <Input
+              <Label htmlFor="account-email" className="text-muted-foreground">
+                New email
+              </Label>
+              <SettingsInput
                 id="account-email"
+                icon={Mail}
                 type="email"
                 value={emailDraft}
                 onChange={(event) => setEmailDraft(event.target.value)}
@@ -536,14 +618,25 @@ export function AccountSection({
           ) : null}
           {emailChangeStep === "draft" ? (
             <div className="mt-4 space-y-2">
-              <Label htmlFor="email-change-password">Password</Label>
-              <Input
+              <Label
+                htmlFor="email-change-password"
+                className="text-muted-foreground"
+              >
+                Password
+              </Label>
+              <SettingsInput
                 id="email-change-password"
-                type="password"
+                icon={LockKeyhole}
+                type={isEmailChangePasswordVisible ? "text" : "password"}
                 value={emailChangePassword}
                 onChange={(event) => setEmailChangePassword(event.target.value)}
                 placeholder="Enter current password"
                 disabled={isEmailChangeBusy}
+                showPasswordToggle={emailChangePassword.length > 0}
+                isPasswordVisible={isEmailChangePasswordVisible}
+                onTogglePasswordVisibility={() =>
+                  setIsEmailChangePasswordVisible((prev) => !prev)
+                }
                 onKeyDown={(e) => {
                   if (e.key !== "Enter") return;
 
@@ -567,12 +660,16 @@ export function AccountSection({
             <div className="mt-4 grid gap-4">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <Label htmlFor="new-email-code">
+                  <Label
+                    htmlFor="new-email-code"
+                    className="text-muted-foreground"
+                  >
                     New email verification code
                   </Label>
                 </div>
-                <Input
+                <SettingsInput
                   id="new-email-code"
+                  icon={KeyRound}
                   value={newEmailCode}
                   onChange={(event) =>
                     setNewEmailCode(
@@ -606,12 +703,22 @@ export function AccountSection({
                   onClick={saveEmailChange}
                   disabled={!isNewCodeValid || isEmailChangeBusy}
                 >
-                  Save Email Change
+                  {isSavingEmailChange ? (
+                    <Loader2 className="absolute h-4 w-4 animate-spin" />
+                  ) : null}
+                  <span
+                    className={isSavingEmailChange ? "opacity-0" : undefined}
+                  >
+                    Change Email
+                  </span>
                 </Button>
                 <Button
                   variant="outline"
                   className="w-full md:w-auto"
-                  onClick={cancelEmailChange}
+                  onClick={() => {
+                    resetEmailFieldState();
+                    cancelEmailChange();
+                  }}
                   disabled={isEmailChangeBusy}
                 >
                   Cancel
@@ -630,12 +737,22 @@ export function AccountSection({
                     isEmailChangeBusy
                   }
                 >
-                  Verify
+                  {isCheckingChangeEmail ? (
+                    <Loader2 className="absolute h-4 w-4 animate-spin" />
+                  ) : null}
+                  <span
+                    className={isCheckingChangeEmail ? "opacity-0" : undefined}
+                  >
+                    Verify
+                  </span>
                 </Button>
                 <Button
                   variant="outline"
                   className="w-full md:w-auto"
-                  onClick={cancelEmailChange}
+                  onClick={() => {
+                    resetEmailFieldState();
+                    cancelEmailChange();
+                  }}
                   disabled={isEmailChangeBusy}
                 >
                   Cancel
@@ -645,7 +762,7 @@ export function AccountSection({
           </div>
         </section>
 
-        <section className="rounded-xl border border-border bg-card p-4 shadow-sm md:p-5">
+        <section className="rounded-xl bg-card p-4 shadow-sm md:p-5">
           <div className="flex items-start gap-3">
             <span className="rounded-xl bg-muted p-2.5 text-foreground">
               <LockKeyhole className="size-4" />
@@ -681,26 +798,44 @@ export function AccountSection({
               {hasServerProvider && !isForgotPasswordMode ? (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="current-password">Current password</Label>
-                    <Input
+                    <Label
+                      htmlFor="current-password"
+                      className="text-muted-foreground"
+                    >
+                      Current password
+                    </Label>
+                    <SettingsInput
                       id="current-password"
-                      type="password"
+                      icon={LockKeyhole}
+                      type={isCurrentPasswordVisible ? "text" : "password"}
                       value={currentPassword}
                       onChange={(event) =>
                         setCurrentPassword(event.target.value)
                       }
                       placeholder="Enter current password"
                       disabled={isSavingPassword}
+                      showPasswordToggle={currentPassword.length > 0}
+                      isPasswordVisible={isCurrentPasswordVisible}
+                      onTogglePasswordVisibility={() =>
+                        setIsCurrentPasswordVisible((prev) => !prev)
+                      }
                     />
                   </div>
                   <div className="-mt-1 flex justify-end">
                     <button
                       type="button"
-                      className="text-xs text-muted-foreground hover:text-primary disabled:pointer-events-none disabled:opacity-60"
+                      className={cn(
+                        "text-xs transition-colors disabled:pointer-events-none disabled:opacity-60",
+                        isSendingPasswordReset
+                          ? "text-muted-foreground"
+                          : "text-primary hover:text-primary/80",
+                      )}
                       onClick={handleForgotCurrentPassword}
                       disabled={isSendingPasswordReset || isSavingPassword}
                     >
-                      Forgot current password?
+                      {isSendingPasswordReset
+                        ? "Sending email code..."
+                        : "Forgot current password?"}
                     </button>
                   </div>
                 </>
@@ -708,65 +843,98 @@ export function AccountSection({
               {hasServerProvider && isForgotPasswordMode ? (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <Label htmlFor="password-reset-code">
-                      Verification email code
+                    <Label
+                      htmlFor="password-reset-code"
+                      className="text-muted-foreground"
+                    >
+                      Email verification code
                     </Label>
                   </div>
-                  <Input
-                    id="password-reset-code"
-                    value={passwordResetCode}
-                    onChange={(event) =>
-                      setPasswordResetCode(
-                        event.target.value.replace(/\D/g, "").slice(0, 6),
-                      )
-                    }
-                    placeholder="6-digit code"
-                    inputMode="numeric"
-                    maxLength={6}
-                    disabled={isSavingPassword}
-                  />
-                  <div className="flex justify-end">
+                  <div className="flex items-start gap-2">
+                    <div className="min-w-0 flex-1">
+                      <SettingsInput
+                        id="password-reset-code"
+                        icon={KeyRound}
+                        value={passwordResetCode}
+                        onChange={(event) =>
+                          setPasswordResetCode(
+                            event.target.value.replace(/\D/g, "").slice(0, 6),
+                          )
+                        }
+                        placeholder="Enter 6 digit code"
+                        inputMode="numeric"
+                        maxLength={6}
+                        disabled={isSavingPassword}
+                      />
+                    </div>
                     {passwordResendTimer === 0 ? (
-                      <button
+                      <Button
                         type="button"
                         onClick={resendPasswordResetCode}
-                        className="text-xs text-muted-foreground hover:text-primary disabled:pointer-events-none disabled:opacity-60"
+                        variant="outline"
+                        className="h-8 w-18 shrink-0 px-3 text-xs disabled:bg-input/50 dark:disabled:bg-input/80"
                         disabled={isSendingPasswordReset || isSavingPassword}
                       >
-                        Resend code
-                      </button>
+                        {isSendingPasswordReset ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <span>Resend</span>
+                        )}
+                      </Button>
                     ) : (
-                      <span className="text-xs text-muted-foreground">
-                        Resend in {passwordResendTimer}s
-                      </span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-8 w-10 shrink-0 px-0 text-xs disabled:bg-input/50 dark:disabled:bg-input/80"
+                        disabled
+                      >
+                        {passwordResendTimer}s
+                      </Button>
                     )}
                   </div>
                 </div>
               ) : null}
               <div className="space-y-2">
-                <Label htmlFor="new-password">New password</Label>
-                <Input
+                <Label htmlFor="new-password" className="text-muted-foreground">
+                  New password
+                </Label>
+                <SettingsInput
                   id="new-password"
-                  type="password"
+                  icon={LockKeyhole}
+                  type={isNewPasswordVisible ? "text" : "password"}
                   value={newPassword}
                   onChange={(event) => setNewPassword(event.target.value)}
                   placeholder="Enter new password"
                   disabled={isSavingPassword}
+                  showPasswordToggle={newPassword.length > 0}
+                  isPasswordVisible={isNewPasswordVisible}
+                  onTogglePasswordVisibility={() =>
+                    setIsNewPasswordVisible((prev) => !prev)
+                  }
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="confirm-new-password">
+                <Label
+                  htmlFor="confirm-new-password"
+                  className="text-muted-foreground"
+                >
                   Confirm new password
                 </Label>
-                <Input
+                <SettingsInput
                   id="confirm-new-password"
-                  type="password"
+                  icon={LockKeyhole}
+                  type={isConfirmNewPasswordVisible ? "text" : "password"}
                   value={confirmNewPassword}
                   onChange={(event) =>
                     setConfirmNewPassword(event.target.value)
                   }
                   placeholder="Confirm new password"
                   disabled={isSavingPassword}
+                  showPasswordToggle={confirmNewPassword.length > 0}
+                  isPasswordVisible={isConfirmNewPasswordVisible}
+                  onTogglePasswordVisibility={() =>
+                    setIsConfirmNewPasswordVisible((prev) => !prev)
+                  }
                   onKeyDown={(event) => {
                     if (event.key !== "Enter") return;
 
@@ -785,17 +953,23 @@ export function AccountSection({
               ) : null}
               <div className="grid gap-2 md:flex md:flex-wrap">
                 <Button
-                  className="w-full md:w-auto"
+                  className="w-full md:w-40"
                   onClick={savePasswordFlow}
                   disabled={!canSavePassword || isSavingPassword}
                 >
-                  {hasServerProvider ? "Change Password" : "Create Password"}
+                  {isSavingPassword ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : hasServerProvider ? (
+                    "Change Password"
+                  ) : (
+                    "Create Password"
+                  )}
                 </Button>
                 <Button
                   variant="outline"
                   className="w-full md:w-auto"
                   onClick={resetPasswordFlow}
-                  disabled={isSavingPassword}
+                  disabled={isSavingPassword || isSendingPasswordReset}
                 >
                   Cancel
                 </Button>
@@ -805,10 +979,8 @@ export function AccountSection({
         </section>
       </div>
 
-      <Separator />
-
       <div className="space-y-4">
-        <section className="rounded-xl border border-border bg-card p-4 shadow-sm md:p-5">
+        <section className="rounded-xl bg-card p-4 shadow-sm md:p-5">
           <div className="flex items-start gap-3">
             <span className="rounded-xl bg-muted p-2.5 text-foreground">
               <Smartphone className="size-4" />
@@ -822,7 +994,7 @@ export function AccountSection({
           </div>
           <div className="mt-5 space-y-3">
             <div className="rounded-xl bg-muted/30 p-4">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div className="flex items-start gap-3">
                   <span className="rounded-2xl bg-primary/10 p-2.5 text-primary">
                     <FcGoogle className="size-4" />
@@ -849,7 +1021,7 @@ export function AccountSection({
                 <Button
                   variant={hasGoogleProvider ? "outline" : "default"}
                   className={cn(
-                    "w-full rounded-xl lg:w-auto",
+                    "w-full rounded-xl md:w-auto",
                     hasGoogleProvider ? "text-destructive" : "",
                   )}
                   disabled={isUpdatingGoogleProvider}
@@ -872,7 +1044,7 @@ export function AccountSection({
           </div>
         </section>
 
-        <section className="rounded-xl border border-border bg-card p-4 shadow-sm md:p-5">
+        <section className="rounded-xl bg-card p-4 shadow-sm md:p-5">
           <div className="flex items-start gap-3">
             <span className="rounded-xl bg-muted p-2.5 text-destructive">
               <TriangleAlert className="size-4" />
@@ -889,69 +1061,116 @@ export function AccountSection({
               <div>
                 <p className="font-medium text-destructive">Permanent action</p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  This action cannot be undone. You will need to confirm
-                  credentials before final deletion.
+                  This action cannot be undone.
                 </p>
               </div>
 
               {isDeleteAuthStepOpen && hasServerProvider ? (
                 <div className="space-y-2">
-                  <Label htmlFor="delete-account-password">
+                  <Label
+                    htmlFor="delete-account-password"
+                    className="text-muted-foreground"
+                  >
                     Enter password
                   </Label>
-                  <Input
+                  <SettingsInput
                     id="delete-account-password"
-                    type="password"
+                    icon={LockKeyhole}
+                    type={isDeletePasswordVisible ? "text" : "password"}
                     value={deletePassword}
-                    onChange={(event) => setDeletePassword(event.target.value)}
+                    onChange={(event) => {
+                      setDeletePassword(event.target.value);
+                      setDeletePasswordError("");
+                    }}
                     placeholder="Enter your password"
                     disabled={isDeletingAccount}
+                    showPasswordToggle={deletePassword.length > 0}
+                    isPasswordVisible={isDeletePasswordVisible}
+                    onTogglePasswordVisibility={() =>
+                      setIsDeletePasswordVisible((prev) => !prev)
+                    }
+                    aria-invalid={Boolean(deletePasswordError)}
                   />
                 </div>
               ) : null}
 
-              {isDeleteAuthStepOpen && !hasServerProvider ? (
+              {isDeleteAuthStepOpen &&
+              !hasServerProvider &&
+              !isDeleteCodeStepVisible ? (
                 <div className="space-y-2">
                   <p className="text-sm text-muted-foreground">
-                    Send a verification code to your email before continuing
-                    with account deletion.
+                    Send a code to your email to continue delete.
                   </p>
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <Label htmlFor="delete-account-code">
-                        Email verification code
-                      </Label>
-                    </div>
-                    {hasSentDeleteCode && deleteCodeResendTimer === 0 ? (
-                      <button
-                        type="button"
-                        className="text-xs text-muted-foreground hover:text-primary disabled:pointer-events-none disabled:opacity-60"
-                        disabled={isSendingDeleteVerify || isDeletingAccount}
-                        onClick={() => {
-                          requestDeleteAccountCode();
-                        }}
-                      >
-                        {isSendingDeleteVerify ? "Sending..." : "Resend code"}
-                      </button>
-                    ) : hasSentDeleteCode && deleteCodeResendTimer > 0 ? (
-                      <span className="text-xs text-muted-foreground">
-                        Resend in {deleteCodeResendTimer}s
-                      </span>
-                    ) : null}
+                </div>
+              ) : null}
+
+              {isDeleteAuthStepOpen &&
+              !hasServerProvider &&
+              isDeleteCodeStepVisible ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Label
+                      htmlFor="delete-account-code"
+                      className="text-muted-foreground"
+                    >
+                      Email verification code
+                    </Label>
                   </div>
-                  <Input
-                    id="delete-account-code"
-                    value={deleteCode}
-                    onChange={(event) =>
-                      setDeleteCode(
-                        event.target.value.replace(/\D/g, "").slice(0, 6),
-                      )
-                    }
-                    placeholder="6-digit code"
-                    inputMode="numeric"
-                    maxLength={6}
-                    disabled={isDeletingAccount || !hasSentDeleteCode}
-                  />
+                  <div className="flex items-start gap-2">
+                    <div className="min-w-0 flex-1">
+                      <SettingsInput
+                        id="delete-account-code"
+                        icon={KeyRound}
+                        value={deleteCode}
+                        onChange={(event) => {
+                          setDeleteCode(
+                            event.target.value.replace(/\D/g, "").slice(0, 6),
+                          );
+                          setDeleteCodeError("");
+                        }}
+                        placeholder="6-digit code"
+                        inputMode="numeric"
+                        maxLength={6}
+                        disabled={isDeleteFlowBusy}
+                        onKeyDown={(event) => {
+                          if (event.key !== "Enter") return;
+
+                          event.preventDefault();
+
+                          if (isDeleteFlowBusy || !canContinueDelete) {
+                            return;
+                          }
+
+                          void onOpenDeleteConfirm();
+                        }}
+                        aria-invalid={Boolean(deleteCodeError)}
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="relative h-8 w-18 shrink-0 px-3 text-xs disabled:bg-input/50 dark:disabled:bg-input/80"
+                      disabled={isDeleteFlowBusy || deleteCodeResendTimer > 0}
+                      onClick={() => {
+                        requestDeleteAccountCode();
+                      }}
+                    >
+                      {isSendingDeleteVerify ? (
+                        <Loader2 className="absolute h-3.5 w-3.5 animate-spin" />
+                      ) : null}
+                      <span
+                        className={
+                          isSendingDeleteVerify ? "opacity-0" : undefined
+                        }
+                      >
+                        {deleteCodeResendTimer > 0
+                          ? `${deleteCodeResendTimer}s`
+                          : hasSentDeleteCode
+                            ? "Resend"
+                            : "Send"}
+                      </span>
+                    </Button>
+                  </div>
                 </div>
               ) : null}
 
@@ -959,7 +1178,7 @@ export function AccountSection({
                 <Button
                   variant="destructive"
                   className="w-full"
-                  disabled={isDeleteStepBusy}
+                  disabled={isDeleteFlowBusy}
                   onClick={() => {
                     resetAllActionStates("delete");
                     setIsDeleteAuthStepOpen(true);
@@ -967,44 +1186,44 @@ export function AccountSection({
                 >
                   {isDeleteStepBusy ? (
                     <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      {isDeletingAccount ? "Deleting..." : "Sending code..."}
+                      <Loader2 className="absolute h-4 w-4 animate-spin" />
+                      <span className="opacity-0">Delete Account</span>
                     </>
                   ) : (
                     "Delete Account"
                   )}
                 </Button>
-              ) : !hasServerProvider && !hasSentDeleteCode ? (
+              ) : !hasServerProvider && !isDeleteCodeStepVisible ? (
                 <Button
                   variant="destructive"
                   className="w-full"
-                  disabled={isDeleteStepBusy}
+                  disabled={isDeleteFlowBusy}
                   onClick={() => {
                     requestDeleteAccountCode();
                   }}
                 >
-                  {isDeleteStepBusy ? (
+                  {isSendingDeleteVerify ? (
                     <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      {isDeletingAccount ? "Deleting..." : "Sending code..."}
+                      <Loader2 className="absolute h-4 w-4 animate-spin" />
+                      <span className="opacity-0">Send Email Code</span>
                     </>
                   ) : (
-                    "Send Email"
+                    "Send Email Code"
                   )}
                 </Button>
               ) : (
                 <Button
                   variant="destructive"
                   className="w-full"
-                  disabled={isDeleteStepBusy || !canContinueDelete}
+                  disabled={isDeleteFlowBusy || !canContinueDelete}
                   onClick={() => {
                     void onOpenDeleteConfirm();
                   }}
                 >
                   {isDeleteStepBusy ? (
                     <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      {isDeletingAccount ? "Deleting..." : "Sending code..."}
+                      <Loader2 className="absolute h-4 w-4 animate-spin" />
+                      <span className="opacity-0">Continue Delete</span>
                     </>
                   ) : (
                     "Continue Delete"
@@ -1017,7 +1236,7 @@ export function AccountSection({
                   type="button"
                   variant="outline"
                   className="w-full"
-                  disabled={isDeleteStepBusy}
+                  disabled={isDeleteFlowBusy}
                   onClick={() => {
                     resetDeleteFlow();
                   }}
@@ -1056,9 +1275,27 @@ export function AccountSection({
                   ? { password: deletePassword }
                   : { code: deleteCode };
 
-                void handleDeleteAccount(payload).finally(() => {
-                  setIsDeleteConfirmOpen(false);
-                });
+                void handleDeleteAccount(payload)
+                  .then(() => {
+                    setIsDeleteConfirmOpen(false);
+                  })
+                  .catch((error: unknown) => {
+                    if (hasServerProvider) {
+                      setDeletePasswordError(
+                        error instanceof Error && error.message
+                          ? error.message
+                          : "Incorrect password!",
+                      );
+                    } else {
+                      setDeleteCodeError(
+                        error instanceof Error && error.message
+                          ? error.message
+                          : "Invalid verification code!",
+                      );
+                    }
+
+                    setIsDeleteConfirmOpen(false);
+                  });
               }}
             >
               {isDeletingAccount ? (

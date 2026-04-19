@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useGoogleLogin } from "@react-oauth/google";
 import axios from "axios";
@@ -21,14 +21,6 @@ import {
   verifyChangeEmail,
 } from "@/api/auth";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -36,9 +28,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { useAuthStore } from "@/store/auth";
-import { cn } from "@/lib/utils";
 import { AccountSection } from "./sections/account-section";
 import { PreferencesSection } from "./sections/preferences-section";
 
@@ -46,13 +39,11 @@ const sections = [
   {
     id: "account",
     label: "Account & Security",
-    description: "Identity, login methods, and session protection.",
     icon: ShieldCheck,
   },
   {
     id: "preferences",
     label: "Preferences",
-    description: "Theme and app-level preferences.",
     icon: SlidersHorizontal,
   },
 ] as const;
@@ -77,12 +68,6 @@ export default function Settings() {
     useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [isSendingDeleteVerify, setIsSendingDeleteVerify] = useState(false);
-
-  const currentSection = useMemo(
-    () =>
-      sections.find((section) => section.id === activeSection) ?? sections[0],
-    [activeSection],
-  );
 
   const connectGoogleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
@@ -261,16 +246,18 @@ export default function Settings() {
     try {
       await deleteAccountVerify();
     } catch (error) {
-      toast.error(
+      const message =
         typeof error === "object" &&
-          error !== null &&
-          "response" in error &&
-          typeof (error as { response?: { data?: { message?: string } } })
-            .response?.data?.message === "string"
+        error !== null &&
+        "response" in error &&
+        typeof (error as { response?: { data?: { message?: string } } })
+          .response?.data?.message === "string"
           ? (error as { response?: { data?: { message?: string } } }).response!
               .data!.message!
-          : "Failed to send verification code.",
-      );
+          : "Failed to send verification code.";
+
+      toast.error(message);
+      throw new Error(message);
     } finally {
       setIsSendingDeleteVerify(false);
     }
@@ -287,16 +274,18 @@ export default function Settings() {
       logout();
       navigate("/", { replace: true });
     } catch (error) {
-      toast.error(
+      const message =
         typeof error === "object" &&
-          error !== null &&
-          "response" in error &&
-          typeof (error as { response?: { data?: { message?: string } } })
-            .response?.data?.message === "string"
+        error !== null &&
+        "response" in error &&
+        typeof (error as { response?: { data?: { message?: string } } })
+          .response?.data?.message === "string"
           ? (error as { response?: { data?: { message?: string } } }).response!
               .data!.message!
-          : "Failed to delete account.",
-      );
+          : "Failed to delete account.";
+
+      toast.error(message);
+      throw new Error(message);
     } finally {
       setIsDeletingAccount(false);
     }
@@ -307,171 +296,113 @@ export default function Settings() {
       <div className="space-y-2">
         <h1 className="text-3xl font-bold">Settings</h1>
         <p className="max-w-2xl text-muted-foreground">
-          Manage your account details and app preferences in one place. Use the
-          section picker to move between settings without leaving the page.
+          Manage your account details and app preferences in one place.
         </p>
       </div>
 
-      <Card className="min-w-0 overflow-visible">
-        <CardContent className="grid min-w-0 gap-6 px-3 py-3 md:px-4 md:py-4 lg:grid-cols-[260px_minmax(0,1fr)]">
-          <div className="min-w-0 space-y-4">
-            <div className="space-y-2 lg:hidden">
-              <Label>Settings Category</Label>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="h-auto min-h-12 w-full justify-between rounded-xl px-3 py-2 whitespace-normal"
-                  >
-                    <span className="flex min-w-0 flex-1 items-center gap-3 overflow-hidden text-left">
-                      <span className="shrink-0 rounded-lg bg-muted p-2">
-                        <currentSection.icon className="size-4" />
-                      </span>
-                      <span className="min-w-0 flex-1 overflow-hidden">
-                        <span className="block truncate font-medium">
-                          {currentSection.label}
-                        </span>
-                        <span className="block truncate text-xs text-muted-foreground">
-                          {currentSection.description}
-                        </span>
-                      </span>
-                    </span>
-                    <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
-                  </Button>
-                </DropdownMenuTrigger>
+      <div className="space-y-2 md:hidden">
+        <Label>Settings Category</Label>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-full justify-between"
+            >
+              <span className="truncate font-medium">
+                {
+                  sections.find((section) => section.id === activeSection)
+                    ?.label
+                }
+              </span>
+              <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
+            </Button>
+          </DropdownMenuTrigger>
 
-                <DropdownMenuContent
-                  align="end"
-                  collisionPadding={16}
-                  className="w-[min(var(--radix-dropdown-menu-trigger-width),calc(100vw-2rem))] max-w-[calc(100vw-2rem)]"
-                >
-                  <DropdownMenuLabel>Select section</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {sections.map((section) => {
-                    const Icon = section.icon;
-                    const isActive = section.id === activeSection;
+          <DropdownMenuContent
+            align="end"
+            collisionPadding={16}
+            className="w-[min(var(--radix-dropdown-menu-trigger-width),calc(100vw-2rem))] max-w-[calc(100vw-2rem)]"
+          >
+            <DropdownMenuLabel>Select section</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {sections.map((section) => (
+              <DropdownMenuItem
+                key={section.id}
+                onSelect={() => setActiveSection(section.id)}
+                className="justify-between"
+              >
+                {section.label}
+                {section.id === activeSection ? (
+                  <Check className="size-4" />
+                ) : null}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
 
-                    return (
-                      <DropdownMenuItem
-                        key={section.id}
-                        onSelect={() => setActiveSection(section.id)}
-                        className="min-h-12 gap-3 px-3 py-2"
-                      >
-                        <span
-                          className={cn(
-                            "rounded-lg p-2",
-                            isActive
-                              ? "bg-muted text-foreground"
-                              : "bg-muted text-foreground",
-                          )}
-                        >
-                          <Icon className="size-4" />
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate font-medium">
-                            {section.label}
-                          </span>
-                          <span className="block truncate text-xs text-muted-foreground">
-                            {section.description}
-                          </span>
-                        </span>
-                        {isActive ? (
-                          <Check className="size-4 shrink-0 text-foreground" />
-                        ) : null}
-                      </DropdownMenuItem>
-                    );
-                  })}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+      <Tabs
+        orientation="vertical"
+        value={activeSection}
+        onValueChange={(value) =>
+          setActiveSection(value as (typeof sections)[number]["id"])
+        }
+        className="min-w-0 md:grid md:grid-cols-[220px_minmax(0,1fr)] md:items-start"
+      >
+        <TabsList
+          className="hidden h-auto w-full flex-col items-stretch gap-2 bg-transparent p-0 md:flex"
+          aria-label="Settings categories"
+        >
+          {sections.map((section) => {
+            const Icon = section.icon;
 
-            <div className="hidden space-y-2 lg:block">
-              {sections.map((section) => {
-                const Icon = section.icon;
-                const isActive = section.id === activeSection;
+            return (
+              <TabsTrigger
+                key={section.id}
+                value={section.id}
+                className="group h-auto w-full justify-start gap-2.5 rounded-xl !border-0 bg-card px-3.5 py-2.5 text-left text-sm font-medium text-foreground !shadow-none hover:bg-muted/60 data-active:!border-0 data-active:!bg-primary data-active:text-primary-foreground data-active:!shadow-none data-[state=active]:!border-0 data-[state=active]:!bg-primary data-[state=active]:text-primary-foreground data-[state=active]:!shadow-none dark:data-active:!bg-primary dark:data-active:text-primary-foreground dark:data-[state=active]:!bg-primary dark:data-[state=active]:text-primary-foreground"
+              >
+                <span className="p-2 transition-colors group-data-active:text-primary-foreground group-data-[state=active]:text-primary-foreground">
+                  <Icon className="size-4" />
+                </span>
+                <span className="transition-colors group-data-active:text-primary-foreground group-data-[state=active]:text-primary-foreground">
+                  {section.label}
+                </span>
+              </TabsTrigger>
+            );
+          })}
+        </TabsList>
 
-                return (
-                  <button
-                    key={section.id}
-                    type="button"
-                    onClick={() => setActiveSection(section.id)}
-                    className={cn(
-                      "flex w-full items-start gap-3 rounded-2xl border px-4 py-3 text-left transition-colors",
-                      isActive
-                        ? "border-primary/40 bg-primary/8"
-                        : "border-transparent bg-muted/40 hover:border-border hover:bg-muted/80",
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "mt-0.5 rounded-lg p-2",
-                        isActive
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-background",
-                      )}
-                    >
-                      <Icon className="size-4" />
-                    </span>
-                    <span className="space-y-1">
-                      <span className="block font-medium">{section.label}</span>
-                      <span className="block text-xs text-muted-foreground">
-                        {section.description}
-                      </span>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+        <TabsContent value="account" className="min-w-0">
+          <AccountSection
+            emailChangeStep={emailChangeStep}
+            emailChangePassword={emailChangePassword}
+            emailDraft={emailDraft}
+            setEmailDraft={setEmailDraft}
+            setEmailChangePassword={setEmailChangePassword}
+            newEmailCode={newEmailCode}
+            setNewEmailCode={setNewEmailCode}
+            setEmailChangeStep={setEmailChangeStep}
+            verifyEmailChange={verifyEmailChange}
+            saveEmailChange={saveEmailChange}
+            cancelEmailChange={cancelEmailChange}
+            isCheckingChangeEmail={isCheckingChangeEmail}
+            isSavingEmailChange={isSavingEmailChange}
+            handlePasswordAction={handlePasswordAction}
+            isUpdatingGoogleProvider={isUpdatingGoogleProvider}
+            handleGoogleProviderAction={handleGoogleProviderAction}
+            isDeletingAccount={isDeletingAccount}
+            isSendingDeleteVerify={isSendingDeleteVerify}
+            handleDeleteAccountVerify={handleDeleteAccountVerify}
+            handleDeleteAccount={handleDeleteAccount}
+          />
+        </TabsContent>
 
-          <div className="min-w-0 space-y-4">
-            <Card className="min-w-0 border border-border/70 shadow-none">
-              <CardHeader className="px-4 pb-0 md:px-6">
-                <div className="flex items-start gap-3">
-                  <span className="rounded-xl bg-muted p-2">
-                    <currentSection.icon className="size-5" />
-                  </span>
-                  <div className="min-w-0 space-y-1">
-                    <CardTitle>{currentSection.label}</CardTitle>
-                    <CardDescription>
-                      {currentSection.description}
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-
-              <CardContent className="min-w-0 space-y-6 overflow-x-hidden px-4 pt-6 md:px-6">
-                {activeSection === "account" && (
-                  <AccountSection
-                    emailChangeStep={emailChangeStep}
-                    emailChangePassword={emailChangePassword}
-                    emailDraft={emailDraft}
-                    setEmailDraft={setEmailDraft}
-                    setEmailChangePassword={setEmailChangePassword}
-                    newEmailCode={newEmailCode}
-                    setNewEmailCode={setNewEmailCode}
-                    setEmailChangeStep={setEmailChangeStep}
-                    verifyEmailChange={verifyEmailChange}
-                    saveEmailChange={saveEmailChange}
-                    cancelEmailChange={cancelEmailChange}
-                    isCheckingChangeEmail={isCheckingChangeEmail}
-                    isSavingEmailChange={isSavingEmailChange}
-                    handlePasswordAction={handlePasswordAction}
-                    isUpdatingGoogleProvider={isUpdatingGoogleProvider}
-                    handleGoogleProviderAction={handleGoogleProviderAction}
-                    isDeletingAccount={isDeletingAccount}
-                    isSendingDeleteVerify={isSendingDeleteVerify}
-                    handleDeleteAccountVerify={handleDeleteAccountVerify}
-                    handleDeleteAccount={handleDeleteAccount}
-                  />
-                )}
-
-                {activeSection === "preferences" && <PreferencesSection />}
-              </CardContent>
-            </Card>
-          </div>
-        </CardContent>
-      </Card>
+        <TabsContent value="preferences" className="min-w-0">
+          <PreferencesSection />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

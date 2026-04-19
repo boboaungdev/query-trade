@@ -4,7 +4,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 
 export function PreferencesSection() {
   return (
-    <div className="rounded-xl border border-border bg-card p-4 shadow-sm md:p-5">
+    <div className="rounded-xl bg-card p-4 shadow-sm md:p-5">
       <div className="flex items-start gap-3">
         <span className="rounded-xl bg-muted p-2.5 text-foreground">
           <SlidersHorizontal className="size-4" />
