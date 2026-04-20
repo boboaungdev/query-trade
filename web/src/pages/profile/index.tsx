@@ -352,8 +352,15 @@ export default function Profile() {
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const profileListScrollRef = useRef<HTMLDivElement | null>(null);
   const profileListLoadMoreRef = useRef<HTMLDivElement | null>(null);
+  const editSheetBodyRef = useRef<HTMLDivElement | null>(null);
   const usernameRequestIdRef = useRef(0);
+  const editSheetDragPointerIdRef = useRef<number | null>(null);
+  const editSheetDragStartYRef = useRef(0);
+  const editSheetDragLastYRef = useRef(0);
+  const editSheetDragSourceRef = useRef<"handle" | "body" | null>(null);
   const isMobile = useIsMobile();
+  const [editSheetDragOffset, setEditSheetDragOffset] = useState(0);
+  const [isEditSheetDragging, setIsEditSheetDragging] = useState(false);
 
   const [form, setForm] = useState<FormState>({
     name: user?.name || "",
@@ -804,6 +811,15 @@ export default function Profile() {
     activeProfileTab,
   ]);
 
+  useEffect(() => {
+    if (isEditing) return;
+
+    editSheetDragPointerIdRef.current = null;
+    editSheetDragSourceRef.current = null;
+    setIsEditSheetDragging(false);
+    setEditSheetDragOffset(0);
+  }, [isEditing]);
+
   if (!routeUsername && isAuthenticated && user?.username) {
     return <Navigate to={`/${user.username}`} replace />;
   }
@@ -870,6 +886,83 @@ export default function Profile() {
     setUsernameStatus("idle");
     setSelectedAvatarFileName("");
     setIsEditing(true);
+  };
+
+  const beginEditSheetDrag = (
+    event: React.PointerEvent<HTMLDivElement>,
+    source: "handle" | "body",
+  ) => {
+    if (!isMobile || event.pointerType === "mouse") return;
+    if (source === "body" && (editSheetBodyRef.current?.scrollTop ?? 0) > 0) {
+      return;
+    }
+
+    editSheetDragPointerIdRef.current = event.pointerId;
+    editSheetDragStartYRef.current = event.clientY;
+    editSheetDragLastYRef.current = event.clientY;
+    editSheetDragSourceRef.current = source;
+    setIsEditSheetDragging(false);
+    setEditSheetDragOffset(0);
+  };
+
+  const onEditSheetPointerMove = (
+    event: React.PointerEvent<HTMLDivElement>,
+  ) => {
+    if (!isMobile || editSheetDragPointerIdRef.current !== event.pointerId) {
+      return;
+    }
+
+    const deltaY = event.clientY - editSheetDragStartYRef.current;
+
+    if (deltaY <= 0) {
+      if (isEditSheetDragging || editSheetDragOffset > 0) {
+        setIsEditSheetDragging(false);
+        setEditSheetDragOffset(0);
+      }
+      return;
+    }
+
+    if (
+      editSheetDragSourceRef.current === "body" &&
+      (editSheetBodyRef.current?.scrollTop ?? 0) > 0
+    ) {
+      editSheetDragPointerIdRef.current = null;
+      editSheetDragSourceRef.current = null;
+      setIsEditSheetDragging(false);
+      setEditSheetDragOffset(0);
+      return;
+    }
+
+    editSheetDragLastYRef.current = event.clientY;
+    setIsEditSheetDragging(true);
+    setEditSheetDragOffset(deltaY);
+    event.preventDefault();
+  };
+
+  const endEditSheetDrag = (event?: React.PointerEvent<HTMLDivElement>) => {
+    if (
+      event &&
+      editSheetDragPointerIdRef.current !== null &&
+      editSheetDragPointerIdRef.current !== event.pointerId
+    ) {
+      return;
+    }
+
+    const totalDrag = Math.max(
+      0,
+      editSheetDragLastYRef.current - editSheetDragStartYRef.current,
+    );
+
+    editSheetDragPointerIdRef.current = null;
+    editSheetDragSourceRef.current = null;
+    setIsEditSheetDragging(false);
+
+    if (totalDrag > 120) {
+      onCancel();
+      return;
+    }
+
+    setEditSheetDragOffset(0);
   };
 
   const onAvatarSelect = (event: ChangeEvent<HTMLInputElement>) => {
@@ -1739,16 +1832,36 @@ export default function Profile() {
                   showCloseButton={!isMobile}
                   className={
                     isMobile
-                      ? "flex h-auto max-h-[92vh] w-full flex-col overflow-x-hidden rounded-t-2xl p-0"
+                      ? "flex h-auto max-h-[82vh] w-full flex-col overflow-x-hidden rounded-t-2xl p-0"
                       : "w-full md:max-w-md"
                   }
                   onOpenAutoFocus={(event) => {
                     event.preventDefault();
                   }}
+                  onPointerMove={onEditSheetPointerMove}
+                  onPointerUp={endEditSheetDrag}
+                  onPointerCancel={endEditSheetDrag}
+                  style={
+                    isMobile
+                      ? {
+                          transform: `translateY(${editSheetDragOffset}px)`,
+                          transition: isEditSheetDragging
+                            ? "none"
+                            : "transform 200ms ease-out",
+                        }
+                      : undefined
+                  }
                 >
                   <SheetHeader
                     className={
-                      isMobile ? "border-b px-4 py-4" : "border-b px-6 py-5"
+                      isMobile
+                        ? "border-b px-4 py-4 touch-none"
+                        : "border-b px-6 py-5"
+                    }
+                    onPointerDown={
+                      isMobile
+                        ? (event) => beginEditSheetDrag(event, "handle")
+                        : undefined
                     }
                   >
                     {isMobile ? (
@@ -1763,11 +1876,14 @@ export default function Profile() {
                   </SheetHeader>
 
                   <div
+                    ref={editSheetBodyRef}
                     className={
                       isMobile
                         ? "flex-1 overflow-y-auto px-4 py-4"
                         : "flex-1 overflow-y-auto px-6 py-5"
                     }
+                    onPointerDown={(event) => beginEditSheetDrag(event, "body")}
+                    style={{ touchAction: isMobile ? "pan-y" : undefined }}
                   >
                     <div className="space-y-5">
                       <div className="space-y-2">
@@ -1965,14 +2081,6 @@ export default function Profile() {
                       className="w-full md:w-auto"
                     >
                       {isSaving ? <Loader2 className="animate-spin" /> : "Save"}
-                    </Button>
-                    <Button
-                      onClick={onCancel}
-                      disabled={isSaving}
-                      variant="outline"
-                      className="w-full md:w-auto"
-                    >
-                      Cancel
                     </Button>
                   </SheetFooter>
                 </SheetContent>

@@ -186,7 +186,14 @@ export default function StrategyPage() {
   const [reloadKey, setReloadKey] = useState(0);
   const [createSheetControls, setCreateSheetControls] =
     useState<StrategyBuilderFooterControls | null>(null);
+  const [createSheetDragOffset, setCreateSheetDragOffset] = useState(0);
+  const [isCreateSheetDragging, setIsCreateSheetDragging] = useState(false);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const createSheetBodyRef = useRef<HTMLDivElement | null>(null);
+  const createSheetDragPointerIdRef = useRef<number | null>(null);
+  const createSheetDragStartYRef = useRef(0);
+  const createSheetDragLastYRef = useRef(0);
+  const createSheetDragSourceRef = useRef<"header" | "body" | null>(null);
   const previousDebouncedSearchRef = useRef(debouncedSearch);
   const shouldOpenStrategyBuilder =
     typeof location.state === "object" &&
@@ -495,6 +502,92 @@ export default function StrategyPage() {
   };
 
   const isEditingInSheet = Boolean(sheetStrategyId);
+
+  useEffect(() => {
+    if (isCreateSheetOpen) return;
+
+    createSheetDragPointerIdRef.current = null;
+    createSheetDragSourceRef.current = null;
+    setIsCreateSheetDragging(false);
+    setCreateSheetDragOffset(0);
+  }, [isCreateSheetOpen]);
+
+  const beginCreateSheetDrag = (
+    event: React.PointerEvent<HTMLDivElement>,
+    source: "header" | "body",
+  ) => {
+    if (!isMobile || event.pointerType === "mouse") return;
+    if (source === "body" && (createSheetBodyRef.current?.scrollTop ?? 0) > 0) {
+      return;
+    }
+
+    createSheetDragPointerIdRef.current = event.pointerId;
+    createSheetDragStartYRef.current = event.clientY;
+    createSheetDragLastYRef.current = event.clientY;
+    createSheetDragSourceRef.current = source;
+    setIsCreateSheetDragging(false);
+    setCreateSheetDragOffset(0);
+  };
+
+  const onCreateSheetPointerMove = (
+    event: React.PointerEvent<HTMLDivElement>,
+  ) => {
+    if (!isMobile || createSheetDragPointerIdRef.current !== event.pointerId) {
+      return;
+    }
+
+    const deltaY = event.clientY - createSheetDragStartYRef.current;
+
+    if (deltaY <= 0) {
+      if (isCreateSheetDragging || createSheetDragOffset > 0) {
+        setIsCreateSheetDragging(false);
+        setCreateSheetDragOffset(0);
+      }
+      return;
+    }
+
+    if (
+      createSheetDragSourceRef.current === "body" &&
+      (createSheetBodyRef.current?.scrollTop ?? 0) > 0
+    ) {
+      createSheetDragPointerIdRef.current = null;
+      createSheetDragSourceRef.current = null;
+      setIsCreateSheetDragging(false);
+      setCreateSheetDragOffset(0);
+      return;
+    }
+
+    createSheetDragLastYRef.current = event.clientY;
+    setIsCreateSheetDragging(true);
+    setCreateSheetDragOffset(deltaY);
+    event.preventDefault();
+  };
+
+  const endCreateSheetDrag = (event?: React.PointerEvent<HTMLDivElement>) => {
+    if (
+      event &&
+      createSheetDragPointerIdRef.current !== null &&
+      createSheetDragPointerIdRef.current !== event.pointerId
+    ) {
+      return;
+    }
+
+    const totalDrag = Math.max(
+      0,
+      createSheetDragLastYRef.current - createSheetDragStartYRef.current,
+    );
+
+    createSheetDragPointerIdRef.current = null;
+    createSheetDragSourceRef.current = null;
+    setIsCreateSheetDragging(false);
+
+    if (totalDrag > 120) {
+      closeCreateSheet();
+      return;
+    }
+
+    setCreateSheetDragOffset(0);
+  };
 
   return (
     <div className="mx-auto w-full max-w-6xl min-w-0 space-y-4 overflow-x-hidden md:space-y-6">
@@ -968,15 +1061,35 @@ export default function StrategyPage() {
           showCloseButton={!isMobile}
           className={
             isMobile
-              ? "flex h-auto max-h-[92vh] w-full flex-col overflow-x-hidden rounded-t-2xl p-0"
+              ? "flex h-auto max-h-[82vh] w-full flex-col overflow-x-hidden rounded-t-2xl p-0"
               : "flex h-full w-full flex-col overflow-x-hidden p-0 md:max-w-[92vw] lg:max-w-[960px] xl:max-w-[1100px]"
           }
           onOpenAutoFocus={(event) => {
             event.preventDefault();
           }}
+          onPointerMove={onCreateSheetPointerMove}
+          onPointerUp={endCreateSheetDrag}
+          onPointerCancel={endCreateSheetDrag}
+          style={
+            isMobile
+              ? {
+                  transform: `translateY(${createSheetDragOffset}px)`,
+                  transition: isCreateSheetDragging
+                    ? "none"
+                    : "transform 200ms ease-out",
+                }
+              : undefined
+          }
         >
           <SheetHeader
-            className={isMobile ? "border-b px-4 py-4" : "border-b px-6 py-5"}
+            className={
+              isMobile ? "border-b px-4 py-4 touch-none" : "border-b px-6 py-5"
+            }
+            onPointerDown={
+              isMobile
+                ? (event) => beginCreateSheetDrag(event, "header")
+                : undefined
+            }
           >
             {isMobile ? (
               <div className="-mt-1 mb-3 flex justify-center">
@@ -999,7 +1112,12 @@ export default function StrategyPage() {
             </SheetDescription>
           </SheetHeader>
 
-          <div className="flex-1 overflow-y-auto">
+          <div
+            ref={createSheetBodyRef}
+            className="flex-1 overflow-y-auto"
+            onPointerDown={(event) => beginCreateSheetDrag(event, "body")}
+            style={{ touchAction: isMobile ? "pan-y" : undefined }}
+          >
             {isCreateSheetOpen ? (
               <StrategyBuilder
                 embedded
@@ -1036,17 +1154,6 @@ export default function StrategyPage() {
               >
                 {createSheetControls?.submitLabel ?? "Create Strategy"}
               </span>
-            </Button>
-            <Button
-              onClick={closeCreateSheet}
-              disabled={
-                createSheetControls?.isSubmitting ||
-                createSheetControls?.isLoadingStrategy
-              }
-              variant="outline"
-              className="w-full md:w-auto"
-            >
-              Cancel
             </Button>
             {createSheetControls?.helperText ? (
               <p className="w-full text-xs text-muted-foreground">
@@ -3959,7 +4066,12 @@ export function StrategyBuilder({
           <div className="min-w-0 space-y-4">
             <div className="min-w-0 space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="strategy-name">Strategy Name</Label>
+                <Label
+                  htmlFor="strategy-name"
+                  className="text-muted-foreground"
+                >
+                  Strategy Name
+                </Label>
                 <Input
                   id="strategy-name"
                   value={name}
@@ -3971,7 +4083,12 @@ export function StrategyBuilder({
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-3">
-                  <Label htmlFor="strategy-description">Description</Label>
+                  <Label
+                    htmlFor="strategy-description"
+                    className="text-muted-foreground"
+                  >
+                    Description
+                  </Label>
                   <span className="text-xs text-muted-foreground">
                     {description.length}/{STRATEGY_DESCRIPTION_MAX_LENGTH}
                   </span>
@@ -3987,7 +4104,7 @@ export function StrategyBuilder({
               </div>
 
               <div className="space-y-2">
-                <Label>Visibility</Label>
+                <Label className="text-muted-foreground">Visibility</Label>
                 <div className="flex items-start justify-between gap-4 py-1">
                   <div className="flex min-w-0 items-start gap-2.5">
                     <div className="pt-0.5">
