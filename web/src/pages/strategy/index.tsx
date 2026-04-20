@@ -19,7 +19,6 @@ import {
   CopyPlus,
   Compass,
   Globe,
-  Save,
   Pencil,
   SquareArrowOutUpRight,
   Loader2,
@@ -116,6 +115,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useAuthStore } from "@/store/auth";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
 type StrategySortBy = "name" | "createdAt" | "updatedAt" | "popular";
@@ -162,6 +162,7 @@ export default function StrategyPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
+  const isMobile = useIsMobile();
   const [strategies, setStrategies] = useState<StrategyItem[]>([]);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -181,12 +182,12 @@ export default function StrategyPage() {
   const [order, setOrder] = useState<"asc" | "desc">("asc");
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
   const [sheetStrategyId, setSheetStrategyId] = useState("");
+  const [duplicateSheetStrategyId, setDuplicateSheetStrategyId] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
   const [createSheetControls, setCreateSheetControls] =
     useState<StrategyBuilderFooterControls | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const previousDebouncedSearchRef = useRef(debouncedSearch);
-
   const shouldOpenStrategyBuilder =
     typeof location.state === "object" &&
     location.state !== null &&
@@ -194,12 +195,34 @@ export default function StrategyPage() {
     Boolean(
       (location.state as { openStrategyBuilder?: unknown }).openStrategyBuilder,
     );
+  const routeSheetStrategyId =
+    typeof location.state === "object" &&
+    location.state !== null &&
+    "editStrategyId" in location.state &&
+    typeof (location.state as { editStrategyId?: unknown }).editStrategyId ===
+      "string"
+      ? (location.state as { editStrategyId: string }).editStrategyId
+      : "";
+  const routeDuplicateStrategyId =
+    typeof location.state === "object" &&
+    location.state !== null &&
+    "duplicateStrategyId" in location.state &&
+    typeof (location.state as { duplicateStrategyId?: unknown })
+      .duplicateStrategyId === "string"
+      ? (location.state as { duplicateStrategyId: string }).duplicateStrategyId
+      : "";
 
   useEffect(() => {
     if (shouldOpenStrategyBuilder) {
+      setSheetStrategyId(routeSheetStrategyId);
+      setDuplicateSheetStrategyId(routeDuplicateStrategyId);
       setIsCreateSheetOpen(true);
     }
-  }, [shouldOpenStrategyBuilder]);
+  }, [
+    routeDuplicateStrategyId,
+    routeSheetStrategyId,
+    shouldOpenStrategyBuilder,
+  ]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -444,24 +467,26 @@ export default function StrategyPage() {
       state: {
         openStrategyBuilder: true,
         duplicateStrategyId: strategy._id,
-        duplicateStrategyName: strategy.name,
       },
     });
   };
 
   const openCreateSheet = () => {
     setSheetStrategyId("");
+    setDuplicateSheetStrategyId("");
     setIsCreateSheetOpen(true);
   };
 
   const openEditSheet = (strategyId: string) => {
     setSheetStrategyId(strategyId);
+    setDuplicateSheetStrategyId("");
     setIsCreateSheetOpen(true);
   };
 
   const closeCreateSheet = () => {
     setIsCreateSheetOpen(false);
     setSheetStrategyId("");
+    setDuplicateSheetStrategyId("");
     setCreateSheetControls(null);
 
     if (shouldOpenStrategyBuilder) {
@@ -939,20 +964,38 @@ export default function StrategyPage() {
         }}
       >
         <SheetContent
-          side="right"
-          className="flex h-full w-full flex-col overflow-x-hidden p-0 md:max-w-[92vw] lg:max-w-[960px] xl:max-w-[1100px]"
+          side={isMobile ? "bottom" : "right"}
+          showCloseButton={!isMobile}
+          className={
+            isMobile
+              ? "flex h-auto max-h-[92vh] w-full flex-col overflow-x-hidden rounded-t-2xl p-0"
+              : "flex h-full w-full flex-col overflow-x-hidden p-0 md:max-w-[92vw] lg:max-w-[960px] xl:max-w-[1100px]"
+          }
           onOpenAutoFocus={(event) => {
             event.preventDefault();
           }}
         >
-          <SheetHeader className="border-b px-6 py-5">
+          <SheetHeader
+            className={isMobile ? "border-b px-4 py-4" : "border-b px-6 py-5"}
+          >
+            {isMobile ? (
+              <div className="-mt-1 mb-3 flex justify-center">
+                <div className="h-1.5 w-12 rounded-full bg-muted-foreground/25" />
+              </div>
+            ) : null}
             <SheetTitle>
-              {isEditingInSheet ? "Edit Strategy" : "Create Strategy"}
+              {isEditingInSheet
+                ? "Edit Strategy"
+                : duplicateSheetStrategyId
+                  ? "Clone Strategy"
+                  : "Create Strategy"}
             </SheetTitle>
             <SheetDescription>
               {isEditingInSheet
                 ? "Edit your strategy."
-                : "Build a new strategy."}
+                : duplicateSheetStrategyId
+                  ? "Clone this strategy into your own draft, make your changes, and save it as your own."
+                  : "Build a new strategy."}
             </SheetDescription>
           </SheetHeader>
 
@@ -961,7 +1004,9 @@ export default function StrategyPage() {
               <StrategyBuilder
                 embedded
                 strategyId={sheetStrategyId}
+                duplicateStrategyId={duplicateSheetStrategyId}
                 onEmbeddedControlsChange={setCreateSheetControls}
+                onRequestClose={closeCreateSheet}
                 onSuccess={() => {
                   closeCreateSheet();
                   setPage(1);
@@ -971,7 +1016,11 @@ export default function StrategyPage() {
             ) : null}
           </div>
 
-          <SheetFooter className="border-t px-6 pt-4 pb-6">
+          <SheetFooter
+            className={
+              isMobile ? "border-t px-4 pt-3 pb-4" : "border-t px-6 pt-4 pb-6"
+            }
+          >
             <Button
               onClick={() => createSheetControls?.onSubmit()}
               disabled={createSheetControls?.submitDisabled ?? true}
@@ -989,9 +1038,7 @@ export default function StrategyPage() {
               </span>
             </Button>
             <Button
-              onClick={() => {
-                closeCreateSheet();
-              }}
+              onClick={closeCreateSheet}
               disabled={
                 createSheetControls?.isSubmitting ||
                 createSheetControls?.isLoadingStrategy
@@ -3287,29 +3334,25 @@ export type StrategyBuilderFooterControls = {
 export type StrategyBuilderProps = {
   embedded?: boolean;
   strategyId?: string;
+  duplicateStrategyId?: string;
   onSuccess?: (strategyId?: string) => void;
+  onRequestClose?: () => void;
   onEmbeddedControlsChange?: (controls: StrategyBuilderFooterControls) => void;
 };
 
 export function StrategyBuilder({
   embedded = false,
   strategyId: strategyIdProp = "",
+  duplicateStrategyId: duplicateStrategyIdProp = "",
   onSuccess,
+  onRequestClose,
   onEmbeddedControlsChange,
 }: StrategyBuilderProps = {}) {
-  const location = useLocation();
   const navigate = useNavigate();
   const { strategyId: routeStrategyId = "" } = useParams();
   const strategyId = strategyIdProp || routeStrategyId;
   const isEditing = Boolean(strategyId);
-  const duplicateStrategyId =
-    typeof location.state === "object" &&
-    location.state !== null &&
-    "duplicateStrategyId" in location.state &&
-    typeof (location.state as { duplicateStrategyId?: unknown })
-      .duplicateStrategyId === "string"
-      ? (location.state as { duplicateStrategyId: string }).duplicateStrategyId
-      : "";
+  const duplicateStrategyId = duplicateStrategyIdProp;
   const isDuplicating = !isEditing && Boolean(duplicateStrategyId);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -3443,6 +3486,7 @@ export function StrategyBuilder({
 
         if (!strategy) {
           toast.error("Strategy not found");
+          onRequestClose?.();
           navigate("/strategy");
           return;
         }
@@ -3557,6 +3601,7 @@ export function StrategyBuilder({
               ? error.message
               : "Failed to load strategy"),
         );
+        onRequestClose?.();
         navigate("/strategy");
       } finally {
         setIsLoadingStrategy(false);
@@ -3564,7 +3609,7 @@ export function StrategyBuilder({
     };
 
     void loadStrategy();
-  }, [duplicateStrategyId, isEditing, navigate, strategyId]);
+  }, [duplicateStrategyId, isEditing, navigate, onRequestClose, strategyId]);
 
   const indicatorMap = useMemo(
     () => new Map(indicatorOptions.map((item) => [item._id, item])),
@@ -3853,234 +3898,295 @@ export function StrategyBuilder({
     <fieldset
       disabled={isSubmitting || isLoadingStrategy}
       className={cn(
-        "min-w-0 w-full space-y-4 overflow-x-hidden border-0 p-0 md:space-y-6",
-        embedded ? "p-4 md:p-6" : "mx-auto max-w-6xl",
+        "min-w-0 w-full overflow-x-hidden border-0 p-0",
+        embedded
+          ? "space-y-4 p-4 md:space-y-6 md:p-6"
+          : "mx-auto max-w-6xl overflow-hidden rounded-xl border bg-card shadow-sm",
       )}
     >
       {!embedded ? (
-        <Card>
-          <CardContent className="flex flex-col gap-3 p-4 md:p-6">
-            <Button
-              type="button"
-              variant="outline"
-              className="w-fit"
-              onClick={() => {
-                if (window.history.length > 1) {
-                  navigate(-1);
-                  return;
-                }
+        <SheetHeader className="border-b px-4 py-4 md:px-6 md:py-5">
+          <Button
+            type="button"
+            variant="outline"
+            className="w-fit"
+            onClick={() => {
+              if (window.history.length > 1) {
+                navigate(-1);
+                return;
+              }
 
-                navigate("/strategy");
-              }}
-            >
-              <span className="inline-flex items-center gap-1.5">
-                <ChevronLeft className="h-4 w-4" />
-                Back
-              </span>
-            </Button>
+              navigate("/strategy");
+            }}
+          >
+            <span className="inline-flex items-center gap-1.5">
+              <ChevronLeft className="h-4 w-4" />
+              Back
+            </span>
+          </Button>
 
-            <div>
-              <p className="inline-flex items-center gap-1.5 rounded-full border bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground uppercase">
-                <Settings2 className="h-3.5 w-3.5" />
-                Strategy Builder
-              </p>
-              <h1 className="mt-3 text-2xl font-semibold tracking-tight md:text-4xl">
-                {isEditing
-                  ? "Edit Strategy"
-                  : isDuplicating
-                    ? "Clone Strategy"
-                    : "Create Strategy"}
-              </h1>
-              <p className="mt-2 max-w-3xl text-sm text-muted-foreground md:text-base">
-                {isEditing
-                  ? "Update your strategy with friendly form controls for indicators, nested conditions, stop loss, and take profit."
-                  : isDuplicating
-                    ? "Clone this strategy into your own draft, make your changes, and save it as your own."
-                    : "Build a strategy with friendly form controls for indicators, nested conditions, stop loss, and take profit. No JSON needed."}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+          <h1 className="font-heading text-base font-medium text-foreground">
+            {isEditing
+              ? "Edit Strategy"
+              : isDuplicating
+                ? "Clone Strategy"
+                : "Create Strategy"}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {isEditing
+              ? "Edit your strategy."
+              : isDuplicating
+                ? "Clone this strategy into your own draft, make your changes, and save it as your own."
+                : "Build a new strategy."}
+          </p>
+        </SheetHeader>
       ) : null}
 
       <div
         className={cn(
-          "grid min-w-0 gap-4",
-          !embedded && "lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]",
+          "min-w-0",
+          embedded
+            ? "space-y-4 md:space-y-6"
+            : "space-y-4 p-4 md:space-y-6 md:p-6",
         )}
       >
-        <div className="min-w-0 space-y-4">
+        <div
+          className={cn(
+            "grid min-w-0 gap-4",
+            !embedded && "lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]",
+          )}
+        >
           <div className="min-w-0 space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="strategy-name">Strategy Name</Label>
-              <Input
-                id="strategy-name"
-                value={name}
-                maxLength={STRATEGY_NAME_MAX_LENGTH}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="Enter strategy name"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between gap-3">
-                <Label htmlFor="strategy-description">Description</Label>
-                <span className="text-xs text-muted-foreground">
-                  {description.length}/{STRATEGY_DESCRIPTION_MAX_LENGTH}
-                </span>
+            <div className="min-w-0 space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="strategy-name">Strategy Name</Label>
+                <Input
+                  id="strategy-name"
+                  value={name}
+                  maxLength={STRATEGY_NAME_MAX_LENGTH}
+                  onChange={(event) => setName(event.target.value)}
+                  placeholder="Enter strategy name"
+                />
               </div>
-              <Textarea
-                id="strategy-description"
-                value={description}
-                maxLength={STRATEGY_DESCRIPTION_MAX_LENGTH}
-                onChange={(event) => setDescription(event.target.value)}
-                placeholder="Buy on bullish EMA crossover with RSI confirmation, sell on bearish crossover."
-                className="h-24 field-sizing-fixed resize-none"
-              />
-            </div>
 
-            <div className="space-y-2">
-              <Label>Visibility</Label>
-              <div className="flex items-start justify-between gap-4 py-1">
-                <div className="flex min-w-0 items-start gap-2.5">
-                  <div className="pt-0.5">
-                    {isPublic ? (
-                      <Globe className="h-4 w-4 text-muted-foreground" />
-                    ) : (
-                      <Lock className="h-4 w-4 text-muted-foreground" />
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium">
-                      {isPublic ? "Public" : "Private"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {isPublic
-                        ? "Anyone can discover this strategy."
-                        : "Only you can access this strategy."}
-                    </p>
-                  </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <Label htmlFor="strategy-description">Description</Label>
+                  <span className="text-xs text-muted-foreground">
+                    {description.length}/{STRATEGY_DESCRIPTION_MAX_LENGTH}
+                  </span>
                 </div>
-                <Switch checked={isPublic} onCheckedChange={setIsPublic} />
+                <Textarea
+                  id="strategy-description"
+                  value={description}
+                  maxLength={STRATEGY_DESCRIPTION_MAX_LENGTH}
+                  onChange={(event) => setDescription(event.target.value)}
+                  placeholder="Buy on bullish EMA crossover with RSI confirmation, sell on bearish crossover."
+                  className="h-24 field-sizing-fixed resize-none"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Visibility</Label>
+                <div className="flex items-start justify-between gap-4 py-1">
+                  <div className="flex min-w-0 items-start gap-2.5">
+                    <div className="pt-0.5">
+                      {isPublic ? (
+                        <Globe className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <Lock className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">
+                        {isPublic ? "Public" : "Private"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {isPublic
+                          ? "Anyone can discover this strategy."
+                          : "Only you can access this strategy."}
+                      </p>
+                    </div>
+                  </div>
+                  <Switch checked={isPublic} onCheckedChange={setIsPublic} />
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="min-w-0 space-y-4">
-            <h3 className="text-base font-semibold">Indicators</h3>
-            <div className="min-w-0 space-y-2">
-              <Dialog
-                open={isIndicatorMenuOpen}
-                onOpenChange={(open) => {
-                  setIsIndicatorMenuOpen(open);
-                  if (open) {
-                    setIndicatorPage(1);
-                  }
-                  if (!open) {
-                    setIndicatorSearch("");
-                    setIndicatorCategory("all");
-                    setIndicatorSortBy("name");
-                    setIndicatorOrder("asc");
-                    setIndicatorPage(1);
-                    setIsAppendingIndicators(false);
-                  }
-                }}
-              >
-                <DialogTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-auto w-full min-w-0 justify-between rounded-lg border-border/70 bg-background px-3 py-2.5 text-left whitespace-normal hover:bg-muted/30"
-                  >
-                    <span className="flex min-w-0 items-center gap-3">
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
-                        <Plus className="h-3.5 w-3.5" />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-medium text-foreground">
-                          Add indicator
-                        </span>
-                        <span className="block break-words text-xs text-muted-foreground">
-                          Search and configure an indicator
-                        </span>
-                      </span>
-                    </span>
-                  </Button>
-                </DialogTrigger>
-
-                <DialogContent
-                  className="top-[8vh] max-h-[calc(100vh-4rem)] -translate-y-0 gap-0 overflow-hidden p-0 md:top-[10vh] md:max-w-2xl"
-                  onOpenAutoFocus={(event) => {
-                    event.preventDefault();
+            <div className="min-w-0 space-y-4">
+              <h3 className="text-base font-semibold">Indicators</h3>
+              <div className="min-w-0 space-y-2">
+                <Dialog
+                  open={isIndicatorMenuOpen}
+                  onOpenChange={(open) => {
+                    setIsIndicatorMenuOpen(open);
+                    if (open) {
+                      setIndicatorPage(1);
+                    }
+                    if (!open) {
+                      setIndicatorSearch("");
+                      setIndicatorCategory("all");
+                      setIndicatorSortBy("name");
+                      setIndicatorOrder("asc");
+                      setIndicatorPage(1);
+                      setIsAppendingIndicators(false);
+                    }
                   }}
                 >
-                  <DialogHeader className="border-b px-4 pt-4 pb-3">
-                    <DialogTitle>Add Indicator</DialogTitle>
-                    <DialogDescription>
-                      Browse and select an indicator to add to this strategy.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-3 px-4 py-3">
-                    <div className="flex flex-col gap-3 md:flex-row md:items-end">
-                      <div className="relative min-w-0 flex-1">
-                        <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                          value={indicatorSearch}
-                          onChange={(event) => {
-                            setIndicatorSearch(event.target.value);
-                            setIndicatorPage(1);
-                          }}
-                          onKeyDown={(event) => {
-                            if (event.key !== "Enter") {
-                              return;
-                            }
+                  <DialogTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-auto w-full min-w-0 justify-between rounded-lg border-border/70 bg-background px-3 py-2.5 text-left whitespace-normal hover:bg-muted/30"
+                    >
+                      <span className="flex min-w-0 items-center gap-3">
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                          <Plus className="h-3.5 w-3.5" />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-medium text-foreground">
+                            Add indicator
+                          </span>
+                          <span className="block break-words text-xs text-muted-foreground">
+                            Search and configure an indicator
+                          </span>
+                        </span>
+                      </span>
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent
+                    className="top-[8vh] max-h-[calc(100vh-4rem)] -translate-y-0 gap-0 overflow-hidden p-0 md:top-[10vh] md:max-w-2xl"
+                    onOpenAutoFocus={(event) => {
+                      event.preventDefault();
+                    }}
+                  >
+                    <DialogHeader className="border-b px-4 pt-4 pb-3">
+                      <DialogTitle>Add Indicator</DialogTitle>
+                      <DialogDescription>
+                        Browse and select an indicator to add to this strategy.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-3 px-4 py-3">
+                      <div className="flex flex-col gap-3 md:flex-row md:items-end">
+                        <div className="relative min-w-0 flex-1">
+                          <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                          <Input
+                            value={indicatorSearch}
+                            onChange={(event) => {
+                              setIndicatorSearch(event.target.value);
+                              setIndicatorPage(1);
+                            }}
+                            onKeyDown={(event) => {
+                              if (event.key !== "Enter") {
+                                return;
+                              }
 
-                            const firstIndicator = indicatorOptions[0];
-                            if (!firstIndicator) {
-                              return;
-                            }
+                              const firstIndicator = indicatorOptions[0];
+                              if (!firstIndicator) {
+                                return;
+                              }
 
-                            event.preventDefault();
-                            appendIndicatorDraft(firstIndicator._id);
-                            setIsIndicatorMenuOpen(false);
-                          }}
-                          placeholder="Search"
-                          className="w-full rounded-md border-0 border-b-2 border-foreground/15 bg-muted/60 pr-10 pl-9 focus-visible:border-primary focus-visible:ring-0 dark:bg-input/30"
-                        />
-                        <div className="absolute top-1/2 right-1.5 flex -translate-y-1/2 items-center">
+                              event.preventDefault();
+                              appendIndicatorDraft(firstIndicator._id);
+                              setIsIndicatorMenuOpen(false);
+                            }}
+                            placeholder="Search"
+                            className="w-full rounded-md border-0 border-b-2 border-foreground/15 bg-muted/60 pr-10 pl-9 focus-visible:border-primary focus-visible:ring-0 dark:bg-input/30"
+                          />
+                          <div className="absolute top-1/2 right-1.5 flex -translate-y-1/2 items-center">
+                            <DropdownMenu modal={false}>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  className="h-6 w-6"
+                                >
+                                  <ListFilter className="h-3.5 w-3.5" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent
+                                align="end"
+                                className="w-52"
+                                onClick={(event) => event.stopPropagation()}
+                              >
+                                <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+                                <DropdownMenuRadioGroup
+                                  value={indicatorSortBy}
+                                  onValueChange={(value) => {
+                                    const nextSortBy =
+                                      value as IndicatorSortField;
+                                    setIndicatorSortBy(nextSortBy);
+                                    if (nextSortBy === "createdAt") {
+                                      setIndicatorOrder("desc");
+                                    }
+                                    if (nextSortBy === "name") {
+                                      setIndicatorOrder("asc");
+                                    }
+                                    setIndicatorPage(1);
+                                  }}
+                                >
+                                  {indicatorSortOptions.map((option) => (
+                                    <DropdownMenuRadioItem
+                                      key={option.value}
+                                      value={option.value}
+                                    >
+                                      {option.label}
+                                    </DropdownMenuRadioItem>
+                                  ))}
+                                </DropdownMenuRadioGroup>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuLabel>Order</DropdownMenuLabel>
+                                <DropdownMenuRadioGroup
+                                  value={indicatorOrder}
+                                  onValueChange={(value) => {
+                                    setIndicatorOrder(value as SortOrder);
+                                    setIndicatorPage(1);
+                                  }}
+                                >
+                                  <DropdownMenuRadioItem value="asc">
+                                    Asc
+                                  </DropdownMenuRadioItem>
+                                  <DropdownMenuRadioItem value="desc">
+                                    Desc
+                                  </DropdownMenuRadioItem>
+                                </DropdownMenuRadioGroup>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </div>
+                        <div className="flex w-full md:w-[180px] md:flex-none">
                           <DropdownMenu modal={false}>
                             <DropdownMenuTrigger asChild>
                               <Button
                                 type="button"
-                                variant="ghost"
-                                size="icon-sm"
-                                className="h-6 w-6"
+                                variant="outline"
+                                className="h-8 w-full justify-between gap-2"
                               >
-                                <ListFilter className="h-3.5 w-3.5" />
+                                {
+                                  indicatorCategoryOptions.find(
+                                    (option) =>
+                                      option.value === indicatorCategory,
+                                  )?.label
+                                }
+                                <ChevronsUpDown className="h-3.5 w-3.5 opacity-60" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent
-                              align="end"
-                              className="w-52"
+                              align="start"
                               onClick={(event) => event.stopPropagation()}
                             >
-                              <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+                              <DropdownMenuLabel>Category</DropdownMenuLabel>
                               <DropdownMenuRadioGroup
-                                value={indicatorSortBy}
+                                value={indicatorCategory}
                                 onValueChange={(value) => {
-                                  const nextSortBy =
-                                    value as IndicatorSortField;
-                                  setIndicatorSortBy(nextSortBy);
-                                  if (nextSortBy === "createdAt") {
-                                    setIndicatorOrder("desc");
-                                  }
-                                  if (nextSortBy === "name") {
-                                    setIndicatorOrder("asc");
-                                  }
+                                  setIndicatorCategory(
+                                    value as IndicatorCategory | "all",
+                                  );
                                   setIndicatorPage(1);
                                 }}
                               >
-                                {indicatorSortOptions.map((option) => (
+                                {indicatorCategoryOptions.map((option) => (
                                   <DropdownMenuRadioItem
                                     key={option.value}
                                     value={option.value}
@@ -4089,297 +4195,281 @@ export function StrategyBuilder({
                                   </DropdownMenuRadioItem>
                                 ))}
                               </DropdownMenuRadioGroup>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuLabel>Order</DropdownMenuLabel>
-                              <DropdownMenuRadioGroup
-                                value={indicatorOrder}
-                                onValueChange={(value) => {
-                                  setIndicatorOrder(value as SortOrder);
-                                  setIndicatorPage(1);
-                                }}
-                              >
-                                <DropdownMenuRadioItem value="asc">
-                                  Asc
-                                </DropdownMenuRadioItem>
-                                <DropdownMenuRadioItem value="desc">
-                                  Desc
-                                </DropdownMenuRadioItem>
-                              </DropdownMenuRadioGroup>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
                       </div>
-                      <div className="flex w-full md:w-[180px] md:flex-none">
-                        <DropdownMenu modal={false}>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              className="h-8 w-full justify-between gap-2"
-                            >
-                              {
-                                indicatorCategoryOptions.find(
-                                  (option) =>
-                                    option.value === indicatorCategory,
-                                )?.label
-                              }
-                              <ChevronsUpDown className="h-3.5 w-3.5 opacity-60" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent
-                            align="start"
-                            onClick={(event) => event.stopPropagation()}
-                          >
-                            <DropdownMenuLabel>Category</DropdownMenuLabel>
-                            <DropdownMenuRadioGroup
-                              value={indicatorCategory}
-                              onValueChange={(value) => {
-                                setIndicatorCategory(
-                                  value as IndicatorCategory | "all",
-                                );
-                                setIndicatorPage(1);
-                              }}
-                            >
-                              {indicatorCategoryOptions.map((option) => (
-                                <DropdownMenuRadioItem
-                                  key={option.value}
-                                  value={option.value}
-                                >
-                                  {option.label}
-                                </DropdownMenuRadioItem>
-                              ))}
-                            </DropdownMenuRadioGroup>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
                     </div>
-                  </div>
-                  <DropdownMenuSeparator />
-                  {indicatorStatus ? (
-                    <div className="flex items-center justify-center gap-2 px-4 pt-3 pb-4 text-sm text-muted-foreground">
-                      {indicatorStatus === "searching" ? (
-                        <>
-                          <Search className="h-4 w-4 animate-pulse" />
-                          <span>Searching indicator....</span>
-                        </>
-                      ) : (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          <span>Loading indicator....</span>
-                        </>
-                      )}
-                    </div>
-                  ) : indicatorOptions.length === 0 ? (
-                    <p className="flex items-center justify-center px-4 pt-3 pb-4 text-center text-sm text-muted-foreground">
-                      No indicators found.
-                    </p>
-                  ) : indicatorOptions.length > 0 ? (
-                    <Command
-                      shouldFilter={false}
-                      className="rounded-none bg-transparent p-0"
-                    >
-                      <ScrollArea
-                        className={cn(
-                          "px-4 py-3",
-                          indicatorOptions.length > 4 && "h-[320px]",
-                        )}
-                        onScrollCapture={(event) => {
-                          const node = event.target as HTMLElement;
-                          const distanceToBottom =
-                            node.scrollHeight -
-                            node.scrollTop -
-                            node.clientHeight;
-
-                          if (
-                            distanceToBottom < 24 &&
-                            indicatorHasNextPage &&
-                            !indicatorStatus &&
-                            !isAppendingIndicators
-                          ) {
-                            setIndicatorPage((prev) => prev + 1);
-                          }
-                        }}
-                      >
-                        <CommandList className="max-h-none overflow-visible px-0 py-0">
-                          <CommandGroup className="space-y-1 p-0">
-                            {indicatorOptions.map((item) => (
-                              <CommandItem
-                                key={item._id}
-                                value={`${item.name} ${item.category} ${item.description}`}
-                                className="px-3 py-1.5 text-left"
-                                onSelect={() => {
-                                  appendIndicatorDraft(item._id);
-                                  setIsIndicatorMenuOpen(false);
-                                }}
-                              >
-                                <div className="min-w-0 w-full space-y-0.5">
-                                  <p className="truncate text-sm font-medium text-foreground">
-                                    {item.name}
-                                  </p>
-                                  <p className="line-clamp-2 text-xs leading-4 text-muted-foreground">
-                                    {item.description}
-                                  </p>
-                                </div>
-                              </CommandItem>
-                            ))}
-                            {indicatorHasNextPage ? (
-                              <div className="flex h-10 items-center justify-center">
-                                {isAppendingIndicators ? (
-                                  <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin text-muted-foreground" />
-                                    <span className="text-sm text-muted-foreground">
-                                      Loading...
-                                    </span>
-                                  </>
-                                ) : null}
-                              </div>
-                            ) : null}
-                          </CommandGroup>
-                        </CommandList>
-                      </ScrollArea>
-                    </Command>
-                  ) : null}
-                </DialogContent>
-              </Dialog>
-            </div>
-
-            {indicatorDrafts.length === 0 ? (
-              <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-                No indicators added yet. Click the Add indicator button to
-                choose one.
-              </div>
-            ) : (
-              indicatorDrafts.map((draft, index) => {
-                const isUsedInStrategy = isIndicatorDraftUsed(
-                  draft,
-                  usedIndicatorKeys,
-                );
-
-                return (
-                  <div
-                    key={draft.id}
-                    className="rounded-xl border border-border/60 p-2.5 md:p-3"
-                  >
-                    <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-                      <div className="min-w-0 flex-1 space-y-1.5">
-                        <p className="text-sm font-medium break-words">
-                          {index + 1}.{" "}
-                          {draft.indicatorName || "Unknown indicator"}
-                        </p>
-                        {draft.params.length === 0 ? (
-                          <p className="text-xs break-words text-muted-foreground">
-                            No params
-                          </p>
+                    <DropdownMenuSeparator />
+                    {indicatorStatus ? (
+                      <div className="flex items-center justify-center gap-2 px-4 pt-3 pb-4 text-sm text-muted-foreground">
+                        {indicatorStatus === "searching" ? (
+                          <>
+                            <Search className="h-4 w-4 animate-pulse" />
+                            <span>Searching indicator....</span>
+                          </>
                         ) : (
-                          <div className="space-y-1 text-xs text-muted-foreground">
-                            {draft.params.map((param) => (
-                              <p key={param.id} className="break-words">
-                                {param.key}: {param.value}
-                              </p>
-                            ))}
-                          </div>
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <span>Loading indicator....</span>
+                          </>
                         )}
                       </div>
+                    ) : indicatorOptions.length === 0 ? (
+                      <p className="flex items-center justify-center px-4 pt-3 pb-4 text-center text-sm text-muted-foreground">
+                        No indicators found.
+                      </p>
+                    ) : indicatorOptions.length > 0 ? (
+                      <Command
+                        shouldFilter={false}
+                        className="rounded-none bg-transparent p-0"
+                      >
+                        <ScrollArea
+                          className={cn(
+                            "px-4 py-3",
+                            indicatorOptions.length > 4 && "h-[320px]",
+                          )}
+                          onScrollCapture={(event) => {
+                            const node = event.target as HTMLElement;
+                            const distanceToBottom =
+                              node.scrollHeight -
+                              node.scrollTop -
+                              node.clientHeight;
 
-                      <div className="flex w-full gap-2 self-start md:w-auto md:self-center">
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon-sm"
-                              aria-label={`Edit indicator ${index + 1}`}
-                              title="Edit indicator"
+                            if (
+                              distanceToBottom < 24 &&
+                              indicatorHasNextPage &&
+                              !indicatorStatus &&
+                              !isAppendingIndicators
+                            ) {
+                              setIndicatorPage((prev) => prev + 1);
+                            }
+                          }}
+                        >
+                          <CommandList className="max-h-none overflow-visible px-0 py-0">
+                            <CommandGroup className="space-y-1 p-0">
+                              {indicatorOptions.map((item) => (
+                                <CommandItem
+                                  key={item._id}
+                                  value={`${item.name} ${item.category} ${item.description}`}
+                                  className="px-3 py-1.5 text-left"
+                                  onSelect={() => {
+                                    appendIndicatorDraft(item._id);
+                                    setIsIndicatorMenuOpen(false);
+                                  }}
+                                >
+                                  <div className="min-w-0 w-full space-y-0.5">
+                                    <p className="truncate text-sm font-medium text-foreground">
+                                      {item.name}
+                                    </p>
+                                    <p className="line-clamp-2 text-xs leading-4 text-muted-foreground">
+                                      {item.description}
+                                    </p>
+                                  </div>
+                                </CommandItem>
+                              ))}
+                              {indicatorHasNextPage ? (
+                                <div className="flex h-10 items-center justify-center">
+                                  {isAppendingIndicators ? (
+                                    <>
+                                      <Loader2 className="mr-2 h-4 w-4 animate-spin text-muted-foreground" />
+                                      <span className="text-sm text-muted-foreground">
+                                        Loading...
+                                      </span>
+                                    </>
+                                  ) : null}
+                                </div>
+                              ) : null}
+                            </CommandGroup>
+                          </CommandList>
+                        </ScrollArea>
+                      </Command>
+                    ) : null}
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              {indicatorDrafts.length === 0 ? (
+                <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                  No indicators added yet. Click the Add indicator button to
+                  choose one.
+                </div>
+              ) : (
+                indicatorDrafts.map((draft, index) => {
+                  const isUsedInStrategy = isIndicatorDraftUsed(
+                    draft,
+                    usedIndicatorKeys,
+                  );
+
+                  return (
+                    <div
+                      key={draft.id}
+                      className="rounded-xl border border-border/60 p-2.5 md:p-3"
+                    >
+                      <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                        <div className="min-w-0 flex-1 space-y-1.5">
+                          <p className="text-sm font-medium break-words">
+                            {index + 1}.{" "}
+                            {draft.indicatorName || "Unknown indicator"}
+                          </p>
+                          {draft.params.length === 0 ? (
+                            <p className="text-xs break-words text-muted-foreground">
+                              No params
+                            </p>
+                          ) : (
+                            <div className="space-y-1 text-xs text-muted-foreground">
+                              {draft.params.map((param) => (
+                                <p key={param.id} className="break-words">
+                                  {param.key}: {param.value}
+                                </p>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex w-full gap-2 self-start md:w-auto md:self-center">
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon-sm"
+                                aria-label={`Edit indicator ${index + 1}`}
+                                title="Edit indicator"
+                              >
+                                <Settings2 className="h-4 w-4" />
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent
+                              onOpenAutoFocus={(event) =>
+                                event.preventDefault()
+                              }
+                              className="top-[8vh] max-h-[calc(100vh-4rem)] -translate-y-0 gap-0 overflow-hidden p-0 md:top-[10vh] md:max-w-[420px]"
                             >
-                              <Settings2 className="h-4 w-4" />
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent
-                            onOpenAutoFocus={(event) => event.preventDefault()}
-                            className="top-[8vh] max-h-[calc(100vh-4rem)] -translate-y-0 gap-0 overflow-hidden p-0 md:top-[10vh] md:max-w-[420px]"
-                          >
-                            <DialogHeader className="border-b px-4 pt-4 pb-3">
-                              <DialogTitle>
-                                {draft.indicatorName || "Indicator"}
-                              </DialogTitle>
-                              <DialogDescription className="break-words">
-                                {draft.indicatorDescription ||
-                                  "Edit indicator source and parameter values."}
-                              </DialogDescription>
-                            </DialogHeader>
-                            <div className="space-y-4 p-4">
-                              <div className="grid items-center gap-2 md:grid-cols-[72px_minmax(0,1fr)] md:gap-3">
-                                <div>
-                                  <Label>source</Label>
+                              <DialogHeader className="border-b px-4 pt-4 pb-3">
+                                <DialogTitle>
+                                  {draft.indicatorName || "Indicator"}
+                                </DialogTitle>
+                                <DialogDescription className="break-words">
+                                  {draft.indicatorDescription ||
+                                    "Edit indicator source and parameter values."}
+                                </DialogDescription>
+                              </DialogHeader>
+                              <div className="space-y-4 p-4">
+                                <div className="grid items-center gap-2 md:grid-cols-[72px_minmax(0,1fr)] md:gap-3">
+                                  <div>
+                                    <Label>source</Label>
+                                  </div>
+                                  <div className="md:max-w-[180px]">
+                                    <DropdownField
+                                      value={draft.source}
+                                      onChange={(nextSource) =>
+                                        updateIndicatorDraft(
+                                          draft.id,
+                                          (current) => ({
+                                            ...current,
+                                            source: nextSource,
+                                          }),
+                                        )
+                                      }
+                                      options={sourceOptions.map((source) => ({
+                                        label: source,
+                                        value: source,
+                                      }))}
+                                    />
+                                  </div>
                                 </div>
-                                <div className="md:max-w-[180px]">
-                                  <DropdownField
-                                    value={draft.source}
-                                    onChange={(nextSource) =>
-                                      updateIndicatorDraft(
-                                        draft.id,
-                                        (current) => ({
-                                          ...current,
-                                          source: nextSource,
-                                        }),
-                                      )
-                                    }
-                                    options={sourceOptions.map((source) => ({
-                                      label: source,
-                                      value: source,
-                                    }))}
-                                  />
-                                </div>
-                              </div>
 
-                              {draft.params.length > 0 && (
-                                <div className="space-y-3">
-                                  <Label>Parameters</Label>
-                                  <div className="space-y-2 rounded-lg border p-3">
-                                    {draft.params.map((param) =>
-                                      (() => {
-                                        const paramHelpText = getParamHelpText(
-                                          param.key,
-                                        );
+                                {draft.params.length > 0 && (
+                                  <div className="space-y-3">
+                                    <Label>Parameters</Label>
+                                    <div className="space-y-2 rounded-lg border p-3">
+                                      {draft.params.map((param) =>
+                                        (() => {
+                                          const paramHelpText =
+                                            getParamHelpText(param.key);
 
-                                        return (
-                                          <div
-                                            key={param.id}
-                                            className={cn(
-                                              "grid items-center gap-1.5 md:gap-2",
-                                              param.type === "boolean"
-                                                ? "grid-cols-[minmax(0,1fr)_auto]"
-                                                : "md:grid-cols-[minmax(0,1fr)_minmax(120px,160px)]",
-                                            )}
-                                          >
-                                            <div>
-                                              <div className="flex min-h-8 items-center gap-1.5 rounded-lg px-1 text-sm font-medium text-foreground">
-                                                <span>{param.key}</span>
-                                                {paramHelpText && (
-                                                  <ParamHelpTooltip
-                                                    label={param.key}
-                                                    content={paramHelpText}
-                                                  />
-                                                )}
-                                              </div>
-                                            </div>
-
+                                          return (
                                             <div
-                                              className={
+                                              key={param.id}
+                                              className={cn(
+                                                "grid items-center gap-1.5 md:gap-2",
                                                 param.type === "boolean"
-                                                  ? "w-fit"
-                                                  : "md:max-w-[160px]"
-                                              }
+                                                  ? "grid-cols-[minmax(0,1fr)_auto]"
+                                                  : "md:grid-cols-[minmax(0,1fr)_minmax(120px,160px)]",
+                                              )}
                                             >
-                                              {param.type === "boolean" ? (
-                                                <div className="flex h-8 items-center">
-                                                  <Switch
-                                                    checked={
-                                                      param.value === "true"
-                                                    }
-                                                    onCheckedChange={(
-                                                      checked,
-                                                    ) =>
+                                              <div>
+                                                <div className="flex min-h-8 items-center gap-1.5 rounded-lg px-1 text-sm font-medium text-foreground">
+                                                  <span>{param.key}</span>
+                                                  {paramHelpText && (
+                                                    <ParamHelpTooltip
+                                                      label={param.key}
+                                                      content={paramHelpText}
+                                                    />
+                                                  )}
+                                                </div>
+                                              </div>
+
+                                              <div
+                                                className={
+                                                  param.type === "boolean"
+                                                    ? "w-fit"
+                                                    : "md:max-w-[160px]"
+                                                }
+                                              >
+                                                {param.type === "boolean" ? (
+                                                  <div className="flex h-8 items-center">
+                                                    <Switch
+                                                      checked={
+                                                        param.value === "true"
+                                                      }
+                                                      onCheckedChange={(
+                                                        checked,
+                                                      ) =>
+                                                        updateIndicatorDraft(
+                                                          draft.id,
+                                                          (current) => {
+                                                            const params =
+                                                              current.params.map(
+                                                                (item) =>
+                                                                  item.id ===
+                                                                  param.id
+                                                                    ? {
+                                                                        ...item,
+                                                                        value:
+                                                                          checked
+                                                                            ? "true"
+                                                                            : "false",
+                                                                      }
+                                                                    : item,
+                                                              );
+                                                            const indicatorName =
+                                                              current.indicatorName ??
+                                                              "";
+
+                                                            return {
+                                                              ...current,
+                                                              params,
+                                                              key: indicatorName
+                                                                ? buildUniqueIndicatorKey(
+                                                                    indicatorName,
+                                                                    params,
+                                                                    indicatorDrafts,
+                                                                    current.id,
+                                                                  )
+                                                                : current.key,
+                                                            };
+                                                          },
+                                                        )
+                                                      }
+                                                    />
+                                                  </div>
+                                                ) : (
+                                                  <Input
+                                                    className="h-8"
+                                                    value={param.value}
+                                                    onChange={(event) =>
                                                       updateIndicatorDraft(
                                                         draft.id,
                                                         (current) => {
@@ -4391,9 +4481,16 @@ export function StrategyBuilder({
                                                                   ? {
                                                                       ...item,
                                                                       value:
-                                                                        checked
-                                                                          ? "true"
-                                                                          : "false",
+                                                                        param.type ===
+                                                                        "number"
+                                                                          ? sanitizeDecimalInput(
+                                                                              event
+                                                                                .target
+                                                                                .value,
+                                                                            )
+                                                                          : event
+                                                                              .target
+                                                                              .value,
                                                                     }
                                                                   : item,
                                                             );
@@ -4416,208 +4513,158 @@ export function StrategyBuilder({
                                                         },
                                                       )
                                                     }
+                                                    onBlur={() =>
+                                                      updateIndicatorDraft(
+                                                        draft.id,
+                                                        (current) => {
+                                                          const params =
+                                                            current.params.map(
+                                                              (item) =>
+                                                                item.id ===
+                                                                param.id
+                                                                  ? {
+                                                                      ...item,
+                                                                      value:
+                                                                        param.type ===
+                                                                        "number"
+                                                                          ? fallbackInputValue(
+                                                                              item.value,
+                                                                              item.defaultValue,
+                                                                            )
+                                                                          : item.value,
+                                                                    }
+                                                                  : item,
+                                                            );
+                                                          const indicatorName =
+                                                            current.indicatorName ??
+                                                            "";
+
+                                                          return {
+                                                            ...current,
+                                                            params,
+                                                            key: indicatorName
+                                                              ? buildUniqueIndicatorKey(
+                                                                  indicatorName,
+                                                                  params,
+                                                                  indicatorDrafts,
+                                                                  current.id,
+                                                                )
+                                                              : current.key,
+                                                          };
+                                                        },
+                                                      )
+                                                    }
+                                                    placeholder={
+                                                      param.defaultValue ||
+                                                      "value"
+                                                    }
                                                   />
-                                                </div>
-                                              ) : (
-                                                <Input
-                                                  className="h-8"
-                                                  value={param.value}
-                                                  onChange={(event) =>
-                                                    updateIndicatorDraft(
-                                                      draft.id,
-                                                      (current) => {
-                                                        const params =
-                                                          current.params.map(
-                                                            (item) =>
-                                                              item.id ===
-                                                              param.id
-                                                                ? {
-                                                                    ...item,
-                                                                    value:
-                                                                      param.type ===
-                                                                      "number"
-                                                                        ? sanitizeDecimalInput(
-                                                                            event
-                                                                              .target
-                                                                              .value,
-                                                                          )
-                                                                        : event
-                                                                            .target
-                                                                            .value,
-                                                                  }
-                                                                : item,
-                                                          );
-                                                        const indicatorName =
-                                                          current.indicatorName ??
-                                                          "";
-
-                                                        return {
-                                                          ...current,
-                                                          params,
-                                                          key: indicatorName
-                                                            ? buildUniqueIndicatorKey(
-                                                                indicatorName,
-                                                                params,
-                                                                indicatorDrafts,
-                                                                current.id,
-                                                              )
-                                                            : current.key,
-                                                        };
-                                                      },
-                                                    )
-                                                  }
-                                                  onBlur={() =>
-                                                    updateIndicatorDraft(
-                                                      draft.id,
-                                                      (current) => {
-                                                        const params =
-                                                          current.params.map(
-                                                            (item) =>
-                                                              item.id ===
-                                                              param.id
-                                                                ? {
-                                                                    ...item,
-                                                                    value:
-                                                                      param.type ===
-                                                                      "number"
-                                                                        ? fallbackInputValue(
-                                                                            item.value,
-                                                                            item.defaultValue,
-                                                                          )
-                                                                        : item.value,
-                                                                  }
-                                                                : item,
-                                                          );
-                                                        const indicatorName =
-                                                          current.indicatorName ??
-                                                          "";
-
-                                                        return {
-                                                          ...current,
-                                                          params,
-                                                          key: indicatorName
-                                                            ? buildUniqueIndicatorKey(
-                                                                indicatorName,
-                                                                params,
-                                                                indicatorDrafts,
-                                                                current.id,
-                                                              )
-                                                            : current.key,
-                                                        };
-                                                      },
-                                                    )
-                                                  }
-                                                  placeholder={
-                                                    param.defaultValue ||
-                                                    "value"
-                                                  }
-                                                />
-                                              )}
+                                                )}
+                                              </div>
                                             </div>
-                                          </div>
-                                        );
-                                      })(),
-                                    )}
+                                          );
+                                        })(),
+                                      )}
+                                    </div>
                                   </div>
-                                </div>
-                              )}
-                            </div>
-                          </DialogContent>
-                        </Dialog>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-sm"
-                          className="text-destructive hover:text-destructive/80"
-                          onClick={() => {
-                            if (isUsedInStrategy) return;
+                                )}
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            className="text-destructive hover:text-destructive/80"
+                            onClick={() => {
+                              if (isUsedInStrategy) return;
 
-                            setIndicatorDrafts((prev) =>
-                              prev.filter((item) => item.id !== draft.id),
-                            );
-                          }}
-                          disabled={isUsedInStrategy}
-                          aria-label={`Clear indicator ${index + 1}`}
-                          title={
-                            isUsedInStrategy
-                              ? "This indicator is used in rules or risk settings, so clear is disabled"
-                              : "Clear indicator"
-                          }
-                        >
-                          {isUsedInStrategy ? (
-                            <Lock className="h-4 w-4" />
-                          ) : (
-                            <Trash2 className="h-4 w-4" />
-                          )}
-                        </Button>
+                              setIndicatorDrafts((prev) =>
+                                prev.filter((item) => item.id !== draft.id),
+                              );
+                            }}
+                            disabled={isUsedInStrategy}
+                            aria-label={`Clear indicator ${index + 1}`}
+                            title={
+                              isUsedInStrategy
+                                ? "This indicator is used in rules or risk settings, so clear is disabled"
+                                : "Clear indicator"
+                            }
+                          >
+                            {isUsedInStrategy ? (
+                              <Lock className="h-4 w-4" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })
-            )}
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          <div className="min-w-0 space-y-4">
+            <LogicBlockEditor
+              title="Buy Entry"
+              description="Set the buy-side root logic, nested conditions, and risk management."
+              draft={buyDraft}
+              candleOptions={candleOptions}
+              indicatorFieldOptions={indicatorFieldOptions}
+              indicatorKeys={indicatorKeys}
+              onChange={setBuyDraft}
+            />
+
+            <LogicBlockEditor
+              title="Sell Entry"
+              description="Set the sell-side root logic, nested conditions, and risk management."
+              draft={sellDraft}
+              candleOptions={candleOptions}
+              indicatorFieldOptions={indicatorFieldOptions}
+              indicatorKeys={indicatorKeys}
+              onChange={setSellDraft}
+            />
           </div>
         </div>
-
-        <div className="min-w-0 space-y-4">
-          <LogicBlockEditor
-            title="Buy Entry"
-            description="Set the buy-side root logic, nested conditions, and risk management."
-            draft={buyDraft}
-            candleOptions={candleOptions}
-            indicatorFieldOptions={indicatorFieldOptions}
-            indicatorKeys={indicatorKeys}
-            onChange={setBuyDraft}
-          />
-
-          <LogicBlockEditor
-            title="Sell Entry"
-            description="Set the sell-side root logic, nested conditions, and risk management."
-            draft={sellDraft}
-            candleOptions={candleOptions}
-            indicatorFieldOptions={indicatorFieldOptions}
-            indicatorKeys={indicatorKeys}
-            onChange={setSellDraft}
-          />
-
-          {!embedded ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Save Strategy</CardTitle>
-                <CardDescription>
-                  {isDuplicating
-                    ? "Save this cloned strategy as your own when everything looks good."
-                    : "Save your strategy when everything looks good."}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button
-                  type="button"
-                  className="relative w-full"
-                  onClick={() => void handleSubmit()}
-                  disabled={submitDisabled}
-                >
-                  {isSubmitting ? (
-                    <Loader2 className="absolute h-4 w-4 animate-spin" />
-                  ) : null}
-                  <span
-                    className={cn(
-                      "inline-flex items-center gap-2",
-                      isSubmitting && "opacity-0",
-                    )}
-                  >
-                    <Save className="h-4 w-4" />
-                    {submitLabel}
-                  </span>
-                </Button>
-                {helperText ? (
-                  <p className="text-xs text-muted-foreground">{helperText}</p>
-                ) : null}
-              </CardContent>
-            </Card>
-          ) : null}
-        </div>
       </div>
+
+      {!embedded ? (
+        <SheetFooter className="border-t px-4 pt-4 pb-6 md:px-6">
+          <Button
+            onClick={() => void handleSubmit()}
+            disabled={submitDisabled}
+            className="relative w-full md:w-auto"
+          >
+            {isSubmitting ? (
+              <Loader2 className="absolute h-4 w-4 animate-spin" />
+            ) : null}
+            <span className={isSubmitting ? "opacity-0" : undefined}>
+              {submitLabel}
+            </span>
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full md:w-auto"
+            disabled={isSubmitting || isLoadingStrategy}
+            onClick={() => {
+              if (window.history.length > 1) {
+                navigate(-1);
+                return;
+              }
+
+              navigate("/strategy");
+            }}
+          >
+            Cancel
+          </Button>
+          {helperText ? (
+            <p className="w-full text-xs text-muted-foreground">{helperText}</p>
+          ) : null}
+        </SheetFooter>
+      ) : null}
     </fieldset>
   );
 }

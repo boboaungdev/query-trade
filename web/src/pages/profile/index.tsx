@@ -91,6 +91,7 @@ import {
 } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { checkUserExist, editProfile } from "@/api/auth";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
 const NAME_REGEX = /^[A-Za-z0-9 ]{1,20}$/;
@@ -352,6 +353,7 @@ export default function Profile() {
   const profileListScrollRef = useRef<HTMLDivElement | null>(null);
   const profileListLoadMoreRef = useRef<HTMLDivElement | null>(null);
   const usernameRequestIdRef = useRef(0);
+  const isMobile = useIsMobile();
 
   const [form, setForm] = useState<FormState>({
     name: user?.name || "",
@@ -840,7 +842,7 @@ export default function Profile() {
     );
   }
 
-  const onCancel = () => {
+  function onCancel() {
     if (!user) return;
     setForm({
       name: user.name || "",
@@ -853,7 +855,7 @@ export default function Profile() {
     setUsernameStatus("idle");
     setSelectedAvatarFileName("");
     setIsEditing(false);
-  };
+  }
 
   const onStartEditing = () => {
     if (!user) return;
@@ -1706,7 +1708,7 @@ export default function Profile() {
               </div>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
               {statItems.map(({ tab, label, value }) => (
                 <div
                   key={tab}
@@ -1733,20 +1735,40 @@ export default function Profile() {
                 }}
               >
                 <SheetContent
-                  side="right"
-                  className="w-full md:max-w-md"
+                  side={isMobile ? "bottom" : "right"}
+                  showCloseButton={!isMobile}
+                  className={
+                    isMobile
+                      ? "flex h-auto max-h-[92vh] w-full flex-col overflow-x-hidden rounded-t-2xl p-0"
+                      : "w-full md:max-w-md"
+                  }
                   onOpenAutoFocus={(event) => {
                     event.preventDefault();
                   }}
                 >
-                  <SheetHeader className="border-b px-6 py-5">
+                  <SheetHeader
+                    className={
+                      isMobile ? "border-b px-4 py-4" : "border-b px-6 py-5"
+                    }
+                  >
+                    {isMobile ? (
+                      <div className="-mt-1 mb-3 flex justify-center">
+                        <div className="h-1.5 w-12 rounded-full bg-muted-foreground/25" />
+                      </div>
+                    ) : null}
                     <SheetTitle>Edit Profile</SheetTitle>
                     <SheetDescription>
                       Update your public profile details.
                     </SheetDescription>
                   </SheetHeader>
 
-                  <div className="flex-1 overflow-y-auto px-6 py-5">
+                  <div
+                    className={
+                      isMobile
+                        ? "flex-1 overflow-y-auto px-4 py-4"
+                        : "flex-1 overflow-y-auto px-6 py-5"
+                    }
+                  >
                     <div className="space-y-5">
                       <div className="space-y-2">
                         <div className="flex items-center gap-1.5">
@@ -1925,7 +1947,13 @@ export default function Profile() {
                     </div>
                   </div>
 
-                  <SheetFooter className="border-t px-6 pt-4 pb-6">
+                  <SheetFooter
+                    className={
+                      isMobile
+                        ? "border-t px-4 pt-3 pb-4"
+                        : "border-t px-6 pt-4 pb-6"
+                    }
+                  >
                     <Button
                       onClick={onSave}
                       disabled={

@@ -1214,14 +1214,12 @@ export default function BacktestPage() {
                   {isEditing ? "Editing" : "New Run"}
                 </span>
               </div>
-              <CardTitle className="text-xl tracking-tight md:text-2xl">
-                {isEditing
-                  ? "Refine this saved backtest"
-                  : "Create a backtest run"}
+              <CardTitle className="text-lg tracking-tight md:text-xl">
+                {isEditing ? "Update this backtest" : "Create a backtest run"}
               </CardTitle>
               <CardDescription className="max-w-3xl text-sm leading-6">
                 {isEditing
-                  ? "Adjust the market, strategy, and capital settings, then save the updated simulation back into the same result flow."
+                  ? "Adjust the market, strategy, and capital settings, then save your changes to this backtest result."
                   : "Choose your market, strategy, and capital settings."}
               </CardDescription>
             </div>

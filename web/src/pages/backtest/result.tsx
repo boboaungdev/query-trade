@@ -1382,7 +1382,7 @@ export default function BacktestResultPage() {
                   Backtest Result
                 </span>
               </div>
-              <CardTitle className="text-xl tracking-tight md:text-2xl">
+              <CardTitle className="text-lg tracking-tight md:text-xl">
                 {backtest.symbol} backtest result
               </CardTitle>
               <CardDescription className="max-w-3xl text-sm leading-6">

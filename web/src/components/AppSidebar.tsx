@@ -4,6 +4,7 @@ import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
+  SidebarHeader,
   SidebarMenu,
   SidebarMenuAction,
   SidebarMenuItem,
@@ -39,6 +40,7 @@ import { useState } from "react";
 import { getApiErrorMessage } from "@/api/axios";
 import { signout } from "@/api/auth";
 import { toast } from "sonner";
+import { APP_NAME } from "@/constants";
 
 export function AppSidebar() {
   const { isMobile, setOpen, setOpenMobile } = useSidebar();
@@ -93,8 +95,30 @@ export function AppSidebar() {
         if (!menuOpen) setOpen(false);
       }}
     >
+      <SidebarHeader className="min-w-0 overflow-hidden px-2 pt-4 pb-2">
+        <Link
+          to="/"
+          onClick={handleMenuNavigation}
+          className="grid w-full min-w-0 max-w-full grid-cols-[2.25rem_minmax(0,1fr)] items-center gap-2 overflow-hidden rounded-xl px-2 py-1.5 transition-colors hover:bg-sidebar-accent/40 group-data-[collapsible=icon]:grid-cols-1 group-data-[collapsible=icon]:justify-items-center group-data-[collapsible=icon]:px-0"
+        >
+          <img
+            src="/query-trade.svg"
+            alt={`${APP_NAME} logo`}
+            className="h-9 w-9 shrink-0"
+          />
+          <div className="min-w-0 flex-1 overflow-hidden group-data-[collapsible=icon]:hidden">
+            <p className="truncate text-sm font-semibold text-sidebar-foreground">
+              {APP_NAME}
+            </p>
+            <p className="truncate text-xs text-sidebar-foreground/70">
+              Navigation
+            </p>
+          </div>
+        </Link>
+      </SidebarHeader>
+
       {/* TOP MENU */}
-      <SidebarContent className="pt-16 pl-2">
+      <SidebarContent className="pl-2">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild isActive={isRouteActive("/")}>

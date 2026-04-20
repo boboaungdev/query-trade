@@ -531,6 +531,7 @@ export default function StrategyDetailPage() {
   }
 
   const creatorUsername = strategy?.user?.username?.trim().replace(/^@/, "");
+  const strategyDescription = strategy?.description?.trim() || "No description";
   const canOpenCreatorProfile = Boolean(creatorUsername);
   const isBookmarked = Boolean(strategy?.isBookmarked);
   const onToggleBookmark = async () => {
@@ -623,12 +624,10 @@ export default function StrategyDetailPage() {
 
   const onCloneStrategy = () => {
     if (!strategy) return;
-
     navigate("/strategy", {
       state: {
         openStrategyBuilder: true,
         duplicateStrategyId: strategy._id,
-        duplicateStrategyName: strategy.name,
       },
     });
   };
@@ -727,9 +726,9 @@ export default function StrategyDetailPage() {
       : "";
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-5">
-      <div className="space-y-5 p-1 text-foreground">
-        <Card className="theme-hero-panel relative overflow-hidden border-border/70 shadow-sm">
+    <div className="mx-auto w-full max-w-7xl min-w-0 space-y-5 overflow-x-hidden">
+      <div className="min-w-0 space-y-5 p-1 text-foreground">
+        <Card className="theme-hero-panel relative min-w-0 overflow-hidden border-border/70 shadow-sm">
           <div className="theme-hero-overlay pointer-events-none absolute inset-0 opacity-90" />
           <div className="theme-hero-sheen pointer-events-none absolute inset-x-0 top-0 h-px" />
           <CardContent className="relative space-y-5">
@@ -791,7 +790,7 @@ export default function StrategyDetailPage() {
                         type="button"
                         size="icon-sm"
                         variant="ghost"
-                        className="-ml-px rounded-l-none border-transparent bg-transparent text-muted-foreground shadow-none hover:bg-background/60 hover:text-foreground"
+                        className="-ml-px shrink-0 rounded-l-none border-transparent bg-transparent text-muted-foreground shadow-none hover:bg-background/60 hover:text-foreground"
                         aria-label="More actions"
                         title="More actions"
                       >
@@ -837,14 +836,18 @@ export default function StrategyDetailPage() {
                       {isMine ? (
                         <>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem asChild>
-                            <Link
-                              to={`/strategy/${strategy._id}/edit`}
-                              className="flex items-center gap-2"
-                            >
-                              <Pencil className="h-4 w-4" />
-                              Edit
-                            </Link>
+                          <DropdownMenuItem
+                            onSelect={() => {
+                              navigate("/strategy", {
+                                state: {
+                                  openStrategyBuilder: true,
+                                  editStrategyId: strategy._id,
+                                },
+                              });
+                            }}
+                          >
+                            <Pencil className="h-4 w-4" />
+                            Edit
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             variant="destructive"
@@ -880,46 +883,62 @@ export default function StrategyDetailPage() {
                 {loadError || "Strategy not found."}
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="min-w-0 overflow-hidden space-y-4">
                 <div className="flex flex-wrap gap-2">
                   <span className="theme-glass-chip inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium tracking-[0.16em] text-primary uppercase">
                     Strategy Detail
                   </span>
                 </div>
 
-                <div className="space-y-3">
-                  <h1 className="max-w-4xl text-2xl font-semibold tracking-tight text-foreground md:text-4xl">
+                <div className="min-w-0 w-full max-w-full overflow-hidden space-y-3">
+                  <h1
+                    className="line-clamp-2 block min-w-0 w-full max-w-full break-all text-xl leading-tight font-semibold tracking-tight text-foreground md:text-2xl"
+                    title={strategy.name}
+                  >
                     {strategy.name}
                   </h1>
-                  <p className="text-sm leading-6 text-muted-foreground md:text-base">
-                    {strategy.description?.trim() || "No description"}
+                  <p
+                    className="block min-w-0 w-full max-w-full break-all text-sm leading-6 text-muted-foreground md:text-base"
+                    title={strategyDescription}
+                  >
+                    {strategyDescription}
                   </p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
-                    <UserRound className="h-3.5 w-3.5 text-muted-foreground" />@
-                    {strategy.user?.username || "unknown"}
+                <div className="flex min-w-0 flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                  <span className="inline-flex min-w-0 max-w-full items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                    <UserRound className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <span className="truncate">
+                      @{strategy.user?.username || "unknown"}
+                    </span>
                   </span>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                  <span className="inline-flex min-w-0 items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
                     {strategy.isPublic ? (
-                      <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+                      <Globe className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                     ) : (
-                      <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                      <Lock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                     )}
-                    {isMine ? "Mine" : strategy.isPublic ? "Public" : "Private"}
+                    <span>
+                      {isMine
+                        ? "Mine"
+                        : strategy.isPublic
+                          ? "Public"
+                          : "Private"}
+                    </span>
                   </span>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
-                    <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
-                    {strategy.stats?.viewCount ?? 0}
+                  <span className="inline-flex min-w-0 items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                    <TrendingUp className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <span>{strategy.stats?.viewCount ?? 0}</span>
                   </span>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
-                    <Bookmark className="h-3.5 w-3.5 text-muted-foreground" />
-                    {strategy.stats?.bookmarkCount ?? 0}
+                  <span className="inline-flex min-w-0 items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                    <Bookmark className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <span>{strategy.stats?.bookmarkCount ?? 0}</span>
                   </span>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
-                    <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
-                    {formatDateLabel(strategy.updatedAt)}
+                  <span className="inline-flex min-w-0 max-w-full items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                    <CalendarDays className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <span className="truncate">
+                      {formatDateLabel(strategy.updatedAt)}
+                    </span>
                   </span>
                 </div>
               </div>
@@ -929,8 +948,8 @@ export default function StrategyDetailPage() {
       </div>
 
       {!isLoading && strategy ? (
-        <div className="space-y-5">
-          <Card className="theme-creator-card overflow-hidden">
+        <div className="min-w-0 space-y-5">
+          <Card className="theme-creator-card min-w-0 overflow-hidden">
             <CardContent className="space-y-4">
               <CardTitle className="flex items-center gap-2 text-base">
                 <UserRound className="h-4 w-4 text-primary" />
@@ -968,34 +987,34 @@ export default function StrategyDetailPage() {
                       </p>
                     </div>
                   </div>
-                  <div className="grid grid-cols-3 gap-3 text-center md:min-w-[280px]">
-                    <div className="flex flex-col items-center">
+                  <div className="grid min-w-0 flex-1 grid-cols-3 gap-3 text-center md:max-w-[320px] md:flex-none">
+                    <div className="flex min-w-0 flex-col items-center">
                       <p className="text-lg font-semibold tracking-tight text-foreground">
                         {formatCompactNumber(
                           strategy.user?.stats?.followerCount,
                         )}
                       </p>
-                      <p className="text-[11px] tracking-[0.14em] text-muted-foreground uppercase">
+                      <p className="break-words text-[11px] tracking-[0.14em] text-muted-foreground uppercase">
                         Followers
                       </p>
                     </div>
-                    <div className="flex flex-col items-center">
+                    <div className="flex min-w-0 flex-col items-center">
                       <p className="text-lg font-semibold tracking-tight text-foreground">
                         {formatCompactNumber(
                           strategy.user?.stats?.strategyCount,
                         )}
                       </p>
-                      <p className="text-[11px] tracking-[0.14em] text-muted-foreground uppercase">
+                      <p className="break-words text-[11px] tracking-[0.14em] text-muted-foreground uppercase">
                         Strategies
                       </p>
                     </div>
-                    <div className="flex flex-col items-center">
+                    <div className="flex min-w-0 flex-col items-center">
                       <p className="text-lg font-semibold tracking-tight text-foreground">
                         {formatCompactNumber(
                           strategy.user?.stats?.backtestCount,
                         )}
                       </p>
-                      <p className="text-[11px] tracking-[0.14em] text-muted-foreground uppercase">
+                      <p className="break-words text-[11px] tracking-[0.14em] text-muted-foreground uppercase">
                         Backtests
                       </p>
                     </div>
@@ -1120,8 +1139,8 @@ export default function StrategyDetailPage() {
             tone="sell"
           />
 
-          <div className="grid gap-5 lg:grid-cols-3 lg:items-start">
-            <Card className="theme-primary-card overflow-hidden lg:col-span-3">
+          <div className="grid min-w-0 gap-5 lg:grid-cols-3 lg:items-start">
+            <Card className="theme-primary-card min-w-0 overflow-hidden lg:col-span-3">
               <CardHeader className="theme-primary-card-header space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="theme-primary-card-badge inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium tracking-[0.16em] uppercase">

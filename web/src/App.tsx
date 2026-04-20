@@ -13,7 +13,7 @@ import Dashboard from "./pages/dashboard";
 import Leaderboard from "./pages/leaderboard";
 import Backtest from "./pages/backtest/index";
 import BacktestResult from "./pages/backtest/result";
-import Strategy, { StrategyBuilder } from "./pages/strategy";
+import Strategy from "./pages/strategy";
 import StrategyDetail from "./pages/strategy/detail";
 import Bookmark from "./pages/bookmark";
 import Profile from "./pages/profile";
@@ -62,14 +62,6 @@ export default function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/strategy" element={<Strategy />} />
-              <Route
-                path="/strategy/create"
-                element={<Navigate to="/strategy" replace />}
-              />
-              <Route
-                path="/strategy/:strategyId/edit"
-                element={<StrategyBuilder />}
-              />
               <Route
                 path="/strategy/:strategyId"
                 element={<StrategyDetail />}
