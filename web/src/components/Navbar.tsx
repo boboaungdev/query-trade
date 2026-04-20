@@ -89,19 +89,24 @@ export default function Navbar() {
               </Avatar>
             </DropdownMenuTrigger>
 
-              <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuContent
+              align="end"
+              className="w-auto min-w-48 max-w-72"
+            >
               <DropdownMenuItem asChild>
                 <Link
                   to={profileHref}
-                  className="flex w-full items-start gap-2"
+                  className="flex w-full min-w-0 items-start gap-2"
                 >
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={user.avatar} />
                     <AvatarFallback>{initials}</AvatarFallback>
                   </Avatar>
-                  <span className="flex flex-col items-start">
-                    <span className="font-medium">{user.name}</span>
-                    <span className="text-xs text-muted-foreground">
+                  <span className="flex min-w-0 flex-col items-start">
+                    <span className="w-full truncate font-medium">
+                      {user.name}
+                    </span>
+                    <span className="w-full truncate text-xs text-muted-foreground">
                       @{user.username}
                     </span>
                   </span>

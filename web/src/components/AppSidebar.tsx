@@ -94,7 +94,7 @@ export function AppSidebar() {
       }}
     >
       {/* TOP MENU */}
-      <SidebarContent className="pt-10 pl-2">
+      <SidebarContent className="pt-16 pl-2">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild isActive={isRouteActive("/")}>
@@ -188,7 +188,7 @@ export function AppSidebar() {
                 </SidebarMenuAction>
               </DropdownMenuTrigger>
 
-                <DropdownMenuContent side="right" align="end" className="w-44">
+              <DropdownMenuContent side="right" align="end" className="w-44">
                 <DropdownMenuItem asChild>
                   <Link
                     to={profileHref}
