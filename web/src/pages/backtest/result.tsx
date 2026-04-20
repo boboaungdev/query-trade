@@ -24,15 +24,25 @@ import {
   SquareArrowOutUpRight,
   Target,
   Trash2,
-  TrendingDown,
   TrendingUp,
   UserRound,
 } from "lucide-react";
 import {
   Area,
   AreaChart as RechartsAreaChart,
+  Bar,
+  BarChart as RechartsBarChart,
   CartesianGrid,
+  Cell,
+  Label,
+  Pie,
+  PieChart,
+  PolarAngleAxis,
+  PolarGrid,
+  Radar,
+  RadarChart,
   XAxis,
+  YAxis,
 } from "recharts";
 
 import {
@@ -54,12 +64,19 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -72,6 +89,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useBookmarkIds } from "@/hooks/use-bookmark-ids";
 import { cn } from "@/lib/utils";
 import { deleteBacktest, fetchBacktestById } from "@/api/backtest";
@@ -227,6 +245,89 @@ function formatDuration(durationMs?: number) {
   return `${Math.max(1, totalMinutes)}m`;
 }
 
+function getUtcMonthLabel(timestamp: number) {
+  return new Date(timestamp).toLocaleString("en-US", {
+    month: "short",
+    timeZone: "UTC",
+  });
+}
+
+function getUtcHourLabel(timestamp: number) {
+  return `${new Date(timestamp).getUTCHours().toString().padStart(2, "0")}:00`;
+}
+
+function getUtcDateKey(timestamp: number) {
+  return new Date(timestamp).toISOString().slice(0, 10);
+}
+
+function getTopBucket(entries: Trade[], getKey: (trade: Trade) => string) {
+  const counts = new Map<string, number>();
+
+  for (const entry of entries) {
+    const key = getKey(entry);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+
+  let topKey = "-";
+  let topCount = 0;
+
+  for (const [key, count] of counts.entries()) {
+    if (count > topCount) {
+      topKey = key;
+      topCount = count;
+    }
+  }
+
+  return { key: topKey, count: topCount, size: counts.size };
+}
+
+type RadarView = "edge" | "execution" | "timing";
+type TradeActivityView = "date" | "hour" | "month";
+
+const radarViewOptions: Array<{
+  value: RadarView;
+  label: string;
+  description: string;
+}> = [
+  {
+    value: "edge",
+    label: "Edge",
+    description: "Win quality, payoff, recovery, and drawdown control.",
+  },
+  {
+    value: "execution",
+    label: "Execution",
+    description: "Trade frequency, fee load, and average trade output.",
+  },
+  {
+    value: "timing",
+    label: "Activity",
+    description: "When trades cluster by month, hour, and trading date.",
+  },
+];
+
+const tradeActivityViewOptions: Array<{
+  value: TradeActivityView;
+  label: string;
+  description: string;
+}> = [
+  {
+    value: "hour",
+    label: "Hour",
+    description: "Busiest trade entry hours in UTC.",
+  },
+  {
+    value: "date",
+    label: "Date",
+    description: "Most active trading dates in UTC.",
+  },
+  {
+    value: "month",
+    label: "Month",
+    description: "Monthly trade distribution in UTC.",
+  },
+];
+
 function EquityCurve({
   data,
   initialBalance,
@@ -247,7 +348,7 @@ function EquityCurve({
 
   if (chartData.length < 2) {
     return (
-      <div className="flex h-72 items-center justify-center rounded-lg border border-border/70 bg-background text-sm text-muted-foreground">
+      <div className="flex h-72 items-center justify-center text-sm text-muted-foreground">
         No equity curve data available.
       </div>
     );
@@ -268,20 +369,11 @@ function EquityCurve({
   } satisfies ChartConfig;
 
   return (
-    <div
-      className={cn(
-        "overflow-hidden rounded-xl border border-border/70 bg-background shadow-sm",
-        isProfit
-          ? "shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-success)_12%,transparent)]"
-          : "shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-destructive)_12%,transparent)]",
-      )}
-    >
-      <div className="flex items-center justify-between border-b border-border/60 px-4 py-3 md:px-5">
-        <div>
-          <p className="text-[11px] tracking-[0.18em] text-muted-foreground uppercase">
-            Equity Trend
-          </p>
-        </div>
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-[11px] tracking-[0.18em] text-muted-foreground uppercase">
+          Equity Trend
+        </p>
         <span
           className={cn(
             "inline-flex shrink-0 rounded-md border px-2 py-1 text-xs font-medium",
@@ -295,64 +387,682 @@ function EquityCurve({
         </span>
       </div>
 
-      <div className="px-2 py-3 md:px-3 md:py-4">
-        <ChartContainer config={chartConfig} className="h-64 md:h-80">
-          <RechartsAreaChart
-            data={chartData}
-            margin={{ left: 4, right: 4, top: 8, bottom: 0 }}
-          >
-            <defs>
-              <linearGradient id="fillEquityResult" x1="0" y1="0" x2="0" y2="1">
-                <stop
-                  offset="5%"
-                  stopColor="var(--color-equity)"
-                  stopOpacity={0.28}
-                />
-                <stop
-                  offset="70%"
-                  stopColor="var(--color-equity)"
-                  stopOpacity={0.08}
-                />
-                <stop
-                  offset="95%"
-                  stopColor="var(--color-equity)"
-                  stopOpacity={0.01}
-                />
-              </linearGradient>
-            </defs>
+      <ChartContainer config={chartConfig} className="h-64 w-full md:h-80">
+        <RechartsAreaChart
+          data={chartData}
+          margin={{ left: 4, right: 4, top: 8, bottom: 0 }}
+        >
+          <defs>
+            <linearGradient id="fillEquityResult" x1="0" y1="0" x2="0" y2="1">
+              <stop
+                offset="5%"
+                stopColor="var(--color-equity)"
+                stopOpacity={0.28}
+              />
+              <stop
+                offset="70%"
+                stopColor="var(--color-equity)"
+                stopOpacity={0.08}
+              />
+              <stop
+                offset="95%"
+                stopColor="var(--color-equity)"
+                stopOpacity={0.01}
+              />
+            </linearGradient>
+          </defs>
 
-            <CartesianGrid
-              vertical={false}
-              strokeDasharray="3 3"
-              stroke="color-mix(in oklab, var(--color-border) 82%, transparent)"
-            />
-            <XAxis
-              dataKey="timestamp"
-              minTickGap={32}
-              tickLine={false}
-              axisLine={false}
-              tickMargin={10}
-              tick={{ fontSize: 12, fill: "var(--color-muted-foreground)" }}
-              tickFormatter={(value) => format(new Date(value), "MMM d")}
-            />
-            <Area
-              dataKey="equity"
-              type="monotone"
-              stroke="var(--color-equity)"
-              fill="url(#fillEquityResult)"
-              strokeWidth={2.5}
-              dot={false}
-              activeDot={{
-                r: 4,
-                fill: "var(--color-equity)",
-                stroke: "var(--color-background)",
-                strokeWidth: 2,
-              }}
-            />
-          </RechartsAreaChart>
-        </ChartContainer>
-      </div>
+          <CartesianGrid
+            vertical={false}
+            strokeDasharray="3 3"
+            stroke="color-mix(in oklab, var(--color-border) 82%, transparent)"
+          />
+          <ChartTooltip
+            cursor={false}
+            content={
+              <ChartTooltipContent
+                hideLabel
+                formatter={(value, _name, _item, _index, payload) => {
+                  const point = payload as { timestamp?: number };
+                  const equityValue =
+                    typeof value === "number" ? value : Number(value);
+                  const equityPercent =
+                    Number.isFinite(equityValue) && initialBalance > 0
+                      ? ((equityValue - initialBalance) / initialBalance) * 100
+                      : 0;
+
+                  return (
+                    <>
+                      <div className="flex min-w-0 items-center justify-between gap-3">
+                        <span className="text-muted-foreground">
+                          {point.timestamp
+                            ? format(new Date(point.timestamp), "MMM d, yyyy")
+                            : "Equity"}
+                        </span>
+                        <span className="font-mono font-medium text-foreground tabular-nums">
+                          {Number.isFinite(equityValue)
+                            ? moneyFixed.format(equityValue)
+                            : value}
+                        </span>
+                      </div>
+                      <div className="flex min-w-0 items-center justify-between gap-3">
+                        <span className="text-muted-foreground">Change</span>
+                        <span
+                          className={cn(
+                            "font-mono font-medium tabular-nums",
+                            equityPercent >= 0
+                              ? "text-success"
+                              : "text-destructive",
+                          )}
+                        >
+                          {equityPercent >= 0 ? "+" : ""}
+                          {ratio.format(equityPercent)}%
+                        </span>
+                      </div>
+                    </>
+                  );
+                }}
+              />
+            }
+          />
+          <XAxis
+            dataKey="timestamp"
+            minTickGap={32}
+            tickLine={false}
+            axisLine={false}
+            tickMargin={10}
+            tick={{ fontSize: 12, fill: "var(--color-muted-foreground)" }}
+            tickFormatter={(value) => format(new Date(value), "MMM d")}
+          />
+          <Area
+            dataKey="equity"
+            type="monotone"
+            stroke="var(--color-equity)"
+            fill="url(#fillEquityResult)"
+            strokeWidth={2.5}
+            dot={false}
+            activeDot={{
+              r: 4,
+              fill: "var(--color-equity)",
+              stroke: "var(--color-background)",
+              strokeWidth: 2,
+            }}
+          />
+        </RechartsAreaChart>
+      </ChartContainer>
     </div>
+  );
+}
+
+function TradeDistributionChart({
+  wins,
+  losses,
+}: {
+  wins: number;
+  losses: number;
+}) {
+  const totalTrades = wins + losses;
+  const winRate = totalTrades > 0 ? (wins / totalTrades) * 100 : 0;
+  const chartData = [
+    { name: "wins", value: wins, fill: "var(--color-wins)" },
+    { name: "losses", value: losses, fill: "var(--color-losses)" },
+  ];
+
+  const chartConfig = {
+    wins: {
+      label: "Wins",
+      color: "var(--color-success)",
+    },
+    losses: {
+      label: "Losses",
+      color: "var(--color-destructive)",
+    },
+  } satisfies ChartConfig;
+
+  return (
+    <ChartContainer config={chartConfig} className="mx-auto h-64 max-w-[320px]">
+      <PieChart>
+        <ChartTooltip
+          cursor={false}
+          content={
+            <ChartTooltipContent
+              hideLabel
+              formatter={(value, name) => (
+                <>
+                  <span className="text-muted-foreground">
+                    {name === "wins" ? "Wins" : "Losses"}
+                  </span>
+                  <span className="font-mono font-medium text-foreground tabular-nums">
+                    {value}
+                  </span>
+                </>
+              )}
+            />
+          }
+        />
+        <Pie
+          data={chartData}
+          dataKey="value"
+          nameKey="name"
+          innerRadius={62}
+          outerRadius={88}
+          strokeWidth={5}
+          labelLine={false}
+          label={({ cx, cy, midAngle, outerRadius, percent, value, name }) => {
+            if (
+              typeof cx !== "number" ||
+              typeof cy !== "number" ||
+              typeof outerRadius !== "number" ||
+              typeof midAngle !== "number" ||
+              typeof percent !== "number" ||
+              typeof value !== "number" ||
+              !value
+            ) {
+              return null;
+            }
+
+            const radius = outerRadius + 18;
+            const x = cx + radius * Math.cos((-midAngle * Math.PI) / 180);
+            const y = cy + radius * Math.sin((-midAngle * Math.PI) / 180);
+            const isRightSide = x >= cx;
+
+            return (
+              <text
+                x={x}
+                y={y}
+                textAnchor={isRightSide ? "start" : "end"}
+                dominantBaseline="central"
+              >
+                <tspan className="fill-foreground text-[11px] font-medium">
+                  {name === "wins" ? "Wins" : "Losses"}: {value}
+                </tspan>
+                <tspan dx={4} className="fill-muted-foreground text-[10px]">
+                  ({ratio.format(percent * 100)}%)
+                </tspan>
+              </text>
+            );
+          }}
+        >
+          <Label
+            content={({ viewBox }) => {
+              if (!viewBox || !("cx" in viewBox) || !("cy" in viewBox)) {
+                return null;
+              }
+
+              return (
+                <text
+                  x={viewBox.cx}
+                  y={viewBox.cy}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                >
+                  <tspan
+                    x={viewBox.cx}
+                    y={viewBox.cy}
+                    className="fill-foreground text-2xl font-semibold"
+                  >
+                    {totalTrades}
+                  </tspan>
+                  <tspan
+                    x={viewBox.cx}
+                    y={(viewBox.cy || 0) + 20}
+                    className="fill-muted-foreground text-[11px]"
+                  >
+                    trades
+                  </tspan>
+                  <tspan
+                    x={viewBox.cx}
+                    y={(viewBox.cy || 0) + 38}
+                    className="fill-muted-foreground text-[10px]"
+                  >
+                    Win rate {ratio.format(winRate)}%
+                  </tspan>
+                </text>
+              );
+            }}
+          />
+          {chartData.map((entry) => (
+            <Cell key={entry.name} fill={entry.fill} />
+          ))}
+        </Pie>
+      </PieChart>
+    </ChartContainer>
+  );
+}
+
+function TradeActivityBarChart({ trades }: { trades: Trade[] }) {
+  const [view, setView] = useState<TradeActivityView>("hour");
+  const [hourLabelMode, setHourLabelMode] = useState<
+    "mobile" | "tablet" | "desktop"
+  >("mobile");
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(min-width: 1024px)");
+    const tabletQuery = window.matchMedia("(min-width: 768px)");
+    const onChange = () => {
+      if (mediaQuery.matches) {
+        setHourLabelMode("desktop");
+        return;
+      }
+
+      if (tabletQuery.matches) {
+        setHourLabelMode("tablet");
+        return;
+      }
+
+      setHourLabelMode("mobile");
+    };
+
+    onChange();
+    mediaQuery.addEventListener("change", onChange);
+    tabletQuery.addEventListener("change", onChange);
+
+    return () => {
+      mediaQuery.removeEventListener("change", onChange);
+      tabletQuery.removeEventListener("change", onChange);
+    };
+  }, []);
+
+  const chartData = useMemo(() => {
+    if (view === "hour") {
+      const counts = new Map<string, number>();
+
+      for (let hour = 0; hour < 24; hour += 1) {
+        counts.set(`${hour.toString().padStart(2, "0")}:00`, 0);
+      }
+
+      for (const trade of trades) {
+        const key = getUtcHourLabel(trade.entryTime);
+        counts.set(key, (counts.get(key) ?? 0) + 1);
+      }
+
+      return Array.from(counts.entries()).map(([label, tradesCount]) => ({
+        label,
+        trades: tradesCount,
+      }));
+    }
+
+    if (view === "month") {
+      const monthOrder = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+      ];
+      const counts = new Map<string, number>();
+
+      for (const month of monthOrder) {
+        counts.set(month, 0);
+      }
+
+      for (const trade of trades) {
+        const key = getUtcMonthLabel(trade.entryTime);
+        counts.set(key, (counts.get(key) ?? 0) + 1);
+      }
+
+      return monthOrder.map((label) => ({
+        label,
+        trades: counts.get(label) ?? 0,
+      }));
+    }
+
+    const counts = new Map<string, number>();
+
+    for (const trade of trades) {
+      const key = getUtcDateKey(trade.entryTime);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .slice(0, 12)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([label, tradesCount]) => ({
+        label,
+        trades: tradesCount,
+      }));
+  }, [trades, view]);
+
+  const chartConfig = {
+    trades: {
+      label: "Trades",
+      color: "var(--color-primary)",
+    },
+  } satisfies ChartConfig;
+
+  const activeView =
+    tradeActivityViewOptions.find((option) => option.value === view) ??
+    tradeActivityViewOptions[0];
+
+  if (!chartData.length) {
+    return (
+      <div className="flex h-72 items-center justify-center text-sm text-muted-foreground">
+        No trade activity data available.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">
+          {activeView.description}
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {tradeActivityViewOptions.map((option) => (
+            <Button
+              key={option.value}
+              type="button"
+              size="sm"
+              variant={view === option.value ? "default" : "outline"}
+              className="rounded-full px-4"
+              onClick={() => setView(option.value)}
+            >
+              {option.label}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      <ChartContainer config={chartConfig} className="h-72 w-full">
+        <RechartsBarChart
+          data={chartData}
+          margin={{ left: 4, right: 4, top: 12, bottom: 0 }}
+        >
+          <CartesianGrid
+            vertical={false}
+            strokeDasharray="3 3"
+            stroke="color-mix(in oklab, var(--color-border) 82%, transparent)"
+          />
+          <XAxis
+            dataKey="label"
+            tickLine={false}
+            axisLine={false}
+            tickMargin={10}
+            interval={0}
+            minTickGap={12}
+            tick={{ fontSize: 11, fill: "var(--color-muted-foreground)" }}
+            tickFormatter={(value, index) => {
+              if (view === "hour") {
+                if (hourLabelMode === "desktop") {
+                  return String(value);
+                }
+
+                if (hourLabelMode === "tablet") {
+                  return index % 2 === 0 ? String(value) : "";
+                }
+
+                return index % 3 === 0 ? String(value) : "";
+              }
+
+              return String(value);
+            }}
+            angle={view === "date" ? -25 : 0}
+            textAnchor={view === "date" ? "end" : "middle"}
+            height={view === "date" ? 56 : 30}
+          />
+          <YAxis
+            allowDecimals={false}
+            tickLine={false}
+            axisLine={false}
+            width={28}
+            tick={{ fontSize: 11, fill: "var(--color-muted-foreground)" }}
+          />
+          <ChartTooltip
+            cursor={false}
+            content={
+              <ChartTooltipContent
+                hideLabel
+                formatter={(value, _name, _item, _index, payload) => {
+                  const point = payload as { label?: string };
+
+                  return (
+                    <>
+                      <span className="text-muted-foreground">
+                        {point.label ?? activeView.label}
+                      </span>
+                      <span className="font-mono font-medium text-foreground tabular-nums">
+                        {value} trades
+                      </span>
+                    </>
+                  );
+                }}
+              />
+            }
+          />
+          <Bar
+            dataKey="trades"
+            radius={[8, 8, 0, 0]}
+            fill="var(--color-trades)"
+          />
+        </RechartsBarChart>
+      </ChartContainer>
+    </div>
+  );
+}
+
+function PerformanceRadarChart({
+  view,
+  winRate,
+  payoffRatio,
+  profitFactor,
+  recoveryFactor,
+  maxDrawdownPercent,
+  totalTrades,
+  averageTradePnL,
+  totalFees,
+  trades,
+}: {
+  view: RadarView;
+  winRate: number;
+  payoffRatio?: number;
+  profitFactor: number;
+  recoveryFactor?: number;
+  maxDrawdownPercent: number;
+  totalTrades: number;
+  averageTradePnL: number;
+  totalFees: number;
+  trades: Trade[];
+}) {
+  const scoreRatio = (value: number, multiplier: number) =>
+    Math.max(0, Math.min(100, value * multiplier));
+  const scorePercent = (value: number) => Math.max(0, Math.min(100, value));
+  const scoreInversePercent = (value: number, multiplier: number) =>
+    Math.max(0, Math.min(100, 100 - Math.abs(value) * multiplier));
+  const scoreCount = (value: number, target: number) =>
+    Math.max(0, Math.min(100, (value / target) * 100));
+  const scoreCurrency = (value: number, target: number) =>
+    Math.max(0, Math.min(100, (Math.abs(value) / target) * 100));
+  const monthActivity = getTopBucket(trades, (trade) =>
+    getUtcMonthLabel(trade.entryTime),
+  );
+  const hourActivity = getTopBucket(trades, (trade) =>
+    getUtcHourLabel(trade.entryTime),
+  );
+  const dateActivity = getTopBucket(trades, (trade) =>
+    getUtcDateKey(trade.entryTime),
+  );
+  const uniqueTradeDates = new Set(
+    trades.map((trade) => getUtcDateKey(trade.entryTime)),
+  ).size;
+
+  const chartData =
+    view === "execution"
+      ? [
+          {
+            metric: "Trades",
+            value: scoreCount(totalTrades, 100),
+            raw: String(totalTrades),
+          },
+          {
+            metric: "Win Rate",
+            value: scorePercent(winRate),
+            raw: `${ratio.format(winRate)}%`,
+          },
+          {
+            metric: "Avg PnL",
+            value: scoreCurrency(averageTradePnL, 100),
+            raw: money.format(averageTradePnL),
+          },
+          {
+            metric: "Avg Fee",
+            value: scoreCurrency(
+              totalTrades > 0 ? totalFees / totalTrades : 0,
+              20,
+            ),
+            raw: moneyFixed.format(
+              totalTrades > 0 ? totalFees / totalTrades : 0,
+            ),
+          },
+          {
+            metric: "Profit",
+            value: scoreRatio(profitFactor, 50),
+            raw: ratio.format(profitFactor),
+          },
+        ]
+      : view === "timing"
+        ? [
+            {
+              metric: "Top Month",
+              value:
+                totalTrades > 0 ? (monthActivity.count / totalTrades) * 100 : 0,
+              raw:
+                monthActivity.count > 0
+                  ? `${monthActivity.key} (${monthActivity.count})`
+                  : "-",
+            },
+            {
+              metric: "Peak Hour",
+              value:
+                totalTrades > 0 ? (hourActivity.count / totalTrades) * 100 : 0,
+              raw:
+                hourActivity.count > 0
+                  ? `${hourActivity.key} UTC (${hourActivity.count})`
+                  : "-",
+            },
+            {
+              metric: "Top Date",
+              value:
+                totalTrades > 0 ? (dateActivity.count / totalTrades) * 100 : 0,
+              raw:
+                dateActivity.count > 0
+                  ? `${dateActivity.key} (${dateActivity.count})`
+                  : "-",
+            },
+            {
+              metric: "Active Days",
+              value: scoreCount(uniqueTradeDates, 31),
+              raw: String(uniqueTradeDates),
+            },
+            {
+              metric: "Active Months",
+              value: scoreCount(monthActivity.size, 12),
+              raw: String(monthActivity.size),
+            },
+          ]
+        : [
+            {
+              metric: "Win Rate",
+              value: scorePercent(winRate),
+              raw: `${ratio.format(winRate)}%`,
+            },
+            {
+              metric: "Payoff",
+              value: scoreRatio(payoffRatio ?? 0, 50),
+              raw: ratio.format(payoffRatio ?? 0),
+            },
+            {
+              metric: "Profit",
+              value: scoreRatio(profitFactor, 50),
+              raw: ratio.format(profitFactor),
+            },
+            {
+              metric: "Recovery",
+              value: scoreRatio(recoveryFactor ?? 0, 25),
+              raw: ratio.format(recoveryFactor ?? 0),
+            },
+            {
+              metric: "Drawdown",
+              value: scoreInversePercent(maxDrawdownPercent, 500),
+              raw: `-${ratio.format(Math.abs(maxDrawdownPercent))}%`,
+            },
+          ];
+
+  const chartConfig = {
+    value: {
+      label: "Score",
+      color: "var(--color-primary)",
+    },
+  } satisfies ChartConfig;
+
+  return (
+    <ChartContainer config={chartConfig} className="mx-auto h-80 max-w-[420px]">
+      <RadarChart data={chartData}>
+        <ChartTooltip
+          cursor={false}
+          content={
+            <ChartTooltipContent
+              hideLabel
+              formatter={(_, __, ___, ____, payload) => (
+                <>
+                  <span className="text-muted-foreground">
+                    {(payload as { metric?: string }).metric ?? "Metric"}
+                  </span>
+                  <span className="font-mono font-medium text-foreground tabular-nums">
+                    {(payload as { raw?: string }).raw ?? "-"}
+                  </span>
+                </>
+              )}
+            />
+          }
+        />
+        <PolarGrid />
+        <PolarAngleAxis
+          dataKey="metric"
+          tick={({ payload, x, y, textAnchor, ...props }) => {
+            const item = chartData.find(
+              (entry) => entry.metric === payload?.value,
+            );
+
+            return (
+              <text
+                x={x}
+                y={y}
+                textAnchor={textAnchor}
+                className="fill-muted-foreground"
+                {...props}
+              >
+                <tspan x={x} dy="0" className="text-[11px] font-medium">
+                  {payload?.value}
+                </tspan>
+                <tspan
+                  x={x}
+                  dy="14"
+                  className="fill-foreground text-[10px] font-medium"
+                >
+                  {item?.raw ?? "-"}
+                </tspan>
+              </text>
+            );
+          }}
+        />
+        <Radar
+          dataKey="value"
+          fill="var(--color-value)"
+          fillOpacity={0.2}
+          stroke="var(--color-value)"
+          strokeWidth={2}
+        />
+      </RadarChart>
+    </ChartContainer>
   );
 }
 
@@ -374,6 +1084,7 @@ export default function BacktestResultPage() {
   } = useBookmarkIds("strategy");
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const [tradesPage, setTradesPage] = useState(1);
+  const [radarView, setRadarView] = useState<RadarView>("edge");
   const [backtest, setBacktest] = useState<BacktestDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -448,6 +1159,9 @@ export default function BacktestResultPage() {
   const averageTradeFee = Number.isFinite(result.averageTradeFee)
     ? result.averageTradeFee
     : 0;
+  const activeRadarView =
+    radarViewOptions.find((option) => option.value === radarView) ??
+    radarViewOptions[0];
   const strategyName = backtest.strategy?.name?.trim() || "Strategy";
   const strategyIsPublic = backtest.strategy?.isPublic ?? false;
   const strategyCreatorUsername =
@@ -676,20 +1390,20 @@ export default function BacktestResultPage() {
                 movement, and detailed trade history.
               </CardDescription>
               <div className="pt-1">
-                <div className="flex flex-wrap gap-2">
-                  <span className="inline-flex items-center gap-1 rounded-full border bg-muted/30 px-2 py-0.5 text-[11px] text-muted-foreground">
+                <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                  <span className="inline-flex items-center gap-1 rounded-full border bg-muted/30 px-2 py-0.5">
                     <CalendarClock className="h-3.5 w-3.5 text-primary" />
-                    {backtest.timeframe}
+                    <span>{backtest.timeframe}</span>
                   </span>
-                  <span className="inline-flex items-center gap-1 rounded-full border bg-muted/30 px-2 py-0.5 text-[11px] text-muted-foreground">
+                  <span className="inline-flex items-center gap-1 rounded-full border bg-muted/30 px-2 py-0.5">
                     <Clock3 className="h-3.5 w-3.5 text-primary" />
-                    {formatDuration(result.duration)}
+                    <span>{formatDuration(result.duration)}</span>
                   </span>
-                  <span className="inline-flex items-center gap-1 rounded-full border bg-muted/30 px-2 py-0.5 text-[11px] text-muted-foreground">
+                  <span className="inline-flex items-center gap-1 rounded-full border bg-muted/30 px-2 py-0.5">
                     <UserRound className="h-3.5 w-3.5 text-primary" />@
-                    {backtest.user?.username || "unknown"}
+                    <span>{backtest.user?.username || "unknown"}</span>
                   </span>
-                  <span className="inline-flex max-w-full items-center gap-1 rounded-full border bg-muted/30 px-2 py-0.5 text-[11px] text-muted-foreground">
+                  <span className="inline-flex max-w-full items-center gap-1 rounded-full border bg-muted/30 px-2 py-0.5">
                     <Target className="h-3.5 w-3.5 text-primary" />
                     <span className="max-w-[170px] truncate">
                       {backtest.strategy?.name || "Strategy"}
@@ -740,550 +1454,821 @@ export default function BacktestResultPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-3">
-        <Card className="border-border/70 bg-card">
-          <CardHeader className="pb-2">
-            <CardDescription className="flex items-center gap-2">
-              <Percent className="h-4 w-4" />
-              ROI
-            </CardDescription>
-            <CardTitle
-              className={cn(
-                "text-xl md:text-2xl",
-                result.roi >= 0 ? "text-success" : "text-destructive",
-              )}
-            >
-              {result.roi >= 0 ? "+" : ""}
-              {ratio.format(result.roi)}%
-            </CardTitle>
-          </CardHeader>
-          <CardContent
-            className={`text-sm ${
-              pnlPositive ? "text-success" : "text-destructive"
-            }`}
+      <Tabs defaultValue="overview" className="min-w-0">
+        <div className="overflow-x-auto py-1">
+          <TabsList
+            variant="line"
+            className="w-full min-w-max justify-start md:w-auto"
+            aria-label="Backtest result sections"
           >
-            <div className="space-y-1.5">
-              <p>
-                {pnlPositive ? (
-                  <TrendingUp className="mr-1 inline h-4 w-4" />
-                ) : (
-                  <TrendingDown className="mr-1 inline h-4 w-4" />
-                )}
-                {money.format(result.totalPnL)} total PnL
-              </p>
-              <p className="text-muted-foreground">
-                Final balance: {money.format(result.finalBalance)}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/70 bg-card">
-          <CardHeader className="pb-2">
-            <CardDescription className="flex items-center gap-2">
-              <Percent className="h-4 w-4" />
-              Win Rate
-            </CardDescription>
-            <CardTitle className="text-xl md:text-2xl">
-              {ratio.format(result.winRate)}%
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            <div className="space-y-1.5">
-              <p>
-                {result.wins} wins / {result.losses} losses
-              </p>
-              <p>Total trades: {result.totalTrades}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/70 bg-card">
-          <CardHeader className="pb-2">
-            <CardDescription className="flex items-center gap-2">
-              <ShieldAlert className="h-4 w-4" />
-              Max Drawdown
-            </CardDescription>
-            <CardTitle className="text-xl text-destructive md:text-2xl">
-              -{ratio.format(Math.abs(result.maxDrawdownPercent))}%
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            <div className="space-y-1.5">
-              <p>{money.format(result.maxDrawdown)}</p>
-              <p>Recovery: {ratio.format(result.recoveryFactor ?? 0)}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/70 bg-card">
-          <CardHeader className="pb-2">
-            <CardDescription className="flex items-center gap-2">
-              <Target className="h-4 w-4" />
-              Profit Factor
-            </CardDescription>
-            <CardTitle className="text-xl md:text-2xl">
-              {ratio.format(result.profitFactor)}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            <div className="space-y-1.5">
-              <p>Avg trade: {money.format(result.averageTradePnL)}</p>
-              <p>Payoff: {ratio.format(result.payoffRatio ?? 0)}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/70 bg-card">
-          <CardHeader className="pb-2">
-            <CardDescription className="flex items-center gap-2">
-              <CircleDollarSign className="h-4 w-4" />
-              Fees
-            </CardDescription>
-            <CardTitle className="text-xl md:text-2xl">
-              {money.format(result.totalFees)}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            <div className="space-y-1.5">
-              <p>
-                Entry / Exit Fees: {backtest.entryFeeRate}% /{" "}
-                {backtest.exitFeeRate}%
-              </p>
-              <p>Avg fee / trade: {moneyFixed.format(averageTradeFee)}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/70 bg-card">
-          <CardHeader className="pb-2">
-            <CardDescription className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Win / Loss Streak
-            </CardDescription>
-            <CardTitle className="text-xl md:text-2xl">
-              <span className="text-success">{result.maxWinStreak ?? 0}</span>
-              <span className="text-muted-foreground"> / </span>
-              <span className="text-destructive">
-                {result.maxLossStreak ?? 0}
+            <TabsTrigger
+              value="overview"
+              aria-label="Overview"
+              title="Overview"
+              className="group gap-2 data-[state=active]:text-primary data-[state=active]:after:bg-primary dark:data-[state=active]:text-primary dark:data-[state=active]:after:bg-primary"
+            >
+              <Sparkles className="h-4 w-4 shrink-0" />
+              <span className="hidden group-data-[state=active]:inline md:inline">
+                Overview
               </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            <div className="space-y-1.5">
-              <p>{result.streakInsight || "Streak insight unavailable"}</p>
-              <p>
-                Max win / loss: {money.format(result.maxWin)} /{" "}
-                {money.format(result.maxLoss)}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/70 bg-card">
-          <CardHeader className="pb-2">
-            <CardDescription className="flex items-center gap-2">
-              <CalendarClock className="h-4 w-4" />
-              Date Window
-            </CardDescription>
-            <CardTitle className="text-xl md:text-2xl">
-              {formatDuration(result.duration)}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            <div className="space-y-1.5">
-              <p>
-                {format(new Date(backtest.startDate), "PPP")} to{" "}
-                {format(new Date(backtest.endDate), "PPP")}
-              </p>
-              <p>
-                Market: {backtest.symbol} Â· {backtest.timeframe}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/70 bg-card">
-          <CardHeader className="pb-2">
-            <CardDescription className="flex items-center gap-2">
-              <Clock3 className="h-4 w-4" />
-              Position Duration
-            </CardDescription>
-            <CardTitle className="text-xl md:text-2xl">
-              {formatDuration(result.averageTradeDuration ?? 0)}
-              <span className="ml-1 text-xs font-medium text-muted-foreground">
-                avg
+            </TabsTrigger>
+            <TabsTrigger
+              value="performance"
+              aria-label="Performance"
+              title="Performance"
+              className="group gap-2 data-[state=active]:text-primary data-[state=active]:after:bg-primary dark:data-[state=active]:text-primary dark:data-[state=active]:after:bg-primary"
+            >
+              <TrendingUp className="h-4 w-4 shrink-0" />
+              <span className="hidden group-data-[state=active]:inline md:inline">
+                Performance
               </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            <div className="space-y-1.5">
-              <p>
-                Longest / Shortest:{" "}
-                {formatDuration(result.longestTradeDuration ?? 0)} /{" "}
-                {formatDuration(result.shortestTradeDuration ?? 0)}
-              </p>
-              <p>Expectancy: {money.format(result.expectancy ?? 0)}</p>
-            </div>
-          </CardContent>
-        </Card>
+            </TabsTrigger>
+            <TabsTrigger
+              value="setup"
+              aria-label="Setup"
+              title="Setup"
+              className="group gap-2 data-[state=active]:text-primary data-[state=active]:after:bg-primary dark:data-[state=active]:text-primary dark:data-[state=active]:after:bg-primary"
+            >
+              <SlidersHorizontal className="h-4 w-4 shrink-0" />
+              <span className="hidden group-data-[state=active]:inline md:inline">
+                Setup
+              </span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="equity"
+              aria-label="Equity Curve"
+              title="Equity Curve"
+              className="group gap-2 data-[state=active]:text-primary data-[state=active]:after:bg-primary dark:data-[state=active]:text-primary dark:data-[state=active]:after:bg-primary"
+            >
+              <AreaChart className="h-4 w-4 shrink-0" />
+              <span className="hidden group-data-[state=active]:inline md:inline">
+                Equity Curve
+              </span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="trades"
+              aria-label="Trades"
+              title="Trades"
+              className="group gap-2 data-[state=active]:text-primary data-[state=active]:after:bg-primary dark:data-[state=active]:text-primary dark:data-[state=active]:after:bg-primary"
+            >
+              <CandlestickChart className="h-4 w-4 shrink-0" />
+              <span className="hidden group-data-[state=active]:inline md:inline">
+                Trades
+              </span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
-        <Card className="border-border/70 bg-card">
-          <CardHeader className="pb-2">
-            <CardDescription className="flex items-center gap-2">
-              <SlidersHorizontal className="h-4 w-4" />
-              Trade Setup
-            </CardDescription>
-            <CardTitle className="text-xl md:text-2xl">
-              {backtest.hedgeMode ? "Hedge" : "One-way"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            <div className="space-y-1.5">
-              <p>Initial balance: {money.format(result.initialBalance)}</p>
-              <p>{money.format(backtest.amountPerTrade)} per trade</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card className="border-border/70 bg-card">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-xl">
-            <AreaChart className="h-5 w-5 text-primary" />
-            Performance Insights
-          </CardTitle>
-          <CardDescription>
-            Breakdown and edge quality metrics from this backtest.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-xl border bg-muted/20 p-4">
-            <p className="text-[11px] tracking-[0.16em] text-muted-foreground uppercase">
-              Gross Profit / Loss
-            </p>
-            <div className="mt-2 space-y-2.5 text-sm">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-muted-foreground">Profit</p>
-                <p className="font-semibold text-success">
-                  {money.format(result.grossProfit)}
-                </p>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-muted-foreground">Loss</p>
-                <p className="font-semibold text-destructive">
-                  {money.format(result.grossLoss)}
-                </p>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-muted-foreground">Net P/L</p>
-                <p
+        <TabsContent value="overview" className="space-y-4 md:space-y-6">
+          <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
+            <Card className="border-border/70 bg-card">
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center gap-2">
+                  <Percent className="h-4 w-4" />
+                  ROI
+                </CardDescription>
+                <CardTitle
                   className={cn(
-                    "font-semibold",
-                    result.totalPnL >= 0 ? "text-success" : "text-destructive",
+                    "text-xl md:text-2xl",
+                    result.roi >= 0 ? "text-success" : "text-destructive",
                   )}
                 >
-                  {money.format(result.totalPnL)}
-                </p>
-              </div>
-            </div>
+                  {result.roi >= 0 ? "+" : ""}
+                  {ratio.format(result.roi)}%
+                </CardTitle>
+              </CardHeader>
+              <CardContent
+                className={`text-sm ${
+                  pnlPositive ? "text-success" : "text-destructive"
+                }`}
+              >
+                <div className="space-y-1.5">
+                  <p>{money.format(result.totalPnL)} total PnL</p>
+                  <p className="text-muted-foreground">
+                    Final balance: {money.format(result.finalBalance)}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/70 bg-card">
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center gap-2">
+                  <Percent className="h-4 w-4" />
+                  Win Rate
+                </CardDescription>
+                <CardTitle className="text-xl md:text-2xl">
+                  {ratio.format(result.winRate)}%
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm text-muted-foreground">
+                <div className="space-y-1.5">
+                  <p>
+                    {result.wins} wins / {result.losses} losses
+                  </p>
+                  <p>Total trades: {result.totalTrades}</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/70 bg-card">
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center gap-2">
+                  <ShieldAlert className="h-4 w-4" />
+                  Max Drawdown
+                </CardDescription>
+                <CardTitle className="text-xl text-destructive md:text-2xl">
+                  -{ratio.format(Math.abs(result.maxDrawdownPercent))}%
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm text-muted-foreground">
+                <div className="space-y-1.5">
+                  <p>{money.format(result.maxDrawdown)}</p>
+                  <p>Recovery: {ratio.format(result.recoveryFactor ?? 0)}</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/70 bg-card">
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center gap-2">
+                  <Target className="h-4 w-4" />
+                  Profit Factor
+                </CardDescription>
+                <CardTitle className="text-xl md:text-2xl">
+                  {ratio.format(result.profitFactor)}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm text-muted-foreground">
+                <div className="space-y-1.5">
+                  <p>Avg trade: {money.format(result.averageTradePnL)}</p>
+                  <p>Payoff: {ratio.format(result.payoffRatio ?? 0)}</p>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
-          <div className="rounded-xl border bg-muted/20 p-4">
-            <p className="text-[11px] tracking-[0.16em] text-muted-foreground uppercase">
-              Average Win / Loss
-            </p>
-            <div className="mt-2 space-y-2.5 text-sm">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-muted-foreground">Avg Win</p>
-                <p className="font-semibold text-success">
-                  {money.format(result.averageWin)}
-                </p>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-muted-foreground">Avg Loss</p>
-                <p className="font-semibold text-destructive">
-                  {money.format(result.averageLoss)}
-                </p>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-muted-foreground">Avg Fee</p>
-                <p className="font-semibold">
-                  {moneyFixed.format(averageTradeFee)}
-                </p>
-              </div>
-            </div>
-          </div>
+          <Card className="border-border/70 bg-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-xl">
+                <CandlestickChart className="h-5 w-5 text-primary" />
+                Trade Distribution
+              </CardTitle>
+              <CardDescription>
+                Quick read on how your closed trades split between wins and
+                losses.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <TradeDistributionChart
+                wins={result.wins}
+                losses={result.losses}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-          <div className="rounded-xl border bg-muted/20 p-4">
-            <p className="text-[11px] tracking-[0.16em] text-muted-foreground uppercase">
-              Edge
-            </p>
-            <div className="mt-2 space-y-2 text-sm">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-muted-foreground">Expectancy</p>
-                <p
-                  className={cn(
-                    "font-semibold",
-                    (result.expectancy ?? 0) >= 0
-                      ? "text-success"
-                      : "text-destructive",
-                  )}
-                >
-                  {money.format(result.expectancy ?? 0)}
-                </p>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-muted-foreground">Payoff</p>
-                <p className="font-semibold">
-                  {ratio.format(result.payoffRatio ?? 0)}
-                </p>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-muted-foreground">Win Rate</p>
-                <p className="font-semibold">{ratio.format(result.winRate)}%</p>
-              </div>
-            </div>
-          </div>
+        <TabsContent value="performance" className="space-y-4 md:space-y-6">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-2">
+            <Card className="border-border/70 bg-card">
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center gap-2">
+                  <CircleDollarSign className="h-4 w-4" />
+                  Fees
+                </CardDescription>
+                <CardTitle className="text-xl md:text-2xl">
+                  {money.format(result.totalFees)}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm text-muted-foreground">
+                <div className="space-y-1.5">
+                  <p>
+                    Entry / Exit Fees: {backtest.entryFeeRate}% /{" "}
+                    {backtest.exitFeeRate}%
+                  </p>
+                  <p>Avg fee / trade: {moneyFixed.format(averageTradeFee)}</p>
+                </div>
+              </CardContent>
+            </Card>
 
-          <div className="rounded-xl border bg-muted/20 p-4">
-            <p className="text-[11px] tracking-[0.16em] text-muted-foreground uppercase">
-              Risk Recovery
-            </p>
-            <div className="mt-2 space-y-2 text-sm">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-muted-foreground">Recovery</p>
-                <p
-                  className={cn(
-                    "font-semibold",
-                    (result.recoveryFactor ?? 0) >= 0
-                      ? "text-success"
-                      : "text-destructive",
-                  )}
-                >
-                  {ratio.format(result.recoveryFactor ?? 0)}
-                </p>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-muted-foreground">Best / Worst Trade</p>
-                <p className="font-semibold">
+            <Card className="border-border/70 bg-card">
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4" />
+                  Win / Loss Streak
+                </CardDescription>
+                <CardTitle className="text-xl md:text-2xl">
                   <span className="text-success">
-                    {money.format(result.maxWin)}
+                    {result.maxWinStreak ?? 0}
                   </span>
                   <span className="text-muted-foreground"> / </span>
                   <span className="text-destructive">
-                    {money.format(result.maxLoss)}
+                    {result.maxLossStreak ?? 0}
                   </span>
-                </p>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-muted-foreground">Max DD %</p>
-                <p className="font-semibold text-destructive">
-                  -{ratio.format(Math.abs(result.maxDrawdownPercent))}%
-                </p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/70 bg-card">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-xl">
-            <Target className="h-5 w-5 text-primary" />
-            Strategy
-          </CardTitle>
-          <CardDescription>
-            The strategy is the core of this backtest result.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="min-w-0 space-y-2">
-              <p className="truncate text-lg font-semibold tracking-tight text-foreground">
-                {strategyName}
-              </p>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1 rounded-full border bg-muted/40 px-2.5 py-1 text-xs text-muted-foreground">
-                  <UserRound className="h-3.5 w-3.5" />@
-                  {strategyCreatorUsername}
-                </span>
-                <span className="inline-flex items-center gap-1 rounded-full border bg-muted/40 px-2.5 py-1 text-xs text-muted-foreground">
-                  {strategyIsPublic ? (
-                    <Globe className="h-3.5 w-3.5" />
-                  ) : (
-                    <Lock className="h-3.5 w-3.5" />
-                  )}
-                  {isStrategyOwner
-                    ? "Mine"
-                    : strategyIsPublic
-                      ? "Public"
-                      : "Private"}
-                </span>
-                <span className="inline-flex items-center gap-1 rounded-full border bg-muted/40 px-2.5 py-1 text-xs text-muted-foreground">
-                  <TrendingUp className="h-3.5 w-3.5" />
-                  <span>{backtest.strategy?.stats?.viewCount ?? "-"}</span>
-                  <span className="hidden md:inline">views</span>
-                </span>
-                <span className="inline-flex items-center gap-1 rounded-full border bg-muted/40 px-2.5 py-1 text-xs text-muted-foreground">
-                  <Bookmark className="h-3.5 w-3.5" />
-                  <span>{backtest.strategy?.stats?.bookmarkCount ?? "-"}</span>
-                  <span className="hidden md:inline">bookmarks</span>
-                </span>
-              </div>
-            </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm text-muted-foreground">
+                <div className="space-y-1.5">
+                  <p>{result.streakInsight || "Streak insight unavailable"}</p>
+                  <p>
+                    Max win / loss: {money.format(result.maxWin)} /{" "}
+                    {money.format(result.maxLoss)}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
-          <div className="flex w-full min-w-0 flex-col gap-2 md:w-auto md:flex-row md:flex-wrap md:items-center">
-            {canOpenStrategy && backtest.strategy?._id ? (
-              <ButtonGroup className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] md:inline-flex md:w-auto">
-                <Button
-                  type="button"
-                  className="min-w-0 w-full rounded-r-none md:w-auto md:flex-none"
-                  asChild
-                >
-                  <Link
-                    to={`/strategy/${backtest.strategy._id}`}
-                    className="inline-flex min-w-0 items-center justify-center gap-1.5"
-                  >
-                    <SquareArrowOutUpRight className="h-4 w-4" />
-                    <span className="truncate">Open Strategy</span>
-                  </Link>
-                </Button>
+          <Card className="border-border/70 bg-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-xl">
+                <AreaChart className="h-5 w-5 text-primary" />
+                Performance Insights
+              </CardTitle>
+              <CardDescription>
+                Breakdown and edge quality metrics from this backtest.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-hidden rounded-2xl border border-border/60 bg-muted/10">
+                <div className="grid divide-y divide-border/60 md:grid-cols-2 md:divide-x md:divide-y-0">
+                  <section className="space-y-4 p-5">
+                    <div>
+                      <p className="text-[11px] tracking-[0.18em] text-muted-foreground uppercase">
+                        Profit Flow
+                      </p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Gross movement and net result.
+                      </p>
+                    </div>
+                    <div className="space-y-3 text-sm">
+                      <div className="flex items-center justify-between gap-3 border-b border-border/50 pb-3">
+                        <span className="text-muted-foreground">
+                          Gross profit
+                        </span>
+                        <span className="font-semibold text-success">
+                          {money.format(result.grossProfit)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3 border-b border-border/50 pb-3">
+                        <span className="text-muted-foreground">
+                          Gross loss
+                        </span>
+                        <span className="font-semibold text-destructive">
+                          {money.format(result.grossLoss)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-muted-foreground">Net P/L</span>
+                        <span
+                          className={cn(
+                            "font-semibold",
+                            result.totalPnL >= 0
+                              ? "text-success"
+                              : "text-destructive",
+                          )}
+                        >
+                          {money.format(result.totalPnL)}
+                        </span>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section className="space-y-4 p-5">
+                    <div>
+                      <p className="text-[11px] tracking-[0.18em] text-muted-foreground uppercase">
+                        Trade Quality
+                      </p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Average outcome per position.
+                      </p>
+                    </div>
+                    <div className="space-y-3 text-sm">
+                      <div className="flex items-center justify-between gap-3 border-b border-border/50 pb-3">
+                        <span className="text-muted-foreground">
+                          Average win
+                        </span>
+                        <span className="font-semibold text-success">
+                          {money.format(result.averageWin)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3 border-b border-border/50 pb-3">
+                        <span className="text-muted-foreground">
+                          Average loss
+                        </span>
+                        <span className="font-semibold text-destructive">
+                          {money.format(result.averageLoss)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-muted-foreground">
+                          Average fee
+                        </span>
+                        <span className="font-semibold text-foreground">
+                          {moneyFixed.format(averageTradeFee)}
+                        </span>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section className="space-y-4 p-5">
+                    <div>
+                      <p className="text-[11px] tracking-[0.18em] text-muted-foreground uppercase">
+                        Edge
+                      </p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Core reward and expectancy signals.
+                      </p>
+                    </div>
+                    <div className="space-y-3 text-sm">
+                      <div className="flex items-center justify-between gap-3 border-b border-border/50 pb-3">
+                        <span className="text-muted-foreground">
+                          Expectancy
+                        </span>
+                        <span
+                          className={cn(
+                            "font-semibold",
+                            (result.expectancy ?? 0) >= 0
+                              ? "text-success"
+                              : "text-destructive",
+                          )}
+                        >
+                          {money.format(result.expectancy ?? 0)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3 border-b border-border/50 pb-3">
+                        <span className="text-muted-foreground">
+                          Payoff ratio
+                        </span>
+                        <span className="font-semibold text-foreground">
+                          {ratio.format(result.payoffRatio ?? 0)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-muted-foreground">Win rate</span>
+                        <span className="font-semibold text-foreground">
+                          {ratio.format(result.winRate)}%
+                        </span>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section className="space-y-4 p-5">
+                    <div>
+                      <p className="text-[11px] tracking-[0.18em] text-muted-foreground uppercase">
+                        Risk Recovery
+                      </p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Drawdown and bounce-back context.
+                      </p>
+                    </div>
+                    <div className="space-y-3 text-sm">
+                      <div className="flex items-center justify-between gap-3 border-b border-border/50 pb-3">
+                        <span className="text-muted-foreground">
+                          Recovery factor
+                        </span>
+                        <span
+                          className={cn(
+                            "font-semibold",
+                            (result.recoveryFactor ?? 0) >= 0
+                              ? "text-success"
+                              : "text-destructive",
+                          )}
+                        >
+                          {ratio.format(result.recoveryFactor ?? 0)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3 border-b border-border/50 pb-3">
+                        <span className="text-muted-foreground">
+                          Best / worst trade
+                        </span>
+                        <span className="font-semibold text-foreground">
+                          <span className="text-success">
+                            {money.format(result.maxWin)}
+                          </span>
+                          <span className="text-muted-foreground"> / </span>
+                          <span className="text-destructive">
+                            {money.format(result.maxLoss)}
+                          </span>
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-muted-foreground">
+                          Max drawdown
+                        </span>
+                        <span className="font-semibold text-destructive">
+                          -{ratio.format(Math.abs(result.maxDrawdownPercent))}%
+                        </span>
+                      </div>
+                    </div>
+                  </section>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/70 bg-card">
+            <CardHeader>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-xl">
+                    <Target className="h-5 w-5 text-primary" />
+                    Edge Radar
+                  </CardTitle>
+                  <CardDescription>
+                    {activeRadarView.description}
+                  </CardDescription>
+                </div>
+
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
                       type="button"
-                      size="icon-sm"
-                      className="-ml-px shrink-0 rounded-l-none"
-                      aria-label="More strategy actions"
-                      title="More strategy actions"
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5"
                     >
+                      {activeRadarView.label}
                       <ChevronDown className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-44 min-w-44">
-                    <DropdownMenuLabel>Strategy</DropdownMenuLabel>
-                    {canOpenCreatorProfile ? (
-                      <DropdownMenuItem asChild>
-                        <Link
-                          to={`/${strategyCreatorUsername}`}
-                          className="flex items-center gap-2"
-                        >
-                          <UserRound className="h-4 w-4" />
-                          Creator profile
-                        </Link>
-                      </DropdownMenuItem>
-                    ) : null}
-                    <DropdownMenuItem asChild>
-                      <Link
-                        to={`/strategy/${backtest.strategy._id}`}
-                        className="flex items-center gap-2"
-                      >
-                        <SquareArrowOutUpRight className="h-4 w-4" />
-                        Open strategy
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onSelect={() => {
-                        void onToggleStrategyBookmark();
-                      }}
-                      disabled={
-                        !backtest.strategy?._id || isStrategyBookmarkUpdating
+                  <DropdownMenuContent align="end" className="w-44">
+                    <DropdownMenuLabel>Radar View</DropdownMenuLabel>
+                    <DropdownMenuRadioGroup
+                      value={radarView}
+                      onValueChange={(value) =>
+                        setRadarView(value as RadarView)
                       }
                     >
-                      {isStrategyBookmarkUpdating ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : isStrategyBookmarked ? (
-                        <BookmarkCheck className="h-4 w-4" />
-                      ) : (
-                        <Bookmark className="h-4 w-4" />
-                      )}
-                      {isStrategyBookmarked ? "Bookmarked" : "Bookmark"}
-                    </DropdownMenuItem>
+                      {radarViewOptions.map((option) => (
+                        <DropdownMenuRadioItem
+                          key={option.value}
+                          value={option.value}
+                        >
+                          {option.label}
+                        </DropdownMenuRadioItem>
+                      ))}
+                    </DropdownMenuRadioGroup>
                   </DropdownMenuContent>
                 </DropdownMenu>
-              </ButtonGroup>
-            ) : canOpenCreatorProfile ? (
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full md:w-auto md:flex-none"
-                asChild
-              >
-                <Link
-                  to={`/${strategyCreatorUsername}`}
-                  className="inline-flex items-center justify-center gap-1.5"
-                >
-                  <UserRound className="h-4 w-4" />
-                  Creator Profile
-                </Link>
-              </Button>
-            ) : (
-              <span className="inline-flex w-full items-center justify-center gap-1 rounded-md border bg-muted px-3 py-2 text-sm text-muted-foreground md:w-auto md:flex-none">
-                <Lock className="h-4 w-4" />
-                Locked
-              </span>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <PerformanceRadarChart
+                view={radarView}
+                winRate={result.winRate}
+                payoffRatio={result.payoffRatio}
+                profitFactor={result.profitFactor}
+                recoveryFactor={result.recoveryFactor}
+                maxDrawdownPercent={result.maxDrawdownPercent}
+                totalTrades={result.totalTrades}
+                averageTradePnL={result.averageTradePnL}
+                totalFees={result.totalFees}
+                trades={result.trades}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      <Card className="max-w-full min-w-0 border-border/70 bg-card">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-xl">
-            <AreaChart className="h-5 w-5 text-primary" />
-            Equity Curve
-          </CardTitle>
-          <CardDescription>
-            From {money.format(result.initialBalance)} to{" "}
-            {money.format(result.finalBalance)} with {result.totalTrades} closed
-            trades.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <EquityCurve
-            data={result.equityCurves}
-            initialBalance={result.initialBalance}
-            finalBalance={result.finalBalance}
-          />
-        </CardContent>
-      </Card>
+        <TabsContent value="setup" className="space-y-4 md:space-y-6">
+          <Card className="border-border/70 bg-card">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-xl">
+                <Target className="h-5 w-5 text-primary" />
+                Strategy
+              </CardTitle>
+              <CardDescription>
+                The strategy and run configuration behind this backtest.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="min-w-0 space-y-2">
+                  <p className="truncate text-lg font-semibold tracking-tight text-foreground">
+                    {strategyName}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                      <UserRound className="h-3.5 w-3.5 text-muted-foreground" />
+                      @<span>{strategyCreatorUsername}</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                      {strategyIsPublic ? (
+                        <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+                      ) : (
+                        <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                      )}
+                      <span>
+                        {isStrategyOwner
+                          ? "Mine"
+                          : strategyIsPublic
+                            ? "Public"
+                            : "Private"}
+                      </span>
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                      <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span>{backtest.strategy?.stats?.viewCount ?? "-"}</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                      <Bookmark className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span>
+                        {backtest.strategy?.stats?.bookmarkCount ?? "-"}
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              </div>
 
-      <Card className="border-border/70 bg-card">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-xl">
-            <CandlestickChart className="h-5 w-5 text-primary" />
-            Trade History
-          </CardTitle>
-          <CardDescription>
-            Compact execution log from the backtest result payload.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="max-w-full min-w-0 space-y-4 overflow-x-hidden">
-          <div className="hidden max-w-full md:block">
-            <table className="w-full table-fixed text-sm">
-              <thead>
-                <tr className="border-b text-left text-xs tracking-wide text-muted-foreground uppercase">
-                  <th className="px-2 py-3">Side</th>
-                  <th className="px-2 py-3">Entry (UTC)</th>
-                  <th className="px-2 py-3">Exit (UTC)</th>
-                  <th className="px-2 py-3">Entry Price</th>
-                  <th className="px-2 py-3">Exit Price</th>
-                  <th className="px-2 py-3">PnL</th>
-                  <th className="px-2 py-3">Reason</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {recentTrades.map((trade, index) => (
-                  <tr
-                    key={`${trade.entryTime}-${trade.exitTime}-${index}`}
-                    className="border-b last:border-none"
+              <div className="flex w-full min-w-0 flex-col gap-2 md:w-auto md:flex-row md:flex-wrap md:items-center">
+                {canOpenStrategy && backtest.strategy?._id ? (
+                  <ButtonGroup className="w-full min-w-0 md:w-auto">
+                    <Button
+                      type="button"
+                      className="min-w-0 flex-1 rounded-r-none"
+                      asChild
+                    >
+                      <Link
+                        to={`/strategy/${backtest.strategy._id}`}
+                        className="inline-flex min-w-0 items-center justify-center gap-1.5"
+                      >
+                        <SquareArrowOutUpRight className="h-4 w-4" />
+                        <span className="truncate">Open Strategy</span>
+                      </Link>
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          type="button"
+                          className="-ml-px shrink-0 rounded-l-none"
+                          aria-label="More strategy actions"
+                          title="More strategy actions"
+                        >
+                          <ChevronDown className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent
+                        align="end"
+                        className="w-44 min-w-44"
+                      >
+                        <DropdownMenuLabel>Strategy</DropdownMenuLabel>
+                        {canOpenCreatorProfile ? (
+                          <DropdownMenuItem asChild>
+                            <Link
+                              to={`/${strategyCreatorUsername}`}
+                              className="flex items-center gap-2"
+                            >
+                              <UserRound className="h-4 w-4" />
+                              Creator profile
+                            </Link>
+                          </DropdownMenuItem>
+                        ) : null}
+                        <DropdownMenuItem asChild>
+                          <Link
+                            to={`/strategy/${backtest.strategy._id}`}
+                            className="flex items-center gap-2"
+                          >
+                            <SquareArrowOutUpRight className="h-4 w-4" />
+                            Open strategy
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onSelect={() => {
+                            void onToggleStrategyBookmark();
+                          }}
+                          disabled={
+                            !backtest.strategy?._id ||
+                            isStrategyBookmarkUpdating
+                          }
+                        >
+                          {isStrategyBookmarkUpdating ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : isStrategyBookmarked ? (
+                            <BookmarkCheck className="h-4 w-4" />
+                          ) : (
+                            <Bookmark className="h-4 w-4" />
+                          )}
+                          {isStrategyBookmarked ? "Bookmarked" : "Bookmark"}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </ButtonGroup>
+                ) : canOpenCreatorProfile ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full md:w-auto md:flex-none"
+                    asChild
                   >
-                    <td className="px-2 py-3">
+                    <Link
+                      to={`/${strategyCreatorUsername}`}
+                      className="inline-flex items-center justify-center gap-1.5"
+                    >
+                      <UserRound className="h-4 w-4" />
+                      Creator Profile
+                    </Link>
+                  </Button>
+                ) : (
+                  <span className="inline-flex w-full items-center justify-center gap-1 rounded-md border bg-muted px-3 py-2 text-sm text-muted-foreground md:w-auto md:flex-none">
+                    <Lock className="h-4 w-4" />
+                    Locked
+                  </span>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <Card className="border-border/70 bg-card">
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center gap-2">
+                  <CalendarClock className="h-4 w-4" />
+                  Date Window
+                </CardDescription>
+                <CardTitle className="text-xl md:text-2xl">
+                  {formatDuration(result.duration)}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm text-muted-foreground">
+                <div className="space-y-1.5">
+                  <p>
+                    {format(new Date(backtest.startDate), "PPP")} to{" "}
+                    {format(new Date(backtest.endDate), "PPP")}
+                  </p>
+                  <p>
+                    Market: {backtest.symbol} / {backtest.timeframe}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/70 bg-card">
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center gap-2">
+                  <SlidersHorizontal className="h-4 w-4" />
+                  Trade Setup
+                </CardDescription>
+                <CardTitle className="text-xl md:text-2xl">
+                  {backtest.hedgeMode ? "Hedge" : "One-way"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm text-muted-foreground">
+                <div className="grid gap-3">
+                  <p>Initial balance: {money.format(result.initialBalance)}</p>
+                  <p>{money.format(backtest.amountPerTrade)} per trade</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/70 bg-card">
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center gap-2">
+                  <Clock3 className="h-4 w-4" />
+                  Position Duration
+                </CardDescription>
+                <CardTitle className="text-xl md:text-2xl">
+                  {formatDuration(result.averageTradeDuration ?? 0)}
+                  <span className="ml-1 text-xs font-medium text-muted-foreground">
+                    avg
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm text-muted-foreground">
+                <div className="space-y-1.5">
+                  <p>
+                    Longest / Shortest:{" "}
+                    {formatDuration(result.longestTradeDuration ?? 0)} /{" "}
+                    {formatDuration(result.shortestTradeDuration ?? 0)}
+                  </p>
+                  <p>Total trades: {result.totalTrades}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="equity" className="space-y-4 md:space-y-6">
+          <Card className="max-w-full min-w-0 border-border/70 bg-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-xl">
+                <AreaChart className="h-5 w-5 text-primary" />
+                Equity Curve
+              </CardTitle>
+              <CardDescription>
+                From {money.format(result.initialBalance)} to{" "}
+                {money.format(result.finalBalance)} with {result.totalTrades}{" "}
+                closed trades.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <EquityCurve
+                data={result.equityCurves}
+                initialBalance={result.initialBalance}
+                finalBalance={result.finalBalance}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="trades" className="space-y-4 md:space-y-6">
+          <Card className="border-border/70 bg-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-xl">
+                <CalendarClock className="h-5 w-5 text-primary" />
+                Trade Activity
+              </CardTitle>
+              <CardDescription>
+                Shadcn-style bar chart for when trades happen across date and
+                time views.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <TradeActivityBarChart trades={result.trades} />
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/70 bg-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-xl">
+                <CandlestickChart className="h-5 w-5 text-primary" />
+                Trade History
+              </CardTitle>
+              <CardDescription>
+                Compact execution log from the backtest result payload.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="max-w-full min-w-0 space-y-4 overflow-x-hidden">
+              <div className="hidden max-w-full md:block">
+                <table className="w-full table-fixed text-sm">
+                  <thead>
+                    <tr className="border-b text-left text-xs tracking-wide text-muted-foreground uppercase">
+                      <th className="px-2 py-3">Side</th>
+                      <th className="px-2 py-3">Entry (UTC)</th>
+                      <th className="px-2 py-3">Exit (UTC)</th>
+                      <th className="px-2 py-3">Entry Price</th>
+                      <th className="px-2 py-3">Exit Price</th>
+                      <th className="px-2 py-3">PnL</th>
+                      <th className="px-2 py-3">Reason</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {recentTrades.map((trade, index) => (
+                      <tr
+                        key={`${trade.entryTime}-${trade.exitTime}-${index}`}
+                        className="border-b last:border-none"
+                      >
+                        <td className="px-2 py-3">
+                          <span
+                            className={`rounded-full px-2 py-1 text-xs font-medium ${
+                              trade.side === "buy"
+                                ? "bg-success/15 text-success"
+                                : "bg-destructive/15 text-destructive"
+                            }`}
+                          >
+                            {trade.side.toUpperCase()}
+                          </span>
+                        </td>
+                        <td className="px-2 py-3 text-muted-foreground">
+                          {formatDateTime(trade.entryTime)}
+                        </td>
+                        <td className="px-2 py-3 text-muted-foreground">
+                          {formatDateTime(trade.exitTime)}
+                        </td>
+                        <td className="px-2 py-3">
+                          {money.format(trade.entryPrice)}
+                        </td>
+                        <td className="px-2 py-3">
+                          {money.format(trade.exitPrice)}
+                        </td>
+                        <td
+                          className={`px-2 py-3 font-medium ${
+                            trade.pnl >= 0 ? "text-success" : "text-destructive"
+                          }`}
+                        >
+                          {money.format(trade.pnl)} (
+                          {ratio.format(trade.pnlPercent)}%)
+                        </td>
+                        <td className="px-2 py-3">
+                          <span className="rounded-full border px-2 py-1 text-xs">
+                            {trade.exitReason}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="space-y-2 md:hidden">
+                {recentTrades.map((trade, index) => (
+                  <div
+                    key={`${trade.entryTime}-${trade.exitTime}-${index}-mobile`}
+                    className="rounded-lg border p-3 text-sm"
+                  >
+                    <div className="mb-2 flex items-center justify-between">
                       <span
-                        className={`rounded-full px-2 py-1 text-xs font-medium ${
+                        className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
                           trade.side === "buy"
                             ? "bg-success/15 text-success"
                             : "bg-destructive/15 text-destructive"
@@ -1291,137 +2276,91 @@ export default function BacktestResultPage() {
                       >
                         {trade.side.toUpperCase()}
                       </span>
-                    </td>
-                    <td className="px-2 py-3 text-muted-foreground">
-                      {formatDateTime(trade.entryTime)}
-                    </td>
-                    <td className="px-2 py-3 text-muted-foreground">
-                      {formatDateTime(trade.exitTime)}
-                    </td>
-                    <td className="px-2 py-3">
-                      {money.format(trade.entryPrice)}
-                    </td>
-                    <td className="px-2 py-3">
-                      {money.format(trade.exitPrice)}
-                    </td>
-                    <td
-                      className={`px-2 py-3 font-medium ${
-                        trade.pnl >= 0 ? "text-success" : "text-destructive"
-                      }`}
-                    >
-                      {money.format(trade.pnl)} (
-                      {ratio.format(trade.pnlPercent)}%)
-                    </td>
-                    <td className="px-2 py-3">
-                      <span className="rounded-full border px-2 py-1 text-xs">
-                        {trade.exitReason}
+                      <span
+                        className={`font-medium ${
+                          trade.pnl >= 0 ? "text-success" : "text-destructive"
+                        }`}
+                      >
+                        {money.format(trade.pnl)}
                       </span>
-                    </td>
-                  </tr>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Entry: {formatDateTime(trade.entryTime)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Exit: {formatDateTime(trade.exitTime)}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {money.format(trade.entryPrice)} {"->"}{" "}
+                      {money.format(trade.exitPrice)} (
+                      {ratio.format(trade.pnlPercent)}%)
+                    </p>
+                  </div>
                 ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="space-y-2 md:hidden">
-            {recentTrades.map((trade, index) => (
-              <div
-                key={`${trade.entryTime}-${trade.exitTime}-${index}-mobile`}
-                className="rounded-lg border p-3 text-sm"
-              >
-                <div className="mb-2 flex items-center justify-between">
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                      trade.side === "buy"
-                        ? "bg-success/15 text-success"
-                        : "bg-destructive/15 text-destructive"
-                    }`}
-                  >
-                    {trade.side.toUpperCase()}
-                  </span>
-                  <span
-                    className={`font-medium ${
-                      trade.pnl >= 0 ? "text-success" : "text-destructive"
-                    }`}
-                  >
-                    {money.format(trade.pnl)}
-                  </span>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Entry: {formatDateTime(trade.entryTime)}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Exit: {formatDateTime(trade.exitTime)}
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {money.format(trade.entryPrice)} {"->"}{" "}
-                  {money.format(trade.exitPrice)} (
-                  {ratio.format(trade.pnlPercent)}%)
-                </p>
               </div>
-            ))}
-          </div>
 
-          {totalTradesPages > 1 && (
-            <Pagination className="justify-center">
-              <PaginationContent className="flex-nowrap justify-center">
-                <PaginationItem>
-                  <PaginationPrevious
-                    href="#"
-                    onClick={(event) => {
-                      event.preventDefault();
-                      setTradesPage((prev) => Math.max(1, prev - 1));
-                    }}
-                    className={
-                      tradesPage <= 1
-                        ? "pointer-events-none opacity-50"
-                        : undefined
-                    }
-                  />
-                </PaginationItem>
-
-                {tradePageItems.map((item, index) =>
-                  typeof item === "number" ? (
-                    <PaginationItem key={`trades-page-${item}`}>
-                      <PaginationLink
+              {totalTradesPages > 1 && (
+                <Pagination className="justify-center">
+                  <PaginationContent className="flex-nowrap justify-center">
+                    <PaginationItem>
+                      <PaginationPrevious
                         href="#"
-                        isActive={item === tradesPage}
                         onClick={(event) => {
                           event.preventDefault();
-                          setTradesPage(item);
+                          setTradesPage((prev) => Math.max(1, prev - 1));
                         }}
-                      >
-                        {item}
-                      </PaginationLink>
+                        className={
+                          tradesPage <= 1
+                            ? "pointer-events-none opacity-50"
+                            : undefined
+                        }
+                      />
                     </PaginationItem>
-                  ) : (
-                    <PaginationItem key={`${item}-${index}`}>
-                      <PaginationEllipsis />
-                    </PaginationItem>
-                  ),
-                )}
 
-                <PaginationItem>
-                  <PaginationNext
-                    href="#"
-                    onClick={(event) => {
-                      event.preventDefault();
-                      setTradesPage((prev) =>
-                        Math.min(totalTradesPages, prev + 1),
-                      );
-                    }}
-                    className={
-                      tradesPage >= totalTradesPages
-                        ? "pointer-events-none opacity-50"
-                        : undefined
-                    }
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
-          )}
-        </CardContent>
-      </Card>
+                    {tradePageItems.map((item, index) =>
+                      typeof item === "number" ? (
+                        <PaginationItem key={`trades-page-${item}`}>
+                          <PaginationLink
+                            href="#"
+                            isActive={item === tradesPage}
+                            onClick={(event) => {
+                              event.preventDefault();
+                              setTradesPage(item);
+                            }}
+                          >
+                            {item}
+                          </PaginationLink>
+                        </PaginationItem>
+                      ) : (
+                        <PaginationItem key={`${item}-${index}`}>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      ),
+                    )}
+
+                    <PaginationItem>
+                      <PaginationNext
+                        href="#"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          setTradesPage((prev) =>
+                            Math.min(totalTradesPages, prev + 1),
+                          );
+                        }}
+                        className={
+                          tradesPage >= totalTradesPages
+                            ? "pointer-events-none opacity-50"
+                            : undefined
+                        }
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -1981,16 +1981,15 @@ export default function Profile() {
                                 disabled={isActive}
                                 aria-label={dialogTabLabels[tab]}
                                 title={dialogTabLabels[tab]}
-                                className="gap-2 data-[state=active]:cursor-default data-[state=active]:text-primary data-[state=active]:after:bg-primary disabled:pointer-events-none disabled:opacity-100 dark:data-[state=active]:text-primary dark:data-[state=active]:after:bg-primary"
+                                className="group gap-2 data-[state=active]:cursor-default data-[state=active]:text-primary data-[state=active]:after:bg-primary disabled:pointer-events-none disabled:opacity-100 dark:data-[state=active]:text-primary dark:data-[state=active]:after:bg-primary"
                               >
                                 <Icon className="h-4 w-4 shrink-0" />
-                                {isActive ? (
-                                  <span>{dialogTabLabels[tab]}</span>
-                                ) : (
-                                  <span className="sr-only">
-                                    {dialogTabLabels[tab]}
-                                  </span>
-                                )}
+                                <span className="hidden group-data-[state=active]:inline lg:inline">
+                                  {dialogTabLabels[tab]}
+                                </span>
+                                <span className="sr-only lg:hidden">
+                                  {dialogTabLabels[tab]}
+                                </span>
                               </TabsTrigger>
                             );
                           })}
@@ -2231,8 +2230,8 @@ export default function Profile() {
                                                       key={stat.key}
                                                       className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5"
                                                     >
-                                                      <stat.icon className="h-3.5 w-3.5" />
-                                                      <span className="font-medium text-foreground">
+                                                      <stat.icon className="h-3.5 w-3.5 text-muted-foreground" />
+                                                      <span>
                                                         {compactNumber.format(
                                                           stat.value ?? 0,
                                                         )}
@@ -2372,7 +2371,25 @@ export default function Profile() {
                                                     {item.description ||
                                                       "No description provided."}
                                                   </p>
-                                                  <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                                                  <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                                                    <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                                                      <UserRound className="h-3.5 w-3.5 text-muted-foreground" />
+                                                      <span className="truncate">
+                                                        @
+                                                        {routeUsername ||
+                                                          "unknown"}
+                                                      </span>
+                                                    </span>
+                                                    <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                                                      {item.isPublic ? (
+                                                        <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+                                                      ) : (
+                                                        <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                                                      )}
+                                                      {item.isPublic
+                                                        ? "Public"
+                                                        : "Private"}
+                                                    </span>
                                                     <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
                                                       <TrendingUp className="h-3.5 w-3.5" />
                                                       {item.stats?.viewCount ??
@@ -2382,16 +2399,6 @@ export default function Profile() {
                                                       <Bookmark className="h-3.5 w-3.5" />
                                                       {item.stats
                                                         ?.bookmarkCount ?? "-"}
-                                                    </span>
-                                                    <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
-                                                      {item.isPublic ? (
-                                                        <Globe className="h-3.5 w-3.5" />
-                                                      ) : (
-                                                        <Lock className="h-3.5 w-3.5" />
-                                                      )}
-                                                      {item.isPublic
-                                                        ? "Public"
-                                                        : "Private"}
                                                     </span>
                                                   </div>
                                                 </div>

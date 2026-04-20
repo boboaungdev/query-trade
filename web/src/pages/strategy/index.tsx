@@ -524,17 +524,25 @@ export default function StrategyPage() {
                   >
                     <TabsTrigger
                       value="all"
-                      className="data-[state=active]:text-primary data-[state=active]:after:bg-primary dark:data-[state=active]:text-primary dark:data-[state=active]:after:bg-primary"
+                      aria-label="Explore"
+                      title="Explore"
+                      className="group gap-2 data-[state=active]:text-primary data-[state=active]:after:bg-primary dark:data-[state=active]:text-primary dark:data-[state=active]:after:bg-primary"
                     >
-                      <Compass className="h-4 w-4" />
-                      Explore
+                      <Compass className="h-4 w-4 shrink-0" />
+                      <span className="hidden group-data-[state=active]:inline md:inline">
+                        Explore
+                      </span>
                     </TabsTrigger>
                     <TabsTrigger
                       value="mine"
-                      className="data-[state=active]:text-primary data-[state=active]:after:bg-primary dark:data-[state=active]:text-primary dark:data-[state=active]:after:bg-primary"
+                      aria-label="Me"
+                      title="Me"
+                      className="group gap-2 data-[state=active]:text-primary data-[state=active]:after:bg-primary dark:data-[state=active]:text-primary dark:data-[state=active]:after:bg-primary"
                     >
-                      <UserRound className="h-4 w-4" />
-                      Me
+                      <UserRound className="h-4 w-4 shrink-0" />
+                      <span className="hidden group-data-[state=active]:inline md:inline">
+                        Me
+                      </span>
                     </TabsTrigger>
                   </TabsList>
 
@@ -699,8 +707,33 @@ export default function StrategyPage() {
                           </h3>
                         </div>
 
-                        <div className="truncate text-xs text-muted-foreground">
-                          @{item.user?.username || "unknown"}
+                        <div className="mt-4 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                          <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                            <UserRound className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span className="truncate">
+                              @{item.user?.username || "unknown"}
+                            </span>
+                          </span>
+                          <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                            {item.isPublic ? (
+                              <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+                            ) : (
+                              <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                            )}
+                            {isMine
+                              ? "Mine"
+                              : item.isPublic
+                                ? "Public"
+                                : "Private"}
+                          </span>
+                          <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                            <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
+                            {item.stats?.viewCount ?? 0}
+                          </span>
+                          <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                            <Bookmark className="h-3.5 w-3.5 text-muted-foreground" />
+                            {item.stats?.bookmarkCount ?? 0}
+                          </span>
                         </div>
                       </div>
 
@@ -833,29 +866,6 @@ export default function StrategyPage() {
                       >
                         {description}
                       </p>
-
-                      <div className="mt-4 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-                        <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5 text-foreground">
-                          <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
-                          {item.stats?.viewCount ?? 0}
-                        </span>
-                        <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5 text-foreground">
-                          <Bookmark className="h-3.5 w-3.5 text-muted-foreground" />
-                          {item.stats?.bookmarkCount ?? 0}
-                        </span>
-                        <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5 text-foreground">
-                          {item.isPublic ? (
-                            <Globe className="h-3.5 w-3.5 text-muted-foreground" />
-                          ) : (
-                            <Lock className="h-3.5 w-3.5 text-muted-foreground" />
-                          )}
-                          {isMine
-                            ? "Mine"
-                            : item.isPublic
-                              ? "Public"
-                              : "Private"}
-                        </span>
-                      </div>
                     </div>
                   </CardContent>
                 </Card>

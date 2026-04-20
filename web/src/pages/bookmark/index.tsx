@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   Bookmark,
   BookmarkCheck,
+  CandlestickChart,
   Copy,
   Globe,
   Loader2,
@@ -12,6 +13,7 @@ import {
   SquareArrowOutUpRight,
   Trash2,
   TrendingUp,
+  UserRound,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -57,7 +59,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuthStore } from "@/store/auth";
 import { cn } from "@/lib/utils";
 
-type BookmarkFilter = "all" | BookmarkTargetType;
+type BookmarkFilter = BookmarkTargetType;
 
 type BookmarkTarget = {
   _id?: string;
@@ -310,22 +312,26 @@ function renderBookmarkStrategyCard({
           {target?.description?.trim() || "No description"}
         </p>
 
-        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-          <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5 text-foreground">
-            <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
-            {target?.stats?.viewCount ?? 0}
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+          <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+            <UserRound className="h-3.5 w-3.5 text-muted-foreground" />@
+            <span className="truncate">{targetUsername || "unknown"}</span>
           </span>
-          <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5 text-foreground">
-            <Bookmark className="h-3.5 w-3.5 text-muted-foreground" />
-            {target?.stats?.bookmarkCount ?? 0}
-          </span>
-          <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5 text-foreground">
+          <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
             {target?.isPublic ? (
               <Globe className="h-3.5 w-3.5 text-muted-foreground" />
             ) : (
               <Lock className="h-3.5 w-3.5 text-muted-foreground" />
             )}
             {isMine ? "Mine" : target?.isPublic ? "Public" : "Private"}
+          </span>
+          <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+            <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
+            {target?.stats?.viewCount ?? 0}
+          </span>
+          <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+            <Bookmark className="h-3.5 w-3.5 text-muted-foreground" />
+            {target?.stats?.bookmarkCount ?? 0}
           </span>
         </div>
       </CardContent>
@@ -563,7 +569,7 @@ export default function BookmarkPage() {
   const navigate = useNavigate();
 
   const [bookmarks, setBookmarks] = useState<BookmarkItem[]>([]);
-  const [filter, setFilter] = useState<BookmarkFilter>("all");
+  const [filter, setFilter] = useState<BookmarkFilter>("backtest");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sortBy, setSortBy] = useState<"createdAt" | "updatedAt">("updatedAt");
@@ -626,7 +632,7 @@ export default function BookmarkPage() {
       try {
         const response = (await fetchBookmarks({
           page,
-          targetType: filter === "all" ? undefined : filter,
+          targetType: filter,
           search: debouncedSearch,
           sortBy,
           order,
@@ -726,7 +732,14 @@ export default function BookmarkPage() {
 
     observer.observe(node);
     return () => observer.disconnect();
-  }, [debouncedSearch, hasNextPage, isAppending, isLoading, isSearching, search]);
+  }, [
+    debouncedSearch,
+    hasNextPage,
+    isAppending,
+    isLoading,
+    isSearching,
+    search,
+  ]);
 
   const isSearchPending = search.trim() !== debouncedSearch;
   const listStatus =
@@ -853,22 +866,26 @@ export default function BookmarkPage() {
                 className="w-full justify-start md:w-auto"
               >
                 <TabsTrigger
-                  value="all"
-                  className="data-[state=active]:text-primary data-[state=active]:after:bg-primary dark:data-[state=active]:text-primary dark:data-[state=active]:after:bg-primary"
-                >
-                  All
-                </TabsTrigger>
-                <TabsTrigger
                   value="backtest"
-                  className="data-[state=active]:text-primary data-[state=active]:after:bg-primary dark:data-[state=active]:text-primary dark:data-[state=active]:after:bg-primary"
+                  aria-label="Backtests"
+                  title="Backtests"
+                  className="group gap-2 data-[state=active]:text-primary data-[state=active]:after:bg-primary dark:data-[state=active]:text-primary dark:data-[state=active]:after:bg-primary"
                 >
-                  Backtests
+                  <CandlestickChart className="h-4 w-4 shrink-0" />
+                  <span className="hidden group-data-[state=active]:inline md:inline">
+                    Backtests
+                  </span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="strategy"
-                  className="data-[state=active]:text-primary data-[state=active]:after:bg-primary dark:data-[state=active]:text-primary dark:data-[state=active]:after:bg-primary"
+                  aria-label="Strategies"
+                  title="Strategies"
+                  className="group gap-2 data-[state=active]:text-primary data-[state=active]:after:bg-primary dark:data-[state=active]:text-primary dark:data-[state=active]:after:bg-primary"
                 >
-                  Strategies
+                  <TrendingUp className="h-4 w-4 shrink-0" />
+                  <span className="hidden group-data-[state=active]:inline md:inline">
+                    Strategies
+                  </span>
                 </TabsTrigger>
               </TabsList>
 

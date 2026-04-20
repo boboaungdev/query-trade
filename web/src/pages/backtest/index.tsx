@@ -21,6 +21,8 @@ import {
   Play,
   Bookmark,
   BookmarkCheck,
+  Globe,
+  Lock,
   Search,
   ShieldAlert,
   ListFilter,
@@ -1781,7 +1783,7 @@ export default function BacktestPage() {
                                                   {item.description?.trim() ||
                                                     "No description provided."}
                                                 </p>
-                                                <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                                                <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
                                                   <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
                                                     <UserRound className="h-3.5 w-3.5" />
                                                     <span className="truncate">
@@ -1789,6 +1791,16 @@ export default function BacktestPage() {
                                                       {item.user?.username ||
                                                         "unknown"}
                                                     </span>
+                                                  </span>
+                                                  <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                                                    {item.isPublic ? (
+                                                      <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+                                                    ) : (
+                                                      <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                                                    )}
+                                                    {item.isPublic
+                                                      ? "Public"
+                                                      : "Private"}
                                                   </span>
                                                   <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
                                                     <TrendingUp className="h-3.5 w-3.5" />

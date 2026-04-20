@@ -896,30 +896,30 @@ export default function StrategyDetailPage() {
                   </p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  <span className="theme-glass-chip inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
-                    <UserRound className="h-3 w-3" />@
+                <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                    <UserRound className="h-3.5 w-3.5 text-muted-foreground" />@
                     {strategy.user?.username || "unknown"}
                   </span>
-                  <span className="theme-glass-chip inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
-                    <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
-                    {formatDateLabel(strategy.updatedAt)}
-                  </span>
-                  <span className="theme-glass-chip inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium text-muted-foreground uppercase">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
                     {strategy.isPublic ? (
-                      <Globe className="h-3 w-3" />
+                      <Globe className="h-3.5 w-3.5 text-muted-foreground" />
                     ) : (
-                      <Lock className="h-3 w-3" />
+                      <Lock className="h-3.5 w-3.5 text-muted-foreground" />
                     )}
                     {isMine ? "Mine" : strategy.isPublic ? "Public" : "Private"}
                   </span>
-                  <span className="theme-glass-chip inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
                     <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
                     {strategy.stats?.viewCount ?? 0}
                   </span>
-                  <span className="theme-glass-chip inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
                     <Bookmark className="h-3.5 w-3.5 text-muted-foreground" />
                     {strategy.stats?.bookmarkCount ?? 0}
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                    <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
+                    {formatDateLabel(strategy.updatedAt)}
                   </span>
                 </div>
               </div>
@@ -1008,10 +1008,7 @@ export default function StrategyDetailPage() {
                       size="sm"
                       variant={isFollowingCreator ? "outline" : "default"}
                       className="relative min-w-0 flex-1 rounded-r-none"
-                      disabled={
-                        !isAuthenticated ||
-                        isFollowUpdating
-                      }
+                      disabled={!isAuthenticated || isFollowUpdating}
                       onClick={() => {
                         if (isFollowingCreator) {
                           setIsUnfollowDialogOpen(true);
@@ -1082,10 +1079,7 @@ export default function StrategyDetailPage() {
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
-                          disabled={
-                            !isAuthenticated ||
-                            isFollowUpdating
-                          }
+                          disabled={!isAuthenticated || isFollowUpdating}
                           onSelect={() => {
                             if (isFollowingCreator) {
                               setIsUnfollowDialogOpen(true);

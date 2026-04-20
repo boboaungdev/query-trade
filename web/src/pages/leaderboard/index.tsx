@@ -440,17 +440,25 @@ export default function LeaderboardPage() {
               >
                 <TabsTrigger
                   value="all"
-                  className="data-[state=active]:text-primary data-[state=active]:after:bg-primary dark:data-[state=active]:text-primary dark:data-[state=active]:after:bg-primary"
+                  aria-label="Explore"
+                  title="Explore"
+                  className="group gap-2 data-[state=active]:text-primary data-[state=active]:after:bg-primary dark:data-[state=active]:text-primary dark:data-[state=active]:after:bg-primary"
                 >
-                  <Compass className="h-4 w-4" />
-                  Explore
+                  <Compass className="h-4 w-4 shrink-0" />
+                  <span className="hidden group-data-[state=active]:inline md:inline">
+                    Explore
+                  </span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="me"
-                  className="data-[state=active]:text-primary data-[state=active]:after:bg-primary dark:data-[state=active]:text-primary dark:data-[state=active]:after:bg-primary"
+                  aria-label="Me"
+                  title="Me"
+                  className="group gap-2 data-[state=active]:text-primary data-[state=active]:after:bg-primary dark:data-[state=active]:text-primary dark:data-[state=active]:after:bg-primary"
                 >
-                  <UserRound className="h-4 w-4" />
-                  Me
+                  <UserRound className="h-4 w-4 shrink-0" />
+                  <span className="hidden group-data-[state=active]:inline md:inline">
+                    Me
+                  </span>
                 </TabsTrigger>
               </TabsList>
 
