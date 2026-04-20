@@ -33,7 +33,7 @@ import { toast } from "sonner";
 
 import { getApiErrorMessage } from "@/api/axios";
 import { createBookmark, deleteBookmark } from "@/api/bookmark";
-import { createFollow, deleteFollow, fetchFollowStatus } from "@/api/follow";
+import { createFollow, deleteFollow } from "@/api/follow";
 import { deleteStrategy, fetchStrategyById } from "@/api/strategy";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -97,6 +97,7 @@ type StrategyDetailItem = {
     name?: string;
     username?: string;
     avatar?: string;
+    isFollowing?: boolean;
     stats?: {
       followerCount?: number;
       strategyCount?: number;
@@ -452,7 +453,6 @@ export default function StrategyDetailPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUnfollowDialogOpen, setIsUnfollowDialogOpen] = useState(false);
   const [isFollowingCreator, setIsFollowingCreator] = useState(false);
-  const [isFollowStatusLoading, setIsFollowStatusLoading] = useState(false);
   const [isFollowUpdating, setIsFollowUpdating] = useState(false);
   const [isStrategyBookmarkUpdating, setIsStrategyBookmarkUpdating] =
     useState(false);
@@ -463,7 +463,6 @@ export default function StrategyDetailPage() {
     if (!strategyId) {
       setStrategy(null);
       setIsFollowingCreator(false);
-      setIsFollowStatusLoading(false);
       setIsLoading(false);
       setLoadError("Missing strategy id.");
       return;
@@ -476,7 +475,6 @@ export default function StrategyDetailPage() {
       setLoadError("");
       setStrategy(null);
       setIsFollowingCreator(false);
-      setIsFollowStatusLoading(false);
       setIsStrategyBookmarkUpdating(false);
 
       try {
@@ -485,25 +483,13 @@ export default function StrategyDetailPage() {
         if (!nextStrategy) throw new Error("Strategy not found");
 
         const creatorId = nextStrategy.user?._id ?? "";
-        const shouldLoadFollowStatus =
-          isAuthenticated && Boolean(creatorId) && creatorId !== user?._id;
-
-        const followStatusPromise = shouldLoadFollowStatus
-          ? fetchFollowStatus(creatorId)
-          : Promise.resolve(null);
-
-        if (shouldLoadFollowStatus) {
-          setIsFollowStatusLoading(true);
-        }
-
-        const followStatusResponse = await followStatusPromise;
 
         if (!isActive) return;
 
         setStrategy(nextStrategy);
         setIsFollowingCreator(
-          shouldLoadFollowStatus
-            ? Boolean(followStatusResponse?.result?.isFollowing)
+          isAuthenticated && Boolean(creatorId) && creatorId !== user?._id
+            ? Boolean(nextStrategy.user?.isFollowing)
             : false,
         );
       } catch (error) {
@@ -519,7 +505,6 @@ export default function StrategyDetailPage() {
         setLoadError(message || "Failed to load strategy.");
       } finally {
         if (isActive) {
-          setIsFollowStatusLoading(false);
           setIsLoading(false);
         }
       }
@@ -1025,8 +1010,7 @@ export default function StrategyDetailPage() {
                       className="relative min-w-0 flex-1 rounded-r-none"
                       disabled={
                         !isAuthenticated ||
-                        isFollowUpdating ||
-                        isFollowStatusLoading
+                        isFollowUpdating
                       }
                       onClick={() => {
                         if (isFollowingCreator) {
@@ -1037,14 +1021,13 @@ export default function StrategyDetailPage() {
                         void onToggleCreatorFollow();
                       }}
                     >
-                      {isFollowUpdating || isFollowStatusLoading ? (
+                      {isFollowUpdating ? (
                         <Loader2 className="absolute h-4 w-4 animate-spin" />
                       ) : null}
                       <span
                         className={cn(
                           "inline-flex items-center gap-1",
-                          (isFollowUpdating || isFollowStatusLoading) &&
-                            "opacity-0",
+                          isFollowUpdating && "opacity-0",
                         )}
                       >
                         {isFollowingCreator ? (
@@ -1101,8 +1084,7 @@ export default function StrategyDetailPage() {
                         <DropdownMenuItem
                           disabled={
                             !isAuthenticated ||
-                            isFollowUpdating ||
-                            isFollowStatusLoading
+                            isFollowUpdating
                           }
                           onSelect={() => {
                             if (isFollowingCreator) {

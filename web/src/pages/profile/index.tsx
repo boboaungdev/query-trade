@@ -11,6 +11,7 @@ import {
   BookmarkCheck,
   CandlestickChart,
   Check,
+  CheckCircle2,
   ChevronDown,
   Copy,
   Gauge,
@@ -33,6 +34,7 @@ import {
   Users,
   UserRound,
   X,
+  XCircle,
   type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -43,6 +45,7 @@ import {
   fetchUserBacktestsByUsername,
   fetchUserFollowsByUsername,
   fetchUserStrategiesByUsername,
+  fetchUserByUsername,
 } from "@/api/user";
 import { createBookmark, deleteBookmark } from "@/api/bookmark";
 import { useAuthStore } from "@/store/auth";
@@ -87,15 +90,27 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { editProfile } from "@/api/auth";
-import { fetchUserByUsername } from "@/api/user";
+import { checkUserExist, editProfile } from "@/api/auth";
 import { cn } from "@/lib/utils";
+
+const NAME_REGEX = /^[A-Za-z0-9 ]{1,20}$/;
+const USERNAME_REGEX = /^[a-z0-9]{6,20}$/;
+const NAME_WORD_LIMIT = 3;
 
 function sanitizeUsername(value: string) {
   return value
     .toLowerCase()
     .replace(/[^a-z0-9]/g, "")
     .slice(0, 20);
+}
+
+function sanitizeName(value: string) {
+  const cleaned = value
+    .replace(/[^A-Za-z0-9 ]/g, "")
+    .replace(/\s+/g, " ")
+    .trimStart();
+
+  return cleaned.split(" ").slice(0, NAME_WORD_LIMIT).join(" ").slice(0, 20);
 }
 
 const compactNumber = new Intl.NumberFormat("en", {
@@ -133,6 +148,13 @@ type PublicProfileResponse = {
 };
 
 type ProfileDialogTab = "followers" | "following" | "strategies" | "backtests";
+type ProfileUsernameStatus =
+  | "idle"
+  | "invalid"
+  | "checking"
+  | "available"
+  | "unavailable"
+  | "error";
 
 type ProfileFollowListItem = {
   _id: string;
@@ -300,6 +322,9 @@ export default function Profile() {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isUsernameInvalid, setIsUsernameInvalid] = useState(false);
+  const [debouncedUsername, setDebouncedUsername] = useState("");
+  const [usernameStatus, setUsernameStatus] =
+    useState<ProfileUsernameStatus>("idle");
   const [viewedUser, setViewedUser] = useState<PublicProfileUser | null>(null);
   const [isProfileLoading, setIsProfileLoading] = useState(false);
   const [profileLoadError, setProfileLoadError] = useState("");
@@ -326,6 +351,7 @@ export default function Profile() {
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const profileListScrollRef = useRef<HTMLDivElement | null>(null);
   const profileListLoadMoreRef = useRef<HTMLDivElement | null>(null);
+  const usernameRequestIdRef = useRef(0);
 
   const [form, setForm] = useState<FormState>({
     name: user?.name || "",
@@ -376,20 +402,118 @@ export default function Profile() {
     );
   }, [form, user]);
 
+  const trimmedName = form.name.trim();
+  const trimmedUsername = form.username.trim();
+  const nameWordCount = trimmedName ? trimmedName.split(/\s+/).length : 0;
+  const validName =
+    NAME_REGEX.test(trimmedName) && nameWordCount <= NAME_WORD_LIMIT;
+  const validUsername = USERNAME_REGEX.test(trimmedUsername);
+  const isUsernameChanged = trimmedUsername !== (user?.username ?? "");
+  const isUsernameSearchPending =
+    isEditing &&
+    validUsername &&
+    isUsernameChanged &&
+    trimmedUsername.length > 0 &&
+    trimmedUsername !== debouncedUsername;
+  const isUsernameLiveInvalid =
+    isUsernameInvalid ||
+    usernameStatus === "invalid" ||
+    usernameStatus === "unavailable" ||
+    usernameStatus === "error";
+  const usernameHelperText =
+    isUsernameInvalid || usernameStatus === "unavailable"
+      ? "Username is not available"
+      : usernameStatus === "invalid"
+        ? "Username must be 6-20 characters"
+        : usernameStatus === "checking" || isUsernameSearchPending
+          ? "Checking username availability..."
+          : usernameStatus === "error"
+            ? "Unable to check username right now"
+            : "";
+  const nameHelperText =
+    trimmedName.length === 0
+      ? ""
+      : nameWordCount > NAME_WORD_LIMIT
+        ? `Name can use up to ${NAME_WORD_LIMIT} words`
+        : !NAME_REGEX.test(trimmedName)
+          ? "Name must be 1-20 chars: letters, numbers, and spaces only"
+          : "";
+
   const isFormValid = useMemo(() => {
     if (!user) return false;
 
-    const nextName = form.name.trim();
-    const nextUsername = form.username.trim();
+    const nextName = trimmedName;
+    const nextUsername = trimmedUsername;
     const isNameChanged = nextName !== user.name;
-    const isUsernameChanged = nextUsername !== user.username;
+    const usernameDidChange = nextUsername !== user.username;
 
-    if (isNameChanged && !/^[A-Za-z0-9 ]{1,20}$/.test(nextName)) return false;
-    if (isUsernameChanged && !/^[a-z0-9]{6,20}$/.test(nextUsername))
+    if (isNameChanged && !validName) return false;
+    if (
+      usernameDidChange &&
+      (!validUsername || usernameStatus !== "available")
+    ) {
       return false;
+    }
 
     return true;
-  }, [form.name, form.username, user]);
+  }, [
+    trimmedName,
+    trimmedUsername,
+    user,
+    validName,
+    validUsername,
+    usernameStatus,
+  ]);
+
+  useEffect(() => {
+    if (!isEditing || !user) {
+      setDebouncedUsername("");
+      setUsernameStatus("idle");
+      return;
+    }
+
+    if (!trimmedUsername || trimmedUsername === user.username) {
+      setDebouncedUsername("");
+      setUsernameStatus("idle");
+      return;
+    }
+
+    if (!USERNAME_REGEX.test(trimmedUsername)) {
+      setDebouncedUsername("");
+      setUsernameStatus("invalid");
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedUsername(trimmedUsername);
+    }, 250);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [isEditing, trimmedUsername, user]);
+
+  useEffect(() => {
+    if (!isEditing || !user || !debouncedUsername) return;
+    if (debouncedUsername === user.username) return;
+    if (debouncedUsername !== trimmedUsername) return;
+
+    const requestId = usernameRequestIdRef.current + 1;
+    usernameRequestIdRef.current = requestId;
+    setUsernameStatus("checking");
+
+    checkUserExist({ username: debouncedUsername })
+      .then((data) => {
+        if (usernameRequestIdRef.current !== requestId) return;
+
+        setUsernameStatus(data?.result?.exist ? "unavailable" : "available");
+      })
+      .catch(() => {
+        if (usernameRequestIdRef.current !== requestId) return;
+
+        setUsernameStatus("error");
+      });
+  }, [debouncedUsername, isEditing, trimmedUsername, user]);
 
   useEffect(() => {
     let isActive = true;
@@ -725,6 +849,8 @@ export default function Profile() {
       bio: user.bio || "",
     });
     setIsUsernameInvalid(false);
+    setDebouncedUsername("");
+    setUsernameStatus("idle");
     setSelectedAvatarFileName("");
     setIsEditing(false);
   };
@@ -738,6 +864,8 @@ export default function Profile() {
       bio: user.bio || "",
     });
     setIsUsernameInvalid(false);
+    setDebouncedUsername("");
+    setUsernameStatus("idle");
     setSelectedAvatarFileName("");
     setIsEditing(true);
   };
@@ -859,10 +987,103 @@ export default function Profile() {
     promise.finally(() => setIsSaving(false));
   };
 
+  const syncFollowStateAcrossLists = (
+    targetUserId: string,
+    nextIsFollowing: boolean,
+  ) => {
+    setProfileLists((prev) => {
+      const next = { ...prev };
+
+      (["followers", "following"] as const).forEach((tab) => {
+        const currentState = next[tab];
+        const shouldRemoveFromFollowing =
+          canEditProfile && tab === "following" && !nextIsFollowing;
+        const hasTargetUser = currentState.items.some(
+          (item) => item._id === targetUserId,
+        );
+
+        let items = currentState.items.map((item) =>
+          item._id === targetUserId
+            ? {
+                ...(item as ProfileFollowListItem),
+                isFollowing: nextIsFollowing,
+              }
+            : item,
+        );
+
+        if (shouldRemoveFromFollowing) {
+          items = items.filter((item) => item._id !== targetUserId);
+        }
+
+        next[tab] = {
+          ...currentState,
+          items,
+          total:
+            shouldRemoveFromFollowing && hasTargetUser
+              ? Math.max(0, currentState.total - 1)
+              : currentState.total,
+        };
+      });
+
+      return next;
+    });
+  };
+
+  const syncViewedUserFollowersList = (nextIsFollowing: boolean) => {
+    if (!user?._id || canEditProfile) return;
+
+    updateProfileListState("followers", (state) => {
+      const alreadyInList = state.items.some((item) => item._id === user._id);
+      const canInjectCurrentUser =
+        state.page === 1 &&
+        !state.search.trim() &&
+        !state.debouncedSearch.trim();
+
+      let items = state.items;
+
+      if (nextIsFollowing) {
+        if (!alreadyInList && canInjectCurrentUser) {
+          const currentUserListItem: ProfileFollowListItem = {
+            _id: user._id,
+            name: user.name,
+            username: user.username,
+            avatar: user.avatar,
+            stats: user.stats,
+            isFollowing: false,
+          };
+
+          items = [currentUserListItem, ...state.items];
+        } else if (alreadyInList) {
+          items = state.items.map((item) =>
+            item._id === user._id
+              ? {
+                  ...(item as ProfileFollowListItem),
+                  name: user.name,
+                  username: user.username,
+                  avatar: user.avatar,
+                  stats: user.stats,
+                  isFollowing: false,
+                }
+              : item,
+          );
+        }
+      } else if (alreadyInList) {
+        items = state.items.filter((item) => item._id !== user._id);
+      }
+
+      return {
+        ...state,
+        items,
+        total: Math.max(0, state.total + (nextIsFollowing ? 1 : -1)),
+      };
+    });
+  };
+
   const onToggleFollow = async () => {
     if (!viewedUser?._id || !isAuthenticated) return;
 
     setIsFollowUpdating(true);
+    const nextIsFollowing = !isFollowing;
 
     try {
       if (isFollowing) {
@@ -872,6 +1093,8 @@ export default function Profile() {
       }
 
       setIsFollowing((prev) => !prev);
+      syncViewedUserFollowersList(nextIsFollowing);
+      syncFollowStateAcrossLists(viewedUser._id, nextIsFollowing);
       setViewedUser((prev) =>
         prev
           ? {
@@ -1173,32 +1396,7 @@ export default function Profile() {
         await createFollow(targetUser._id);
       }
 
-      setProfileLists((prev) => ({
-        ...prev,
-        [activeProfileTab]: {
-          ...prev[activeProfileTab],
-          items: prev[activeProfileTab].items.map((item) =>
-            item._id === targetUser._id
-              ? {
-                  ...(item as ProfileFollowListItem),
-                  isFollowing: !isCurrentlyFollowing,
-                }
-              : item,
-          ),
-        },
-      }));
-
-      if (
-        canEditProfile &&
-        activeProfileTab === "following" &&
-        isCurrentlyFollowing
-      ) {
-        updateProfileListState("following", (state) => ({
-          ...state,
-          items: state.items.filter((item) => item._id !== targetUser._id),
-          total: Math.max(0, state.total - 1),
-        }));
-      }
+      syncFollowStateAcrossLists(targetUser._id, !isCurrentlyFollowing);
 
       if (user) {
         updateUser({
@@ -1359,43 +1557,64 @@ export default function Profile() {
                       {(
                         canEditProfile ? form.bio || user?.bio : viewedUser?.bio
                       ) ? (
-                        <p
-                          className="min-w-0 max-w-full overflow-hidden text-ellipsis text-sm leading-6 text-muted-foreground"
-                          style={{
-                            display: "-webkit-box",
-                            WebkitBoxOrient: "vertical",
-                            WebkitLineClamp: 2,
-                            overflowWrap: "anywhere",
-                          }}
-                        >
-                          {canEditProfile
-                            ? form.bio || user?.bio
-                            : viewedUser?.bio}
-                        </p>
+                        <ScrollArea className="h-12 w-full max-w-md">
+                          <p
+                            className="min-w-0 pr-3 text-sm leading-6 text-muted-foreground"
+                            style={{ overflowWrap: "anywhere" }}
+                          >
+                            {canEditProfile
+                              ? form.bio || user?.bio
+                              : viewedUser?.bio}
+                          </p>
+                        </ScrollArea>
                       ) : null}
                     </div>
                   </div>
 
                   <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row">
                     {canEditProfile ? (
-                      <>
+                      <ButtonGroup
+                        aria-label="Profile actions"
+                        className="w-full min-w-0 md:w-auto"
+                      >
                         <Button
                           onClick={onStartEditing}
+                          type="button"
                           variant="outline"
-                          className="w-full md:w-auto"
+                          className="min-w-0 flex-1 rounded-r-none"
                         >
                           Edit Profile
                         </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="w-full md:w-auto"
-                          onClick={() => void onCopyProfileLink()}
-                        >
-                          <Copy className="h-4 w-4" />
-                          Copy link
-                        </Button>
-                      </>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="-ml-px shrink-0 rounded-l-none"
+                              aria-label="More profile actions"
+                            >
+                              <ChevronDown className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            align="end"
+                            collisionPadding={16}
+                            className="w-44"
+                          >
+                            <DropdownMenuItem onClick={onStartEditing}>
+                              <Pencil className="h-4 w-4" />
+                              Edit profile
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => void onCopyProfileLink()}
+                            >
+                              <Copy className="h-4 w-4" />
+                              Copy link
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </ButtonGroup>
                     ) : null}
 
                     {!canEditProfile && viewedUser?._id ? (
@@ -1419,14 +1638,12 @@ export default function Profile() {
                           ) : isFollowing ? (
                             <>
                               <UserCheck className="h-4 w-4" />
-                              <span className="hidden md:inline">
-                                Following
-                              </span>
+                              <span>Following</span>
                             </>
                           ) : (
                             <>
                               <UserPlus className="h-4 w-4" />
-                              <span className="hidden md:inline">Follow</span>
+                              <span>Follow</span>
                             </>
                           )}
                         </Button>
@@ -1515,7 +1732,13 @@ export default function Profile() {
                   }
                 }}
               >
-                <SheetContent side="right" className="w-full md:max-w-md">
+                <SheetContent
+                  side="right"
+                  className="w-full md:max-w-md"
+                  onOpenAutoFocus={(event) => {
+                    event.preventDefault();
+                  }}
+                >
                   <SheetHeader className="border-b px-6 py-5">
                     <SheetTitle>Edit Profile</SheetTitle>
                     <SheetDescription>
@@ -1526,7 +1749,11 @@ export default function Profile() {
                   <div className="flex-1 overflow-y-auto px-6 py-5">
                     <div className="space-y-5">
                       <div className="space-y-2">
-                        <Label>Avatar</Label>
+                        <div className="flex items-center gap-1.5">
+                          <Label className="text-muted-foreground">
+                            Avatar
+                          </Label>
+                        </div>
                         <div className="flex items-center gap-3">
                           <Avatar className="h-14 w-14">
                             <AvatarImage
@@ -1572,7 +1799,12 @@ export default function Profile() {
 
                       <div className="space-y-2">
                         <div className="flex items-center gap-1.5">
-                          <Label htmlFor="profile-sheet-name">Name</Label>
+                          <Label
+                            htmlFor="profile-sheet-name"
+                            className="text-muted-foreground"
+                          >
+                            Name
+                          </Label>
                         </div>
                         <div className="relative">
                           <UserRound
@@ -1583,58 +1815,103 @@ export default function Profile() {
                             id="profile-sheet-name"
                             className="pl-9"
                             value={form.name}
+                            placeholder="Full name"
+                            aria-invalid={Boolean(nameHelperText)}
+                            maxLength={20}
                             disabled={isSaving}
                             onChange={(event) =>
                               setForm((prev) => ({
                                 ...prev,
-                                name: event.target.value,
+                                name: sanitizeName(event.target.value),
                               }))
                             }
                           />
                         </div>
+                        {nameHelperText ? (
+                          <p className="text-xs text-destructive">
+                            {nameHelperText}
+                          </p>
+                        ) : null}
                       </div>
 
                       <div className="space-y-2">
                         <div className="flex items-center gap-1.5">
-                          <Label htmlFor="profile-sheet-username">
+                          <Label
+                            htmlFor="profile-sheet-username"
+                            className="text-muted-foreground"
+                          >
                             Username
                           </Label>
                         </div>
-                        <div className="relative">
-                          <AtSign
-                            className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                            aria-hidden="true"
-                          />
-                          <Input
-                            id="profile-sheet-username"
-                            className="pl-9"
-                            value={form.username}
-                            aria-invalid={isUsernameInvalid}
-                            disabled={isSaving}
-                            onChange={(event) => {
-                              setIsUsernameInvalid(false);
-                              setForm((prev) => ({
-                                ...prev,
-                                username: sanitizeUsername(event.target.value),
-                              }));
-                            }}
-                          />
+                        <div className="space-y-2">
+                          <div className="relative">
+                            <AtSign
+                              className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                              aria-hidden="true"
+                            />
+                            <Input
+                              id="profile-sheet-username"
+                              className="pl-9 pr-10"
+                              value={form.username}
+                              placeholder="Username"
+                              aria-invalid={isUsernameLiveInvalid}
+                              maxLength={20}
+                              disabled={isSaving}
+                              onChange={(event) => {
+                                setIsUsernameInvalid(false);
+                                setForm((prev) => ({
+                                  ...prev,
+                                  username: sanitizeUsername(
+                                    event.target.value,
+                                  ),
+                                }));
+                              }}
+                            />
+                            <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2">
+                              {usernameStatus === "checking" ||
+                              isUsernameSearchPending ? (
+                                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                              ) : !isUsernameChanged && validUsername ? (
+                                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                              ) : usernameStatus === "available" ? (
+                                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                              ) : isUsernameLiveInvalid ? (
+                                <XCircle className="h-4 w-4 text-destructive" />
+                              ) : null}
+                            </span>
+                          </div>
+                          {usernameHelperText ? (
+                            <p
+                              className={cn(
+                                "text-xs",
+                                isUsernameLiveInvalid
+                                  ? "text-destructive"
+                                  : "text-muted-foreground",
+                              )}
+                            >
+                              {usernameHelperText}
+                            </p>
+                          ) : null}
                         </div>
                       </div>
 
                       <div className="space-y-2">
                         <div className="flex items-center justify-between gap-3">
-                          <Label htmlFor="profile-sheet-bio">Bio</Label>
+                          <Label
+                            htmlFor="profile-sheet-bio"
+                            className="text-muted-foreground"
+                          >
+                            Bio
+                          </Label>
                           <span className="text-xs text-muted-foreground">
                             {form.bio.length}/50
                           </span>
                         </div>
                         <Textarea
                           id="profile-sheet-bio"
-                          className="resize-none"
+                          className="h-24 field-sizing-fixed resize-none"
                           value={form.bio}
                           maxLength={50}
-                          rows={4}
                           disabled={isSaving}
                           placeholder="Tell people a little about yourself"
                           onChange={(event) =>

@@ -128,26 +128,3 @@ export const getFollowing = async (req, res, next) => {
     next(error);
   }
 };
-
-export const getFollowStatus = async (req, res, next) => {
-  try {
-    const user = req.user;
-    const { userId } = req.params;
-
-    await ensureUserExists(userId);
-
-    const isFollowing = Boolean(
-      await FollowDB.exists({
-        follower: user._id,
-        following: userId,
-      }),
-    );
-
-    return resJson(res, 200, "Follow status fetched successfully.", {
-      isFollowing,
-      isSelf: user._id.toString() === userId,
-    });
-  } catch (error) {
-    next(error);
-  }
-};

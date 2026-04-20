@@ -9,8 +9,3 @@ export const deleteFollow = async (userId: string) => {
   const { data } = await api.delete(`/follow/${userId}`);
   return data;
 };
-
-export const fetchFollowStatus = async (userId: string) => {
-  const { data } = await api.get(`/follow/status/${userId}`);
-  return data;
-};

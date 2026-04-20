@@ -1,6 +1,7 @@
 import { UserDB } from "../../models/user.js";
 import { StrategyDB } from "../../models/strategy.js";
 import { BookmarkDB } from "../../models/bookmark.js";
+import { FollowDB } from "../../models/follow.js";
 import { resError, resJson } from "../../utils/response.js";
 
 export const getStrategyById = async (req, res, next) => {
@@ -28,15 +29,28 @@ export const getStrategyById = async (req, res, next) => {
     }
 
     if (user?._id) {
-      const bookmark = await BookmarkDB.findOne({
-        user: user._id,
-        targetType: "strategy",
-        target: strategy._id,
-      })
-        .select("_id")
-        .lean();
+      const [bookmark, follow] = await Promise.all([
+        BookmarkDB.findOne({
+          user: user._id,
+          targetType: "strategy",
+          target: strategy._id,
+        })
+          .select("_id")
+          .lean(),
+        strategy.user?._id && String(strategy.user._id) !== String(user._id)
+          ? FollowDB.findOne({
+              follower: user._id,
+              following: strategy.user._id,
+            })
+              .select("_id")
+              .lean()
+          : null,
+      ]);
 
       strategy.isBookmarked = Boolean(bookmark);
+      if (strategy.user) {
+        strategy.user.isFollowing = Boolean(follow);
+      }
     }
 
     return resJson(res, 200, "Success single strategy fetched by ID.", {
@@ -153,7 +167,9 @@ export const getStrategies = async (req, res, next) => {
         .select("target")
         .lean();
 
-      bookmarkedStrategyIds = bookmarks.map((bookmark) => String(bookmark.target));
+      bookmarkedStrategyIds = bookmarks.map((bookmark) =>
+        String(bookmark.target),
+      );
     }
 
     const strategiesWithBookmarkState = strategies.map((strategy) => ({

@@ -40,6 +40,7 @@ router.get(
 
 router.get(
   "/:username",
+  validateOptionalToken(),
   validateParam(UserSchema.params.username),
   getUserByUsername,
 );

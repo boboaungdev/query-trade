@@ -3,11 +3,7 @@ import express from "express";
 import { FollowSchema } from "../schemas/follow.js";
 import { createFollow } from "../controllers/follow/create.js";
 import { deleteFollow } from "../controllers/follow/delete.js";
-import {
-  getFollowers,
-  getFollowing,
-  getFollowStatus,
-} from "../controllers/follow/get.js";
+import { getFollowers, getFollowing } from "../controllers/follow/get.js";
 import {
   validateParam,
   validateQuery,
@@ -28,13 +24,6 @@ router.get(
   validateParam(FollowSchema.params.userId),
   validateQuery(FollowSchema.query.list),
   getFollowing,
-);
-
-router.get(
-  "/status/:userId",
-  validateToken(),
-  validateParam(FollowSchema.params.userId),
-  getFollowStatus,
 );
 
 router.post(

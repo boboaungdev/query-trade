@@ -3925,7 +3925,7 @@ export function StrategyBuilder({
                 maxLength={STRATEGY_DESCRIPTION_MAX_LENGTH}
                 onChange={(event) => setDescription(event.target.value)}
                 placeholder="Buy on bullish EMA crossover with RSI confirmation, sell on bearish crossover."
-                className="h-24 field-sizing-fixed resize-none overflow-y-auto"
+                className="h-24 field-sizing-fixed resize-none"
               />
             </div>
 
