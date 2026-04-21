@@ -1151,10 +1151,10 @@ export default function StrategyPage() {
                 className={
                   createSheetControls?.isSubmitting ? "opacity-0" : undefined
                 }
-              >
-                {createSheetControls?.submitLabel ?? "Create Strategy"}
-              </span>
-            </Button>
+            >
+              {createSheetControls?.submitLabel ?? "Create Strategy"}
+            </span>
+          </Button>
             {createSheetControls?.helperText ? (
               <p className="w-full text-xs text-muted-foreground">
                 {createSheetControls.helperText}
@@ -1590,6 +1590,18 @@ function getParamHelpText(paramKey: string) {
 
 const STRATEGY_NAME_MAX_LENGTH = 50;
 const STRATEGY_DESCRIPTION_MAX_LENGTH = 200;
+
+function getStrategyNameError(name: string) {
+  const trimmedName = name.trim();
+
+  if (trimmedName.length === 0) return "";
+  if (trimmedName.length < 2) return "Min 2 characters";
+  if (trimmedName.length > STRATEGY_NAME_MAX_LENGTH) {
+    return `Max ${STRATEGY_NAME_MAX_LENGTH} characters`;
+  }
+
+  return "";
+}
 
 function ParamHelpTooltip({
   label: _label,
@@ -3856,16 +3868,11 @@ export function StrategyBuilder({
   });
 
   const formValidationError = useMemo(() => {
-    if (name.trim().length < 2) {
-      return "Strategy name must be at least 2 characters";
-    }
-
-    if (name.trim().length > STRATEGY_NAME_MAX_LENGTH) {
-      return `Strategy name must be ${STRATEGY_NAME_MAX_LENGTH} characters or fewer`;
-    }
+    const nameError = getStrategyNameError(name);
+    if (nameError) return nameError;
 
     if (description.trim().length > STRATEGY_DESCRIPTION_MAX_LENGTH) {
-      return `Strategy description must be ${STRATEGY_DESCRIPTION_MAX_LENGTH} characters or fewer`;
+      return `Max ${STRATEGY_DESCRIPTION_MAX_LENGTH} characters`;
     }
 
     try {
@@ -3967,10 +3974,12 @@ export function StrategyBuilder({
   });
 
   const submitLabel = isEditing ? "Update Strategy" : "Create Strategy";
+  const strategyNameError = getStrategyNameError(name);
   const submitDisabled =
     isSubmitting ||
     isLoadingStrategy ||
     isLoadingIndicators ||
+    name.trim().length === 0 ||
     Boolean(formValidationError) ||
     (isEditing && !hasChanges);
   const helperText = formValidationError
@@ -4079,10 +4088,15 @@ export function StrategyBuilder({
                 <Input
                   id="strategy-name"
                   value={name}
-                  maxLength={STRATEGY_NAME_MAX_LENGTH}
+                  aria-invalid={Boolean(strategyNameError)}
                   onChange={(event) => setName(event.target.value)}
                   placeholder="Enter strategy name"
                 />
+                {strategyNameError ? (
+                  <p className="text-xs text-destructive">
+                    {strategyNameError}
+                  </p>
+                ) : null}
               </div>
 
               <div className="space-y-2">

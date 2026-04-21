@@ -1327,17 +1327,23 @@ export default function AdminDashboard() {
               >
                 <TabsTrigger
                   value="plans"
-                  className="gap-2 data-[state=active]:text-primary data-[state=active]:after:bg-primary"
+                  aria-label="Plans"
+                  className="group gap-2 data-[state=active]:text-primary data-[state=active]:after:bg-primary dark:data-[state=active]:text-primary dark:data-[state=active]:after:bg-primary"
                 >
                   <TicketPercent className="size-4" />
-                  Plans
+                  <span className="hidden group-data-[state=active]:inline md:inline">
+                    Plans
+                  </span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="indicators"
-                  className="gap-2 data-[state=active]:text-primary data-[state=active]:after:bg-primary"
+                  aria-label="Indicators"
+                  className="group gap-2 data-[state=active]:text-primary data-[state=active]:after:bg-primary dark:data-[state=active]:text-primary dark:data-[state=active]:after:bg-primary"
                 >
                   <Gauge className="size-4" />
-                  Indicators
+                  <span className="hidden group-data-[state=active]:inline md:inline">
+                    Indicators
+                  </span>
                 </TabsTrigger>
               </TabsList>
 
