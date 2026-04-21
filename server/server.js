@@ -1,15 +1,17 @@
 import "dotenv/config.js";
 import { app } from "./app.js";
 import { connectDB } from "./configs/db.js";
-import { ENABLE_INDICATOR_SEED, PORT } from "./constants/index.js";
+import { ENABLE_DEFAULT_SEED, PORT } from "./constants/index.js";
 import { seedDefaultIndicators } from "./services/indicator/seedDefaultIndicators.js";
+import { seedDefaultSubscriptionPlans } from "./services/subscription/seedDefaultSubscriptionPlans.js";
 
 const startServer = async () => {
   try {
     await connectDB();
 
-    if (ENABLE_INDICATOR_SEED) {
+    if (ENABLE_DEFAULT_SEED) {
       await seedDefaultIndicators();
+      await seedDefaultSubscriptionPlans();
     }
 
     app.listen(PORT, () => {

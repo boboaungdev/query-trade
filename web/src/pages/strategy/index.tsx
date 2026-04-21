@@ -188,15 +188,12 @@ export default function StrategyPage() {
     useState<StrategyBuilderFooterControls | null>(null);
   const [createSheetDragOffset, setCreateSheetDragOffset] = useState(0);
   const [isCreateSheetDragging, setIsCreateSheetDragging] = useState(false);
-  const [isMobileCreateActionExpanded, setIsMobileCreateActionExpanded] =
-    useState(true);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const createSheetBodyRef = useRef<HTMLDivElement | null>(null);
   const createSheetDragPointerIdRef = useRef<number | null>(null);
   const createSheetDragStartYRef = useRef(0);
   const createSheetDragLastYRef = useRef(0);
   const createSheetDragSourceRef = useRef<"header" | "body" | null>(null);
-  const mobileCreateActionScrollYRef = useRef(0);
   const previousDebouncedSearchRef = useRef(debouncedSearch);
   const shouldOpenStrategyBuilder =
     typeof location.state === "object" &&
@@ -515,31 +512,6 @@ export default function StrategyPage() {
     setCreateSheetDragOffset(0);
   }, [isCreateSheetOpen]);
 
-  useEffect(() => {
-    if (!isMobile) {
-      setIsMobileCreateActionExpanded(true);
-      return;
-    }
-
-    mobileCreateActionScrollYRef.current = window.scrollY;
-
-    const onScroll = () => {
-      const nextScrollY = window.scrollY;
-      const delta = nextScrollY - mobileCreateActionScrollYRef.current;
-
-      if (Math.abs(delta) < 8) return;
-
-      setIsMobileCreateActionExpanded(delta < 0);
-      mobileCreateActionScrollYRef.current = nextScrollY;
-    };
-
-    window.addEventListener("scroll", onScroll, { passive: true });
-
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-    };
-  }, [isMobile]);
-
   const beginCreateSheetDrag = (
     event: React.PointerEvent<HTMLDivElement>,
     source: "header" | "body",
@@ -682,8 +654,8 @@ export default function StrategyPage() {
                     </TabsTrigger>
                   </TabsList>
 
-                  <div className="flex w-full min-w-0 items-center gap-2 md:w-auto md:flex-1 md:justify-end">
-                    <div className="relative min-w-0 flex-1 md:max-w-[320px]">
+                  <div className="flex w-full min-w-0 flex-col gap-2 md:max-w-[420px] md:flex-1 md:flex-row">
+                    <div className="relative min-w-0 flex-1">
                       <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
                         value={search}
@@ -765,11 +737,11 @@ export default function StrategyPage() {
 
                     <Button
                       type="button"
-                      className="hidden md:inline-flex"
+                      className="md:w-auto"
                       onClick={openCreateSheet}
                     >
-                      <Plus className="h-4 w-4" />
-                      Create
+                      <Plus className="size-4" />
+                      New strategy
                     </Button>
                   </div>
                 </div>
@@ -803,7 +775,7 @@ export default function StrategyPage() {
                 : "No strategies found."}
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {strategies.map((item) => {
               const isMine = Boolean(user?._id) && item.user?._id === user?._id;
               const isBookmarked = Boolean(item.isBookmarked);
@@ -1034,24 +1006,6 @@ export default function StrategyPage() {
         )}
       </div>
 
-      <Button
-        type="button"
-        size={isMobileCreateActionExpanded ? "default" : "icon"}
-        className={cn(
-          "fixed right-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-40 overflow-hidden rounded-full shadow-md shadow-primary/15 transition-[width,padding,box-shadow,transform] duration-200 ease-out active:scale-95 md:hidden",
-          isMobileCreateActionExpanded ? "w-auto" : "size-8 gap-0 px-0",
-        )}
-        onClick={openCreateSheet}
-        aria-label="Create strategy"
-      >
-        <Plus className="h-4 w-4" />
-        {isMobileCreateActionExpanded ? (
-          <span className="animate-in fade-in-0 slide-in-from-left-1 duration-200">
-            Create
-          </span>
-        ) : null}
-      </Button>
-
       <AlertDialog
         open={Boolean(strategyIdPendingDelete)}
         onOpenChange={(open) => {
@@ -1108,8 +1062,8 @@ export default function StrategyPage() {
           showCloseButton={!isMobile}
           className={
             isMobile
-              ? "flex h-auto max-h-[82vh] w-full flex-col overflow-x-hidden rounded-t-2xl p-0"
-              : "flex h-full w-full flex-col overflow-x-hidden p-0 md:max-w-[92vw] lg:max-w-[960px] xl:max-w-[1100px]"
+              ? "gap-0 h-auto max-h-[82vh] w-full rounded-t-2xl p-0"
+              : "gap-0 p-0 data-[side=right]:w-full md:data-[side=right]:max-w-2xl"
           }
           onOpenAutoFocus={(event) => {
             event.preventDefault();

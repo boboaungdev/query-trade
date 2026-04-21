@@ -1520,7 +1520,7 @@ export default function BacktestResultPage() {
         </div>
 
         <TabsContent value="overview" className="space-y-4 md:space-y-6">
-          <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
             <Card className="border-border/70 bg-card">
               <CardHeader className="pb-2">
                 <CardDescription className="flex items-center gap-2">
@@ -1629,7 +1629,7 @@ export default function BacktestResultPage() {
         </TabsContent>
 
         <TabsContent value="performance" className="space-y-4 md:space-y-6">
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-2">
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-2">
             <Card className="border-border/70 bg-card">
               <CardHeader className="pb-2">
                 <CardDescription className="flex items-center gap-2">
@@ -2078,7 +2078,7 @@ export default function BacktestResultPage() {
             </CardContent>
           </Card>
 
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             <Card className="border-border/70 bg-card">
               <CardHeader className="pb-2">
                 <CardDescription className="flex items-center gap-2">

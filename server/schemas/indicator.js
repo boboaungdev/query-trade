@@ -22,7 +22,7 @@ export const IndicatorSchema = {
     params: Joi.object()
       .pattern(
         Joi.string(),
-        Joi.alternatives().try(Joi.number(), Joi.string(), Joi.boolean()),
+        Joi.alternatives().try(Joi.number(), Joi.boolean()),
       )
       .default({}),
   }),
@@ -49,7 +49,7 @@ export const IndicatorSchema = {
     source: Joi.string().valid("open", "high", "low", "close", "volume"),
     params: Joi.object().pattern(
       Joi.string(),
-      Joi.alternatives().try(Joi.number(), Joi.string(), Joi.boolean()),
+      Joi.alternatives().try(Joi.number(), Joi.boolean()),
     ),
   }).min(1),
 
@@ -64,9 +64,7 @@ export const IndicatorSchema = {
       page: Joi.number().integer().min(1).default(1),
       limit: Joi.number().integer().min(1).max(60).default(12),
       search: Joi.string().trim().allow(""),
-      sortBy: Joi.string()
-        .valid("name", "createdAt")
-        .default("name"),
+      sortBy: Joi.string().valid("name", "createdAt").default("name"),
       order: Joi.string().valid("asc", "desc").default("asc"),
 
       category: Joi.string().valid(

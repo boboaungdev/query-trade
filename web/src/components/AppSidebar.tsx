@@ -28,6 +28,8 @@ import {
   Bookmark,
   CandlestickChart,
   Settings,
+  WalletCards,
+  ShieldCheck,
   UserRound,
   CircleHelp,
   LogOut,
@@ -165,6 +167,15 @@ export function AppSidebar() {
           </SidebarMenuItem>
 
           <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={isRouteActive("/pricing")}>
+              <Link to="/pricing" onClick={handleMenuNavigation}>
+                <WalletCards />
+                <span>Pricing</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+
+          <SidebarMenuItem>
             <SidebarMenuButton asChild isActive={isRouteActive("/settings")}>
               <Link to="/settings" onClick={handleMenuNavigation}>
                 <Settings />
@@ -172,6 +183,20 @@ export function AppSidebar() {
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
+
+          {user?.role === "admin" ? (
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={isRouteActive("/admin/dashboard")}
+              >
+                <Link to="/admin/dashboard" onClick={handleMenuNavigation}>
+                  <ShieldCheck />
+                  <span>Admin</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ) : null}
         </SidebarMenu>
       </SidebarContent>
 

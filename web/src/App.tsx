@@ -17,6 +17,10 @@ import StrategyDetail from "./pages/strategy/detail";
 import Bookmark from "./pages/bookmark";
 import Profile from "./pages/profile";
 import NotFound from "./pages/not-found";
+import Pricing from "./pages/pricing";
+import Billing from "./pages/billing";
+import PaymentPage from "./pages/payment";
+import AdminDashboard from "./pages/admin";
 
 import { useAuthStore } from "@/store/auth";
 import Settings from "./pages/settings";
@@ -41,6 +45,16 @@ function AuthRoute() {
   return <Auth />;
 }
 
+function AdminRoute() {
+  const user = useAuthStore((state) => state.user);
+
+  if (user?.role !== "admin") {
+    return <Navigate to="/" replace />;
+  }
+
+  return <AdminDashboard />;
+}
+
 export default function App() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
@@ -56,6 +70,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/auth" element={<AuthRoute />} />
+            <Route path="/pricing" element={<Pricing />} />
 
             <Route element={<ProtectedRoute />}>
               <Route path="/leaderboard" element={<Leaderboard />} />
@@ -72,6 +87,9 @@ export default function App() {
                 element={<BacktestResult />}
               />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/billing" element={<Billing />} />
+              <Route path="/payment/:paymentId" element={<PaymentPage />} />
+              <Route path="/admin/dashboard" element={<AdminRoute />} />
             </Route>
 
             <Route path="/:username" element={<Profile />} />
