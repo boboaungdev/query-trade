@@ -33,9 +33,9 @@ export default function NotFoundPage() {
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Button asChild size="lg" className="gap-2">
-            <Link to={isAuthenticated ? "/dashboard" : "/"}>
+            <Link to={isAuthenticated ? "/strategy" : "/"}>
               <Home className="h-4 w-4" />
-              {isAuthenticated ? "Back to Dashboard" : "Back to Home"}
+              {isAuthenticated ? "Back to Strategy" : "Back to Home"}
             </Link>
           </Button>
           <Button

@@ -23,7 +23,6 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 import {
   Home,
-  LayoutDashboard,
   Trophy,
   Target,
   Bookmark,
@@ -125,15 +124,6 @@ export function AppSidebar() {
               <Link to="/" onClick={handleMenuNavigation}>
                 <Home />
                 <span>Home</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={isRouteActive("/dashboard")}>
-              <Link to="/dashboard" onClick={handleMenuNavigation}>
-                <LayoutDashboard />
-                <span>Dashboard</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

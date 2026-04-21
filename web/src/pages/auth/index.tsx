@@ -513,7 +513,7 @@ export default function Auth() {
         .then((data) => {
           const { user, accessToken } = data.result;
           setAuth(user, accessToken);
-          navigate("/dashboard");
+          navigate("/strategy");
         })
         .catch((error: unknown) => {
           if (shouldMarkInvalidFromError(error)) {
@@ -564,7 +564,7 @@ export default function Auth() {
         .then((data) => {
           const { user, accessToken } = data.result;
           setAuth(user, accessToken);
-          navigate("/dashboard");
+          navigate("/strategy");
         })
         .catch((error: unknown) => {
           if (shouldMarkInvalidFromError(error)) {
@@ -614,7 +614,7 @@ export default function Auth() {
         .then((data) => {
           const { user, accessToken } = data.result;
           setAuth(user, accessToken);
-          navigate("/dashboard");
+          navigate("/strategy");
         })
         .catch((error: unknown) => {
           if (shouldMarkInvalidFromError(error)) {
@@ -648,7 +648,7 @@ export default function Auth() {
       const data = await promise;
       const { user, accessToken } = data.result;
       setAuth(user, accessToken);
-      navigate("/dashboard");
+      navigate("/strategy");
     } catch (error) {
       if (shouldMarkInvalidFromError(error)) {
         markCurrentStepInvalid();

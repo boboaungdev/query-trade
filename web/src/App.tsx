@@ -9,7 +9,6 @@ import Navbar from "./components/Navbar";
 
 import Home from "./pages/home";
 import Auth from "./pages/auth";
-import Dashboard from "./pages/dashboard";
 import Leaderboard from "./pages/leaderboard";
 import Backtest from "./pages/backtest/index";
 import BacktestResult from "./pages/backtest/result";
@@ -59,7 +58,6 @@ export default function App() {
             <Route path="/auth" element={<AuthRoute />} />
 
             <Route element={<ProtectedRoute />}>
-              <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/strategy" element={<Strategy />} />
               <Route
