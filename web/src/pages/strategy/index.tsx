@@ -188,12 +188,15 @@ export default function StrategyPage() {
     useState<StrategyBuilderFooterControls | null>(null);
   const [createSheetDragOffset, setCreateSheetDragOffset] = useState(0);
   const [isCreateSheetDragging, setIsCreateSheetDragging] = useState(false);
+  const [isMobileCreateActionExpanded, setIsMobileCreateActionExpanded] =
+    useState(true);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const createSheetBodyRef = useRef<HTMLDivElement | null>(null);
   const createSheetDragPointerIdRef = useRef<number | null>(null);
   const createSheetDragStartYRef = useRef(0);
   const createSheetDragLastYRef = useRef(0);
   const createSheetDragSourceRef = useRef<"header" | "body" | null>(null);
+  const mobileCreateActionScrollYRef = useRef(0);
   const previousDebouncedSearchRef = useRef(debouncedSearch);
   const shouldOpenStrategyBuilder =
     typeof location.state === "object" &&
@@ -512,6 +515,31 @@ export default function StrategyPage() {
     setCreateSheetDragOffset(0);
   }, [isCreateSheetOpen]);
 
+  useEffect(() => {
+    if (!isMobile) {
+      setIsMobileCreateActionExpanded(true);
+      return;
+    }
+
+    mobileCreateActionScrollYRef.current = window.scrollY;
+
+    const onScroll = () => {
+      const nextScrollY = window.scrollY;
+      const delta = nextScrollY - mobileCreateActionScrollYRef.current;
+
+      if (Math.abs(delta) < 8) return;
+
+      setIsMobileCreateActionExpanded(delta < 0);
+      mobileCreateActionScrollYRef.current = nextScrollY;
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, [isMobile]);
+
   const beginCreateSheetDrag = (
     event: React.PointerEvent<HTMLDivElement>,
     source: "header" | "body",
@@ -614,16 +642,6 @@ export default function StrategyPage() {
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                className="inline-flex items-center gap-1.5"
-                onClick={openCreateSheet}
-              >
-                <Plus className="h-4 w-4" />
-                Create
-              </Button>
-            </div>
           </div>
 
           <div className="grid gap-3">
@@ -664,84 +682,95 @@ export default function StrategyPage() {
                     </TabsTrigger>
                   </TabsList>
 
-                  <div className="relative min-w-0 w-full md:max-w-[320px] md:flex-1">
-                    <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      value={search}
-                      onChange={(event) => {
-                        setSearch(event.target.value);
-                        setPage(1);
-                      }}
-                      placeholder="Search"
-                      className="rounded-md border-0 border-b-2 border-foreground/15 bg-muted/60 pr-10 pl-9 focus-visible:border-primary focus-visible:ring-0 dark:bg-input/30"
-                    />
-                    <div className="absolute top-1/2 right-1.5 -translate-y-1/2">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-sm"
-                            className="h-7 w-7"
-                          >
-                            <ListFilter className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-52">
-                          <DropdownMenuLabel>Sort by</DropdownMenuLabel>
-                          <DropdownMenuRadioGroup
-                            value={sortBy}
-                            onValueChange={(value) => {
-                              const nextSortBy = value as StrategySortBy;
-                              setSortBy(nextSortBy);
-                              if (nextSortBy === "popular") {
-                                setOrder("desc");
-                              }
-                              if (nextSortBy === "name") {
-                                setOrder("asc");
-                              }
-                              if (
-                                nextSortBy === "createdAt" ||
-                                nextSortBy === "updatedAt"
-                              ) {
-                                setOrder("desc");
-                              }
-                              setPage(1);
-                            }}
-                          >
-                            <DropdownMenuRadioItem value="updatedAt">
-                              Last updated
-                            </DropdownMenuRadioItem>
-                            <DropdownMenuRadioItem value="name">
-                              Name
-                            </DropdownMenuRadioItem>
-                            <DropdownMenuRadioItem value="createdAt">
-                              Newest
-                            </DropdownMenuRadioItem>
-                            <DropdownMenuRadioItem value="popular">
-                              Popular
-                            </DropdownMenuRadioItem>
-                          </DropdownMenuRadioGroup>
+                  <div className="flex w-full min-w-0 items-center gap-2 md:w-auto md:flex-1 md:justify-end">
+                    <div className="relative min-w-0 flex-1 md:max-w-[320px]">
+                      <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        value={search}
+                        onChange={(event) => {
+                          setSearch(event.target.value);
+                          setPage(1);
+                        }}
+                        placeholder="Search"
+                        className="rounded-md border-0 border-b-2 border-foreground/15 bg-muted/60 pr-10 pl-9 focus-visible:border-primary focus-visible:ring-0 dark:bg-input/30"
+                      />
+                      <div className="absolute top-1/2 right-1.5 -translate-y-1/2">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-sm"
+                              className="h-7 w-7"
+                            >
+                              <ListFilter className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-52">
+                            <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+                            <DropdownMenuRadioGroup
+                              value={sortBy}
+                              onValueChange={(value) => {
+                                const nextSortBy = value as StrategySortBy;
+                                setSortBy(nextSortBy);
+                                if (nextSortBy === "popular") {
+                                  setOrder("desc");
+                                }
+                                if (nextSortBy === "name") {
+                                  setOrder("asc");
+                                }
+                                if (
+                                  nextSortBy === "createdAt" ||
+                                  nextSortBy === "updatedAt"
+                                ) {
+                                  setOrder("desc");
+                                }
+                                setPage(1);
+                              }}
+                            >
+                              <DropdownMenuRadioItem value="updatedAt">
+                                Last updated
+                              </DropdownMenuRadioItem>
+                              <DropdownMenuRadioItem value="name">
+                                Name
+                              </DropdownMenuRadioItem>
+                              <DropdownMenuRadioItem value="createdAt">
+                                Newest
+                              </DropdownMenuRadioItem>
+                              <DropdownMenuRadioItem value="popular">
+                                Popular
+                              </DropdownMenuRadioItem>
+                            </DropdownMenuRadioGroup>
 
-                          <DropdownMenuSeparator />
-                          <DropdownMenuLabel>Order</DropdownMenuLabel>
-                          <DropdownMenuRadioGroup
-                            value={order}
-                            onValueChange={(value) => {
-                              setOrder(value as "asc" | "desc");
-                              setPage(1);
-                            }}
-                          >
-                            <DropdownMenuRadioItem value="asc">
-                              Asc
-                            </DropdownMenuRadioItem>
-                            <DropdownMenuRadioItem value="desc">
-                              Desc
-                            </DropdownMenuRadioItem>
-                          </DropdownMenuRadioGroup>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuLabel>Order</DropdownMenuLabel>
+                            <DropdownMenuRadioGroup
+                              value={order}
+                              onValueChange={(value) => {
+                                setOrder(value as "asc" | "desc");
+                                setPage(1);
+                              }}
+                            >
+                              <DropdownMenuRadioItem value="asc">
+                                Asc
+                              </DropdownMenuRadioItem>
+                              <DropdownMenuRadioItem value="desc">
+                                Desc
+                              </DropdownMenuRadioItem>
+                            </DropdownMenuRadioGroup>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </div>
+
+                    <Button
+                      type="button"
+                      className="hidden md:inline-flex"
+                      onClick={openCreateSheet}
+                    >
+                      <Plus className="h-4 w-4" />
+                      Create
+                    </Button>
                   </div>
                 </div>
               </Tabs>
@@ -1005,6 +1034,24 @@ export default function StrategyPage() {
         )}
       </div>
 
+      <Button
+        type="button"
+        size={isMobileCreateActionExpanded ? "default" : "icon"}
+        className={cn(
+          "fixed right-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-40 overflow-hidden rounded-full shadow-md shadow-primary/15 transition-[width,padding,box-shadow,transform] duration-200 ease-out active:scale-95 md:hidden",
+          isMobileCreateActionExpanded ? "w-auto" : "size-8 gap-0 px-0",
+        )}
+        onClick={openCreateSheet}
+        aria-label="Create strategy"
+      >
+        <Plus className="h-4 w-4" />
+        {isMobileCreateActionExpanded ? (
+          <span className="animate-in fade-in-0 slide-in-from-left-1 duration-200">
+            Create
+          </span>
+        ) : null}
+      </Button>
+
       <AlertDialog
         open={Boolean(strategyIdPendingDelete)}
         onOpenChange={(open) => {
@@ -1107,7 +1154,7 @@ export default function StrategyPage() {
               {isEditingInSheet
                 ? "Edit your strategy."
                 : duplicateSheetStrategyId
-                  ? "Clone this strategy into your own draft, make your changes, and save it as your own."
+                  ? "Clone, edit, and save as your own."
                   : "Build a new strategy."}
             </SheetDescription>
           </SheetHeader>
@@ -3574,6 +3621,12 @@ export function StrategyBuilder({
         ? "loading"
         : null;
 
+  const handleStrategyLoadFailure = useEffectEvent((message: string) => {
+    toast.error(message);
+    onRequestClose?.();
+    navigate("/strategy");
+  });
+
   useEffect(() => {
     const sourceStrategyId = strategyId || duplicateStrategyId;
 
@@ -3592,9 +3645,7 @@ export function StrategyBuilder({
         const strategy = response?.result?.strategy;
 
         if (!strategy) {
-          toast.error("Strategy not found");
-          onRequestClose?.();
-          navigate("/strategy");
+          handleStrategyLoadFailure("Strategy not found");
           return;
         }
 
@@ -3702,21 +3753,22 @@ export function StrategyBuilder({
                 .response!.data!.message
             : null;
 
-        toast.error(
+        handleStrategyLoadFailure(
           responseMessage ??
-            (error instanceof Error
-              ? error.message
-              : "Failed to load strategy"),
+            (error instanceof Error ? error.message : "Failed to load strategy"),
         );
-        onRequestClose?.();
-        navigate("/strategy");
       } finally {
         setIsLoadingStrategy(false);
       }
     };
 
     void loadStrategy();
-  }, [duplicateStrategyId, isEditing, navigate, onRequestClose, strategyId]);
+  }, [
+    duplicateStrategyId,
+    isDuplicating,
+    isEditing,
+    strategyId,
+  ]);
 
   const indicatorMap = useMemo(
     () => new Map(indicatorOptions.map((item) => [item._id, item])),
@@ -4043,7 +4095,7 @@ export function StrategyBuilder({
             {isEditing
               ? "Edit your strategy."
               : isDuplicating
-                ? "Clone this strategy into your own draft, make your changes, and save it as your own."
+                ? "Clone, edit, and save as your own."
                 : "Build a new strategy."}
           </p>
         </SheetHeader>

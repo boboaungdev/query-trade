@@ -358,6 +358,8 @@ export default function Profile() {
   const editSheetDragStartYRef = useRef(0);
   const editSheetDragLastYRef = useRef(0);
   const editSheetDragSourceRef = useRef<"handle" | "body" | null>(null);
+  const editSheetDragResetTimerRef = useRef<number | null>(null);
+  const editSheetSwipeCloseTimerRef = useRef<number | null>(null);
   const isMobile = useIsMobile();
   const [editSheetDragOffset, setEditSheetDragOffset] = useState(0);
   const [isEditSheetDragging, setIsEditSheetDragging] = useState(false);
@@ -812,12 +814,39 @@ export default function Profile() {
   ]);
 
   useEffect(() => {
-    if (isEditing) return;
+    if (editSheetDragResetTimerRef.current) {
+      window.clearTimeout(editSheetDragResetTimerRef.current);
+      editSheetDragResetTimerRef.current = null;
+    }
+
+    if (isEditing) {
+      if (editSheetSwipeCloseTimerRef.current) {
+        window.clearTimeout(editSheetSwipeCloseTimerRef.current);
+        editSheetSwipeCloseTimerRef.current = null;
+      }
+
+      editSheetDragPointerIdRef.current = null;
+      editSheetDragSourceRef.current = null;
+      setIsEditSheetDragging(false);
+      setEditSheetDragOffset(0);
+      return;
+    }
 
     editSheetDragPointerIdRef.current = null;
     editSheetDragSourceRef.current = null;
     setIsEditSheetDragging(false);
-    setEditSheetDragOffset(0);
+
+    editSheetDragResetTimerRef.current = window.setTimeout(() => {
+      setEditSheetDragOffset(0);
+      editSheetDragResetTimerRef.current = null;
+    }, 220);
+
+    return () => {
+      if (editSheetDragResetTimerRef.current) {
+        window.clearTimeout(editSheetDragResetTimerRef.current);
+        editSheetDragResetTimerRef.current = null;
+      }
+    };
   }, [isEditing]);
 
   if (!routeUsername && isAuthenticated && user?.username) {
@@ -860,6 +889,11 @@ export default function Profile() {
 
   function onCancel() {
     if (!user) return;
+    if (editSheetSwipeCloseTimerRef.current) {
+      window.clearTimeout(editSheetSwipeCloseTimerRef.current);
+      editSheetSwipeCloseTimerRef.current = null;
+    }
+
     setForm({
       name: user.name || "",
       username: user.username || "",
@@ -875,6 +909,15 @@ export default function Profile() {
 
   const onStartEditing = () => {
     if (!user) return;
+    if (editSheetSwipeCloseTimerRef.current) {
+      window.clearTimeout(editSheetSwipeCloseTimerRef.current);
+      editSheetSwipeCloseTimerRef.current = null;
+    }
+    if (editSheetDragResetTimerRef.current) {
+      window.clearTimeout(editSheetDragResetTimerRef.current);
+      editSheetDragResetTimerRef.current = null;
+    }
+
     setForm({
       name: user.name || "",
       username: user.username || "",
@@ -958,7 +1001,14 @@ export default function Profile() {
     setIsEditSheetDragging(false);
 
     if (totalDrag > 120) {
-      onCancel();
+      setEditSheetDragOffset(
+        Math.max(totalDrag, window.innerHeight || totalDrag),
+      );
+
+      editSheetSwipeCloseTimerRef.current = window.setTimeout(() => {
+        editSheetSwipeCloseTimerRef.current = null;
+        onCancel();
+      }, 180);
       return;
     }
 
