@@ -34,10 +34,10 @@ export const SubscriptionSchema = {
 
   plan: {
     create: Joi.object({
-      name: Joi.string().trim().min(2).max(30).required(),
+      name: Joi.string().trim().min(2).max(20).required(),
       amountUsd: Joi.number().min(0).precision(8).required(),
       durationDays: Joi.number().integer().min(0).required(),
-      features: Joi.array().items(Joi.string().trim().max(80)).default([]),
+      features: Joi.array().items(Joi.string().trim().max(100)).default([]),
       discount: Joi.object({
         isActive: Joi.boolean().default(false),
         type: Joi.string().valid("percentage", "fixed").default("percentage"),
@@ -51,10 +51,10 @@ export const SubscriptionSchema = {
     }),
 
     update: Joi.object({
-      name: Joi.string().trim().min(2).max(30),
+      name: Joi.string().trim().min(2).max(20),
       amountUsd: Joi.number().min(0).precision(8),
       durationDays: Joi.number().integer().min(0),
-      features: Joi.array().items(Joi.string().trim().max(80)),
+      features: Joi.array().items(Joi.string().trim().max(100)),
       discount: Joi.object({
         isActive: Joi.boolean(),
         type: Joi.string().valid("percentage", "fixed"),

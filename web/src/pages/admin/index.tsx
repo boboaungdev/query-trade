@@ -78,6 +78,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth";
 
 type AdminSection = "plans" | "indicators";
@@ -121,6 +122,8 @@ type DeleteTarget =
 type PlanFieldErrors = {
   name?: string;
   sortOrder?: string;
+  features?: string;
+  discountLabel?: string;
 };
 
 type IndicatorFieldErrors = {
@@ -328,12 +331,44 @@ function isPlanDraftValid(draft: PlanDraft) {
 
   return (
     draft.name.trim().length >= 2 &&
+    draft.name.trim().length <= 20 &&
     isNonNegativeNumber(draft.amountUsd) &&
     isNonNegativeInteger(draft.durationDays) &&
     isNonNegativeInteger(draft.sortOrder) &&
     hasValidDiscountValue &&
+    getInvalidFeatureLines(draft.features).length === 0 &&
     draft.discountLabel.trim().length <= 40
   );
+}
+
+function getInvalidFeatureLines(features: string) {
+  return features
+    .split("\n")
+    .map((feature, index) => ({
+      line: index + 1,
+      value: feature.trim(),
+    }))
+    .filter((feature) => feature.value.length > 100);
+}
+
+function getPlanFieldErrors(draft: PlanDraft): PlanFieldErrors {
+  const errors: PlanFieldErrors = {};
+  const invalidFeatureLines = getInvalidFeatureLines(draft.features);
+
+  if (draft.name.trim().length > 20) {
+    errors.name = "Plan name must be 20 characters or fewer.";
+  }
+
+  if (invalidFeatureLines.length > 0) {
+    const lineNumbers = invalidFeatureLines.map((feature) => feature.line);
+    errors.features = `Feature line ${lineNumbers.join(", ")} must be 100 characters or fewer.`;
+  }
+
+  if (draft.discountLabel.trim().length > 40) {
+    errors.discountLabel = "Discount label must be 40 characters or fewer.";
+  }
+
+  return errors;
 }
 
 function isIndicatorDraftValid(draft: IndicatorDraft) {
@@ -980,7 +1015,17 @@ export default function AdminDashboard() {
   };
 
   const savePlan = async () => {
-    if (!editingPlan || !planDraft || !isPlanDraftValid(planDraft)) {
+    if (!editingPlan || !planDraft) {
+      return;
+    }
+
+    const fieldErrors = getPlanFieldErrors(planDraft);
+    if (Object.keys(fieldErrors).length > 0) {
+      setPlanErrors(fieldErrors);
+      return;
+    }
+
+    if (!isPlanDraftValid(planDraft)) {
       return;
     }
 
@@ -1010,6 +1055,8 @@ export default function AdminDashboard() {
             setPlanErrors({ name: message });
           } else if (message.includes("Sort order already exists")) {
             setPlanErrors({ sortOrder: message });
+          } else if (message.toLowerCase().includes("discount.label")) {
+            setPlanErrors({ discountLabel: message });
           }
         }
       }
@@ -1020,6 +1067,12 @@ export default function AdminDashboard() {
   };
 
   const createNewPlan = async () => {
+    const fieldErrors = getPlanFieldErrors(newPlanDraft);
+    if (Object.keys(fieldErrors).length > 0) {
+      setNewPlanErrors(fieldErrors);
+      return;
+    }
+
     if (!isPlanDraftValid(newPlanDraft)) {
       return;
     }
@@ -1047,6 +1100,8 @@ export default function AdminDashboard() {
             setNewPlanErrors({ name: message });
           } else if (message.includes("Sort order already exists")) {
             setNewPlanErrors({ sortOrder: message });
+          } else if (message.toLowerCase().includes("discount.label")) {
+            setNewPlanErrors({ discountLabel: message });
           }
         }
       }
@@ -1642,7 +1697,7 @@ export default function AdminDashboard() {
 
           <div className="flex-1 overflow-y-auto px-4 py-4 md:px-6 md:py-5">
             <div className="space-y-4">
-              <div className="flex items-center justify-between gap-3 border-b pb-4">
+              <div className="flex items-center justify-between gap-3 pb-4">
                 <div>
                   <p className="text-sm font-medium">Active</p>
                   <p className="text-xs text-muted-foreground">
@@ -1665,15 +1720,17 @@ export default function AdminDashboard() {
                     placeholder="Starter Pro"
                     aria-invalid={Boolean(newPlanErrors.name)}
                     onChange={(event) => {
-                      if (newPlanErrors.name) {
-                        setNewPlanErrors((current) => ({
-                          ...current,
-                          name: undefined,
-                        }));
-                      }
+                      const name = event.target.value;
+                      setNewPlanErrors((current) => ({
+                        ...current,
+                        name:
+                          name.trim().length > 20
+                            ? "Plan name must be 20 characters or fewer."
+                            : undefined,
+                      }));
                       setNewPlanDraft({
                         ...newPlanDraft,
-                        name: event.target.value,
+                        name,
                       });
                     }}
                   />
@@ -1749,7 +1806,13 @@ export default function AdminDashboard() {
                     One feature per line
                   </span>
                 </div>
-                <div className="overflow-hidden rounded-lg border border-input bg-background transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 dark:bg-input/30">
+                <div
+                  className={cn(
+                    "overflow-hidden rounded-lg border border-input bg-background transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 dark:bg-input/30",
+                    newPlanErrors.features &&
+                      "border-destructive ring-2 ring-destructive/20 focus-within:border-destructive focus-within:ring-destructive/20 dark:border-destructive/50 dark:ring-destructive/40",
+                  )}
+                >
                   <ScrollArea className="h-24">
                     <Textarea
                       className="min-h-24 resize-none border-0 bg-transparent shadow-none focus-visible:ring-0 dark:bg-transparent"
@@ -1757,21 +1820,44 @@ export default function AdminDashboard() {
                       placeholder={
                         "Advanced analytics\nPriority support\nUnlimited exports"
                       }
-                      onChange={(event) =>
+                      aria-invalid={Boolean(newPlanErrors.features)}
+                      onChange={(event) => {
+                        const features = event.target.value;
+                        const invalidFeatureLines =
+                          getInvalidFeatureLines(features);
+                        setNewPlanErrors((current) => ({
+                          ...current,
+                          features:
+                            invalidFeatureLines.length > 0
+                              ? `Feature line ${invalidFeatureLines
+                                  .map((feature) => feature.line)
+                                  .join(", ")} must be 100 characters or fewer.`
+                              : undefined,
+                        }));
                         setNewPlanDraft({
                           ...newPlanDraft,
-                          features: event.target.value,
-                        })
-                      }
+                          features,
+                        });
+                      }}
                       rows={4}
                     />
                   </ScrollArea>
                 </div>
+                {newPlanErrors.features ? (
+                  <p className="text-xs text-destructive">
+                    {newPlanErrors.features}
+                  </p>
+                ) : null}
               </div>
 
-              <div className="space-y-3 border-t pt-4">
+              <div className="space-y-3 pt-4">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium">Discount</p>
+                  <div>
+                    <p className="text-sm font-medium">Discount</p>
+                    <p className="text-xs text-muted-foreground">
+                      Shown as a discount badge.
+                    </p>
+                  </div>
                   <Switch
                     checked={newPlanDraft.discountIsActive}
                     onCheckedChange={(checked) =>
@@ -1821,13 +1907,27 @@ export default function AdminDashboard() {
                   <Input
                     value={newPlanDraft.discountLabel}
                     placeholder="Launch discount"
-                    onChange={(event) =>
+                    aria-invalid={Boolean(newPlanErrors.discountLabel)}
+                    onChange={(event) => {
+                      const discountLabel = event.target.value;
+                      setNewPlanErrors((current) => ({
+                        ...current,
+                        discountLabel:
+                          discountLabel.trim().length > 40
+                            ? "Discount label must be 40 characters or fewer."
+                            : undefined,
+                      }));
                       setNewPlanDraft({
                         ...newPlanDraft,
-                        discountLabel: event.target.value,
-                      })
-                    }
+                        discountLabel,
+                      });
+                    }}
                   />
+                  {newPlanErrors.discountLabel ? (
+                    <p className="text-xs text-destructive">
+                      {newPlanErrors.discountLabel}
+                    </p>
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -1890,7 +1990,7 @@ export default function AdminDashboard() {
           {planDraft ? (
             <div className="flex-1 overflow-y-auto px-4 py-4 md:px-6 md:py-5">
               <div className="space-y-4">
-                <div className="flex items-center justify-between gap-3 border-b pb-4">
+                <div className="flex items-center justify-between gap-3 pb-4">
                   <div>
                     <p className="text-sm font-medium">Active</p>
                     <p className="text-xs text-muted-foreground">
@@ -1913,15 +2013,17 @@ export default function AdminDashboard() {
                       placeholder="Starter Pro"
                       aria-invalid={Boolean(planErrors.name)}
                       onChange={(event) => {
-                        if (planErrors.name) {
-                          setPlanErrors((current) => ({
-                            ...current,
-                            name: undefined,
-                          }));
-                        }
+                        const name = event.target.value;
+                        setPlanErrors((current) => ({
+                          ...current,
+                          name:
+                            name.trim().length > 20
+                              ? "Plan name must be 20 characters or fewer."
+                              : undefined,
+                        }));
                         setPlanDraft({
                           ...planDraft,
-                          name: event.target.value,
+                          name,
                         });
                       }}
                     />
@@ -2007,7 +2109,7 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                <div className="border-b pb-4 text-sm text-muted-foreground">
+                <div className="pb-4 text-sm text-muted-foreground">
                   Generated key:{" "}
                   <span className="font-medium text-foreground">
                     {planDraft.key}
@@ -2021,7 +2123,13 @@ export default function AdminDashboard() {
                       One feature per line
                     </span>
                   </div>
-                  <div className="overflow-hidden rounded-lg border border-input bg-background transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 dark:bg-input/30">
+                  <div
+                    className={cn(
+                      "overflow-hidden rounded-lg border border-input bg-background transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 dark:bg-input/30",
+                      planErrors.features &&
+                        "border-destructive ring-2 ring-destructive/20 focus-within:border-destructive focus-within:ring-destructive/20 dark:border-destructive/50 dark:ring-destructive/40",
+                    )}
+                  >
                     <ScrollArea className="h-24">
                       <Textarea
                         className="min-h-24 resize-none border-0 bg-transparent shadow-none focus-visible:ring-0 dark:bg-transparent"
@@ -2029,21 +2137,46 @@ export default function AdminDashboard() {
                         placeholder={
                           "Advanced analytics\nPriority support\nUnlimited exports"
                         }
-                        onChange={(event) =>
+                        aria-invalid={Boolean(planErrors.features)}
+                        onChange={(event) => {
+                          const features = event.target.value;
+                          const invalidFeatureLines =
+                            getInvalidFeatureLines(features);
+                          setPlanErrors((current) => ({
+                            ...current,
+                            features:
+                              invalidFeatureLines.length > 0
+                                ? `Feature line ${invalidFeatureLines
+                                    .map((feature) => feature.line)
+                                    .join(
+                                      ", ",
+                                    )} must be 100 characters or fewer.`
+                                : undefined,
+                          }));
                           setPlanDraft({
                             ...planDraft,
-                            features: event.target.value,
-                          })
-                        }
+                            features,
+                          });
+                        }}
                         rows={4}
                       />
                     </ScrollArea>
                   </div>
+                  {planErrors.features ? (
+                    <p className="text-xs text-destructive">
+                      {planErrors.features}
+                    </p>
+                  ) : null}
                 </div>
 
-                <div className="space-y-3 border-t pt-4">
+                <div className="space-y-3 pt-4">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium">Discount</p>
+                    <div>
+                      <p className="text-sm font-medium">Discount</p>
+                      <p className="text-xs text-muted-foreground">
+                        Shown as a discount badge.
+                      </p>
+                    </div>
                     <Switch
                       checked={planDraft.discountIsActive}
                       onCheckedChange={(checked) =>
@@ -2093,13 +2226,27 @@ export default function AdminDashboard() {
                     <Input
                       value={planDraft.discountLabel}
                       placeholder="Launch discount"
-                      onChange={(event) =>
+                      aria-invalid={Boolean(planErrors.discountLabel)}
+                      onChange={(event) => {
+                        const discountLabel = event.target.value;
+                        setPlanErrors((current) => ({
+                          ...current,
+                          discountLabel:
+                            discountLabel.trim().length > 40
+                              ? "Discount label must be 40 characters or fewer."
+                              : undefined,
+                        }));
                         setPlanDraft({
                           ...planDraft,
-                          discountLabel: event.target.value,
-                        })
-                      }
+                          discountLabel,
+                        });
+                      }}
                     />
+                    {planErrors.discountLabel ? (
+                      <p className="text-xs text-destructive">
+                        {planErrors.discountLabel}
+                      </p>
+                    ) : null}
                   </div>
                 </div>
               </div>

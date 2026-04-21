@@ -101,17 +101,14 @@ const NAME_WORD_LIMIT = 3;
 function sanitizeUsername(value: string) {
   return value
     .toLowerCase()
-    .replace(/[^a-z0-9]/g, "")
-    .slice(0, 20);
+    .replace(/[^a-z0-9]/g, "");
 }
 
 function sanitizeName(value: string) {
-  const cleaned = value
+  return value
     .replace(/[^A-Za-z0-9 ]/g, "")
     .replace(/\s+/g, " ")
     .trimStart();
-
-  return cleaned.split(" ").slice(0, NAME_WORD_LIMIT).join(" ").slice(0, 20);
 }
 
 const compactNumber = new Intl.NumberFormat("en", {
@@ -2005,7 +2002,6 @@ export default function Profile() {
                             value={form.name}
                             placeholder="Full name"
                             aria-invalid={Boolean(nameHelperText)}
-                            maxLength={20}
                             disabled={isSaving}
                             onChange={(event) =>
                               setForm((prev) => ({
@@ -2043,7 +2039,6 @@ export default function Profile() {
                               value={form.username}
                               placeholder="Username"
                               aria-invalid={isUsernameLiveInvalid}
-                              maxLength={20}
                               disabled={isSaving}
                               onChange={(event) => {
                                 setIsUsernameInvalid(false);

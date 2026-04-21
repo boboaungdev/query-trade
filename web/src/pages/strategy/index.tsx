@@ -28,7 +28,6 @@ import {
   Search,
   Settings2,
   Trash2,
-  X,
   MoreHorizontal,
   TrendingDown,
   TrendingUp,
@@ -2522,16 +2521,17 @@ function ConditionEditor({
             </p>
           </div>
         </div>
-        <Button
-          type="button"
-          variant="ghost"
-          className="absolute top-3 right-3 h-8 w-8 p-0 text-destructive hover:text-destructive/80"
-          onClick={onRemove}
-          aria-label="Remove group"
-          title="Remove group"
-        >
-          <X className="h-4 w-4" />
-        </Button>
+      <Button
+        type="button"
+        variant="destructive"
+        size="icon-sm"
+        className="absolute top-3 right-3"
+        onClick={onRemove}
+        aria-label="Remove group"
+        title="Remove group"
+      >
+        <Trash2 className="size-4" />
+      </Button>
 
         <div className="space-y-3">
           {node.conditions.length > 1 && (
@@ -2624,13 +2624,14 @@ function ConditionEditor({
       </div>
       <Button
         type="button"
-        variant="ghost"
-        className="absolute top-3 right-3 h-8 w-8 p-0 text-destructive hover:text-destructive/80"
+        variant="destructive"
+        size="icon-sm"
+        className="absolute top-3 right-3"
         onClick={onRemove}
         aria-label="Remove rule"
         title="Remove rule"
       >
-        <X className="h-4 w-4" />
+        <Trash2 className="size-4" />
       </Button>
 
       <OperandEditor
@@ -3118,13 +3119,12 @@ function LogicBlockEditor({
               <DialogTrigger asChild>
                 <Button
                   type="button"
-                  variant="ghost"
+                  variant="outline"
                   size="icon-sm"
-                  className="h-6 w-6 rounded-full border border-border/70 bg-background/80 text-muted-foreground hover:bg-background hover:text-foreground"
                   aria-label="Edit rules"
                   title="Edit rules"
                 >
-                  <Settings2 className="h-3 w-3" />
+                  <Settings2 className="size-4" />
                 </Button>
               </DialogTrigger>
               <DialogContent
@@ -3339,13 +3339,12 @@ function LogicBlockEditor({
                 <DialogTrigger asChild>
                   <Button
                     type="button"
-                    variant="ghost"
+                    variant="outline"
                     size="icon-sm"
-                    className="h-6 w-6 rounded-full border border-border/70 bg-background/80 text-muted-foreground hover:bg-background hover:text-foreground"
                     aria-label="Edit stop loss"
                     title="Edit stop loss"
                   >
-                    <Settings2 className="h-3 w-3" />
+                    <Settings2 className="size-4" />
                   </Button>
                 </DialogTrigger>
                 <DialogContent
@@ -3386,13 +3385,12 @@ function LogicBlockEditor({
                 <DialogTrigger asChild>
                   <Button
                     type="button"
-                    variant="ghost"
+                    variant="outline"
                     size="icon-sm"
-                    className="h-6 w-6 rounded-full border border-border/70 bg-background/80 text-muted-foreground hover:bg-background hover:text-foreground"
                     aria-label="Edit take profit"
                     title="Edit take profit"
                   >
-                    <Settings2 className="h-3 w-3" />
+                    <Settings2 className="size-4" />
                   </Button>
                 </DialogTrigger>
                 <DialogContent
@@ -4450,17 +4448,17 @@ export function StrategyBuilder({
                           )}
                         </div>
 
-                        <div className="flex w-full gap-2 self-start md:w-auto md:self-center">
+                        <div className="flex shrink-0 gap-2 self-start md:self-center">
                           <Dialog>
                             <DialogTrigger asChild>
                               <Button
                                 type="button"
-                                variant="ghost"
+                                variant="outline"
                                 size="icon-sm"
                                 aria-label={`Edit indicator ${index + 1}`}
                                 title="Edit indicator"
                               >
-                                <Settings2 className="h-4 w-4" />
+                                <Settings2 className="size-4" />
                               </Button>
                             </DialogTrigger>
                             <DialogContent
@@ -4696,9 +4694,8 @@ export function StrategyBuilder({
                           </Dialog>
                           <Button
                             type="button"
-                            variant="ghost"
+                            variant="destructive"
                             size="icon-sm"
-                            className="text-destructive hover:text-destructive/80"
                             onClick={() => {
                               if (isUsedInStrategy) return;
 
@@ -4715,9 +4712,9 @@ export function StrategyBuilder({
                             }
                           >
                             {isUsedInStrategy ? (
-                              <Lock className="h-4 w-4" />
+                              <Lock className="size-4" />
                             ) : (
-                              <Trash2 className="h-4 w-4" />
+                              <Trash2 className="size-4" />
                             )}
                           </Button>
                         </div>

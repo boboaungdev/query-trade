@@ -125,6 +125,9 @@ function AuthInput({
 export default function Auth() {
   const navigate = useNavigate();
   const passwordInputRef = useRef<HTMLInputElement | null>(null);
+  const codeInputRef = useRef<HTMLInputElement | null>(null);
+  const signupNameInputRef = useRef<HTMLInputElement | null>(null);
+  const newPasswordInputRef = useRef<HTMLInputElement | null>(null);
 
   const setAuth = useAuthStore((state) => state.setAuth);
 
@@ -135,6 +138,7 @@ export default function Auth() {
   const [debouncedUsername, setDebouncedUsername] = useState("");
   const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>("idle");
   const usernameRequestIdRef = useRef(0);
+  const autoSubmittedCodeRef = useRef("");
 
   const [showPassword, setShowPassword] = useState(false);
   const [isSigninPasswordVisible, setIsSigninPasswordVisible] = useState(false);
@@ -146,6 +150,8 @@ export default function Auth() {
 
   const [verifyStep, setVerifyStep] = useState(false);
   const [code, setCode] = useState("");
+  const [codeError, setCodeError] = useState("");
+  const [signinError, setSigninError] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [loadingSource, setLoadingSource] = useState<
@@ -171,11 +177,32 @@ export default function Auth() {
   const [resendTimer, setResendTimer] = useState(60);
   const [canResend, setCanResend] = useState(false);
   const normalizedEmail = email.trim().toLowerCase();
+  const trimmedName = name.trim();
   const isValidEmail = EMAIL_REGEX.test(normalizedEmail);
-  const validName = NAME_REGEX.test(name.trim());
+  const validName = NAME_REGEX.test(trimmedName);
   const validUsername = USERNAME_REGEX.test(username.trim());
   const validPassword = isValidPassword(password);
   const validNewPassword = isValidPassword(newPassword);
+  const nameHelperText =
+    trimmedName.length === 0
+      ? ""
+      : trimmedName.length > 20
+        ? "Name must be 20 characters or fewer"
+        : !/^[A-Za-z0-9 ]+$/.test(trimmedName)
+          ? "Name can use letters, numbers, and spaces only"
+          : "";
+  const passwordHelperText =
+    signinError || password.length === 0 || validPassword
+      ? ""
+      : "Password must be between 6 and 50 characters";
+  const newPasswordHelperText =
+    newPassword.length === 0 || validNewPassword
+      ? ""
+      : "New password must be between 6 and 50 characters";
+  const confirmNewPasswordHelperText =
+    confirmNewPassword.length === 0 || confirmNewPassword === newPassword
+      ? ""
+      : "Passwords do not match";
   const shouldShowContinueSpinner = loading && loadingSource === "submit";
   const isGoogleLoading = loading && loadingSource === "google";
   const hasInvalidField = Object.values(invalidFields).some(Boolean);
@@ -213,6 +240,16 @@ export default function Auth() {
     setInvalidFields((prev) => ({ ...prev, [field]: false }));
   };
 
+  const clearAuthErrors = () => {
+    setInvalidFieldState();
+    setCodeError("");
+    setSigninError("");
+  };
+
+  const getCodeErrorMessage = (error: unknown) => {
+    return getApiErrorMessage(error, "Invalid code");
+  };
+
   const markCurrentStepInvalid = () => {
     const markFilledFields = (fields: Array<[AuthFieldKey, string]>) => {
       const filledFields = fields
@@ -231,6 +268,7 @@ export default function Auth() {
     }
 
     if (forgotStep || verifyStep) {
+      setCodeError("Invalid code");
       markFilledFields([["code", code]]);
       return;
     }
@@ -263,6 +301,12 @@ export default function Auth() {
       "response" in error &&
       Boolean((error as { response?: unknown }).response)
     );
+  };
+
+  const toastNetworkError = (error: unknown, fallbackMessage: string) => {
+    if (!shouldMarkInvalidFromError(error)) {
+      toast.error(getApiErrorMessage(error, fallbackMessage));
+    }
   };
 
   const markSignupErrorFields = (error: unknown) => {
@@ -400,7 +444,7 @@ export default function Auth() {
 
   const handleResendVerification = () => {
     if (!isValidEmail || !validName || !validUsername || !validPassword) {
-      toast.error("Please fill valid signup details before resending code");
+      markCurrentStepInvalid();
       return;
     }
 
@@ -419,11 +463,13 @@ export default function Auth() {
         setResendTimer(60);
         setCanResend(false);
         setCode("");
+        setCodeError("");
+        clearInvalidField("code");
         toast.success("Verification code sent");
       })
       .catch((error: unknown) => {
         markSignupErrorFields(error);
-        toast.error(getApiErrorMessage(error, "Something went wrong"));
+        toastNetworkError(error, "Network error");
       })
       .finally(() => {
         setLoading(false);
@@ -435,44 +481,40 @@ export default function Auth() {
     if (!normalizedEmail) return;
 
     if (!isValidEmail) {
-      toast.error("Please provide a valid email");
+      setInvalidFieldState("email");
       return;
     }
 
     if (showPassword && !forgotStep && !validPassword) {
-      toast.error("Password must be between 6 and 50 characters");
+      setInvalidFieldState("password");
       return;
     }
 
     if (isSignup && !verifyStep) {
       if (!validName) {
-        toast.error(
-          "Name must be 1-20 chars: letters, numbers, and spaces only",
-        );
+        setInvalidFieldState("name");
         return;
       }
 
       if (!validUsername) {
-        toast.error(
-          "Username must be 6-20 chars: lowercase letters and numbers only",
-        );
+        setInvalidFieldState("username");
         return;
       }
 
       if (!validPassword) {
-        toast.error("Password must be between 6 and 50 characters");
+        setInvalidFieldState("password");
         return;
       }
     }
 
     if (resetStep) {
       if (!validNewPassword) {
-        toast.error("New password must be between 6 and 50 characters");
+        setInvalidFieldState("newPassword");
         return;
       }
 
       if (newPassword !== confirmNewPassword) {
-        toast.error("Passwords do not match");
+        setInvalidFieldState("confirmNewPassword");
         return;
       }
     }
@@ -486,6 +528,7 @@ export default function Auth() {
 
       promise
         .then((data) => {
+          clearAuthErrors();
           if (data.result.exist) {
             setShowPassword(true);
           } else {
@@ -496,7 +539,7 @@ export default function Auth() {
           if (shouldMarkInvalidFromError(error)) {
             markCurrentStepInvalid();
           }
-          toast.error(getApiErrorMessage(error, "Something went wrong"));
+          toastNetworkError(error, "Network error");
         });
 
       promise.finally(() => {
@@ -518,9 +561,10 @@ export default function Auth() {
         .catch((error: unknown) => {
           if (shouldMarkInvalidFromError(error)) {
             setInvalidFieldState(password.trim() ? "password" : "email");
+            setSigninError(getApiErrorMessage(error, "Signin failed"));
           }
 
-          toast.error(getApiErrorMessage(error, "Signin failed"));
+          toastNetworkError(error, "Network error");
         });
 
       promise.finally(() => {
@@ -538,13 +582,15 @@ export default function Auth() {
 
       promise
         .then(() => {
+          clearAuthErrors();
           setResetStep(true);
         })
         .catch((error: unknown) => {
           if (shouldMarkInvalidFromError(error)) {
             markCurrentStepInvalid();
+            setCodeError(getCodeErrorMessage(error));
           }
-          toast.error(getApiErrorMessage(error, "Verification failed"));
+          toastNetworkError(error, "Network error");
         });
 
       promise.finally(() => {
@@ -570,7 +616,7 @@ export default function Auth() {
           if (shouldMarkInvalidFromError(error)) {
             markCurrentStepInvalid();
           }
-          toast.error(getApiErrorMessage(error, "Reset password failed"));
+          toastNetworkError(error, "Network error");
         });
 
       promise.finally(() => {
@@ -590,6 +636,7 @@ export default function Auth() {
 
       promise
         .then(() => {
+          clearAuthErrors();
           setVerifyStep(true);
           setResendTimer(60);
           setCanResend(false);
@@ -597,7 +644,7 @@ export default function Auth() {
         })
         .catch((error: unknown) => {
           markSignupErrorFields(error);
-          toast.error(getApiErrorMessage(error, "Signup failed"));
+          toastNetworkError(error, "Network error");
         });
 
       promise.finally(() => {
@@ -619,8 +666,9 @@ export default function Auth() {
         .catch((error: unknown) => {
           if (shouldMarkInvalidFromError(error)) {
             markCurrentStepInvalid();
+            setCodeError(getCodeErrorMessage(error));
           }
-          toast.error(getApiErrorMessage(error, "Verification failed"));
+          toastNetworkError(error, "Network error");
         });
 
       promise.finally(() => {
@@ -630,13 +678,51 @@ export default function Auth() {
     }
   };
 
+  useEffect(() => {
+    const shouldVerifyCode =
+      code.length === 6 &&
+      !loading &&
+      (verifyStep || (forgotStep && !resetStep));
+
+    if (!shouldVerifyCode) {
+      if (code.length < 6) {
+        autoSubmittedCodeRef.current = "";
+      }
+      return;
+    }
+
+    if (autoSubmittedCodeRef.current === code) {
+      return;
+    }
+
+    autoSubmittedCodeRef.current = code;
+    handleContinue();
+  }, [code, forgotStep, loading, resetStep, verifyStep]);
+
+  useEffect(() => {
+    if (verifyStep || (forgotStep && !resetStep)) {
+      codeInputRef.current?.focus();
+    }
+  }, [forgotStep, resetStep, verifyStep]);
+
+  useEffect(() => {
+    if (isSignup && !verifyStep) {
+      signupNameInputRef.current?.focus();
+    }
+  }, [isSignup, verifyStep]);
+
+  useEffect(() => {
+    if (resetStep) {
+      newPasswordInputRef.current?.focus();
+    }
+  }, [resetStep]);
+
   const handleGoogleSuccess = async (
     credentialResponse: CredentialResponse,
   ) => {
     const credential = credentialResponse.credential;
 
     if (!credential) {
-      toast.error("Google signin failed!");
       return;
     }
 
@@ -653,7 +739,7 @@ export default function Auth() {
       if (shouldMarkInvalidFromError(error)) {
         markCurrentStepInvalid();
       }
-      toast.error(getApiErrorMessage(error, "Google signin failed!"));
+      toastNetworkError(error, "Network error");
     } finally {
       setLoading(false);
       setLoadingSource(null);
@@ -663,12 +749,11 @@ export default function Auth() {
   const handleGoogleError = () => {
     setLoading(false);
     setLoadingSource(null);
-    toast.error("Google signin failed!");
   };
 
   const handleForgotPassword = () => {
     if (!isValidEmail) {
-      toast.error("Please provide a valid email");
+      setInvalidFieldState("email");
       return;
     }
 
@@ -688,7 +773,7 @@ export default function Auth() {
         if (shouldMarkInvalidFromError(error)) {
           setInvalidFieldState("email");
         }
-        toast.error(getApiErrorMessage(error, "Failed to send code!"));
+        toastNetworkError(error, "Network error");
       })
       .finally(() => {
         setLoading(false);
@@ -697,7 +782,7 @@ export default function Auth() {
   };
 
   const handleStepBack = () => {
-    setInvalidFieldState();
+    clearAuthErrors();
 
     if (resetStep) {
       setResetStep(false);
@@ -758,7 +843,7 @@ export default function Auth() {
 
   const handleResendCode = () => {
     if (!isValidEmail) {
-      toast.error("Please provide a valid email");
+      setInvalidFieldState("email");
       return;
     }
 
@@ -772,13 +857,15 @@ export default function Auth() {
         setResendTimer(60);
         setCanResend(false);
         setCode("");
+        setCodeError("");
+        clearInvalidField("code");
         toast.success("Verification code sent");
       })
       .catch((error: unknown) => {
         if (shouldMarkInvalidFromError(error)) {
           setInvalidFieldState("code");
         }
-        toast.error(getApiErrorMessage(error, "Failed to resend code!"));
+        toastNetworkError(error, "Network error");
       })
       .finally(() => {
         setLoading(false);
@@ -998,6 +1085,7 @@ export default function Auth() {
                     disabled={showPassword || isSignup || loading}
                     onChange={(e) => {
                       clearInvalidField("email");
+                      setSigninError("");
                       setEmail(e.target.value.toLowerCase());
                     }}
                     onKeyDown={handleSubmitKeyDown}
@@ -1023,14 +1111,27 @@ export default function Auth() {
                         setIsSigninPasswordVisible((prev) => !prev)
                       }
                       value={password}
-                      aria-invalid={invalidFields.password}
+                      aria-invalid={
+                        invalidFields.password ||
+                        Boolean(passwordHelperText) ||
+                        Boolean(signinError)
+                      }
                       disabled={loading}
                       onChange={(e) => {
                         clearInvalidField("password");
+                        setSigninError("");
                         setPassword(e.target.value);
                       }}
                       onKeyDown={handleSubmitKeyDown}
                     />
+                    {passwordHelperText ? (
+                      <p className="text-xs text-destructive">
+                        {passwordHelperText}
+                      </p>
+                    ) : null}
+                    {signinError ? (
+                      <p className="text-xs text-destructive">{signinError}</p>
+                    ) : null}
 
                     <div className="flex justify-end">
                       <button
@@ -1061,15 +1162,19 @@ export default function Auth() {
                     <div className="flex items-start gap-2">
                       <div className="min-w-0 flex-1">
                         <AuthInput
+                          ref={codeInputRef}
                           icon={KeyRound}
                           placeholder="Enter 6 digit code"
                           aria-label="Email verification code"
                           value={code}
                           maxLength={6}
-                          aria-invalid={invalidFields.code}
+                          aria-invalid={
+                            invalidFields.code || Boolean(codeError)
+                          }
                           disabled={loading}
                           onChange={(e) => {
                             clearInvalidField("code");
+                            setCodeError("");
                             setCode(e.target.value.replace(/[^0-9]/g, ""));
                           }}
                           onKeyDown={handleSubmitKeyDown}
@@ -1104,6 +1209,9 @@ export default function Auth() {
                         </Button>
                       )}
                     </div>
+                    {codeError ? (
+                      <p className="text-xs text-destructive">{codeError}</p>
+                    ) : null}
                   </div>
                 )}
 
@@ -1114,6 +1222,7 @@ export default function Auth() {
                         New password
                       </Label>
                       <AuthInput
+                        ref={newPasswordInputRef}
                         icon={LockKeyhole}
                         type={isNewPasswordVisible ? "text" : "password"}
                         placeholder="New password"
@@ -1125,13 +1234,21 @@ export default function Auth() {
                           setIsNewPasswordVisible((prev) => !prev)
                         }
                         value={newPassword}
-                        aria-invalid={invalidFields.newPassword}
+                        aria-invalid={
+                          invalidFields.newPassword ||
+                          Boolean(newPasswordHelperText)
+                        }
                         disabled={loading}
                         onChange={(e) => {
                           clearInvalidField("newPassword");
                           setNewPassword(e.target.value);
                         }}
                       />
+                      {newPasswordHelperText ? (
+                        <p className="text-xs text-destructive">
+                          {newPasswordHelperText}
+                        </p>
+                      ) : null}
                     </div>
 
                     <div className="space-y-2">
@@ -1150,13 +1267,22 @@ export default function Auth() {
                           setIsConfirmPasswordVisible((prev) => !prev)
                         }
                         value={confirmNewPassword}
-                        aria-invalid={invalidFields.confirmNewPassword}
+                        aria-invalid={
+                          invalidFields.confirmNewPassword ||
+                          Boolean(confirmNewPasswordHelperText)
+                        }
                         disabled={loading}
                         onChange={(e) => {
                           clearInvalidField("confirmNewPassword");
                           setConfirmNewPassword(e.target.value);
                         }}
+                        onKeyDown={handleSubmitKeyDown}
                       />
+                      {confirmNewPasswordHelperText ? (
+                        <p className="text-xs text-destructive">
+                          {confirmNewPasswordHelperText}
+                        </p>
+                      ) : null}
                     </div>
                   </>
                 )}
@@ -1169,18 +1295,25 @@ export default function Auth() {
                         <Label className="text-muted-foreground">Name</Label>
                       </div>
                       <AuthInput
+                        ref={signupNameInputRef}
                         icon={UserRound}
                         placeholder="Full name"
                         aria-label="Name"
                         value={name}
-                        maxLength={20}
-                        aria-invalid={invalidFields.name}
+                        aria-invalid={
+                          invalidFields.name || Boolean(nameHelperText)
+                        }
                         disabled={loading || verifyStep}
                         onChange={(e) => {
                           clearInvalidField("name");
                           setName(e.target.value);
                         }}
                       />
+                      {nameHelperText ? (
+                        <p className="text-xs text-destructive">
+                          {nameHelperText}
+                        </p>
+                      ) : null}
                     </div>
 
                     <div className="space-y-2">
@@ -1200,7 +1333,6 @@ export default function Auth() {
                             placeholder="Username"
                             aria-label="Username"
                             value={username}
-                            maxLength={20}
                             aria-invalid={
                               invalidFields.username || isUsernameLiveInvalid
                             }
@@ -1261,7 +1393,9 @@ export default function Auth() {
                           setIsSignupPasswordVisible((prev) => !prev)
                         }
                         value={password}
-                        aria-invalid={invalidFields.password}
+                        aria-invalid={
+                          invalidFields.password || Boolean(passwordHelperText)
+                        }
                         onChange={(e) => {
                           clearInvalidField("password");
                           setPassword(e.target.value);
@@ -1269,6 +1403,11 @@ export default function Auth() {
                         disabled={loading || verifyStep}
                         onKeyDown={handleSubmitKeyDown}
                       />
+                      {passwordHelperText ? (
+                        <p className="text-xs text-destructive">
+                          {passwordHelperText}
+                        </p>
+                      ) : null}
                     </div>
                   </>
                 )}
@@ -1283,15 +1422,19 @@ export default function Auth() {
                     <div className="flex items-start gap-2">
                       <div className="min-w-0 flex-1">
                         <AuthInput
+                          ref={codeInputRef}
                           icon={KeyRound}
                           placeholder="Enter 6 digit code"
                           aria-label="Email verification code"
                           value={code}
                           maxLength={6}
-                          aria-invalid={invalidFields.code}
+                          aria-invalid={
+                            invalidFields.code || Boolean(codeError)
+                          }
                           disabled={loading}
                           onChange={(e) => {
                             clearInvalidField("code");
+                            setCodeError("");
                             setCode(e.target.value.replace(/[^0-9]/g, ""));
                           }}
                           onKeyDown={handleSubmitKeyDown}
@@ -1326,6 +1469,9 @@ export default function Auth() {
                         </Button>
                       )}
                     </div>
+                    {codeError ? (
+                      <p className="text-xs text-destructive">{codeError}</p>
+                    ) : null}
                   </div>
                 )}
 

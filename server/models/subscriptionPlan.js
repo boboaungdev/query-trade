@@ -21,6 +21,7 @@ const discountSchema = new Schema(
     label: {
       type: String,
       trim: true,
+      maxlength: 40,
       default: "",
     },
     startsAt: Date,
@@ -43,6 +44,7 @@ const subscriptionPlanSchema = new Schema(
       type: String,
       required: true,
       trim: true,
+      maxlength: 20,
       unique: true,
       index: true,
     },
@@ -57,7 +59,13 @@ const subscriptionPlanSchema = new Schema(
       min: 0,
     },
     features: {
-      type: [String],
+      type: [
+        {
+          type: String,
+          trim: true,
+          maxlength: 100,
+        },
+      ],
       default: [],
     },
     discount: {
