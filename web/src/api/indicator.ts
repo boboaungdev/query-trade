@@ -60,7 +60,7 @@ export async function createIndicator(payload: Required<IndicatorPayload>) {
     result: {
       indicator: Indicator
     }
-  }>("/indicator", payload)
+  }>("/indicator/admin", payload)
 
   return data.result
 }
@@ -76,7 +76,7 @@ export async function updateIndicator({
     result: {
       indicator: Indicator
     }
-  }>(`/indicator/${indicatorId}`, payload)
+  }>(`/indicator/admin/${indicatorId}`, payload)
 
   return data.result
 }
@@ -86,7 +86,7 @@ export async function deleteIndicator(indicatorId: string) {
     result: {
       indicator: Indicator
     }
-  }>(`/indicator/${indicatorId}`)
+  }>(`/indicator/admin/${indicatorId}`)
 
   return data.result
 }

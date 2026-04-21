@@ -219,6 +219,44 @@ const emptyIndicatorDraft: IndicatorDraft = {
   params: [],
 };
 
+const adminPlansRequestCache = new Map<
+  string,
+  ReturnType<typeof getAdminSubscriptionPlans>
+>();
+
+const adminIndicatorsRequestCache = new Map<
+  string,
+  ReturnType<typeof fetchIndicators>
+>();
+
+function getCachedAdminPlans(
+  params: Parameters<typeof getAdminSubscriptionPlans>[0],
+) {
+  const cacheKey = JSON.stringify(params);
+  const cached = adminPlansRequestCache.get(cacheKey);
+
+  if (cached) return cached;
+
+  const request = getAdminSubscriptionPlans(params).finally(() => {
+    adminPlansRequestCache.delete(cacheKey);
+  });
+  adminPlansRequestCache.set(cacheKey, request);
+  return request;
+}
+
+function getCachedAdminIndicators(params: Parameters<typeof fetchIndicators>[0]) {
+  const cacheKey = JSON.stringify(params);
+  const cached = adminIndicatorsRequestCache.get(cacheKey);
+
+  if (cached) return cached;
+
+  const request = fetchIndicators(params).finally(() => {
+    adminIndicatorsRequestCache.delete(cacheKey);
+  });
+  adminIndicatorsRequestCache.set(cacheKey, request);
+  return request;
+}
+
 function mergeById<T extends { _id: string }>(prev: T[], next: T[]) {
   return Array.from(
     new Map([...prev, ...next].map((item) => [item._id, item])).values(),
@@ -830,7 +868,7 @@ export default function AdminDashboard() {
       }
 
       try {
-        const result = await getAdminSubscriptionPlans({
+        const result = await getCachedAdminPlans({
           page: planPage,
           search: debouncedPlanSearch,
           sortBy: planSortBy,
@@ -879,7 +917,7 @@ export default function AdminDashboard() {
       }
 
       try {
-        const response = await fetchIndicators({
+        const response = await getCachedAdminIndicators({
           page: indicatorPage,
           search: debouncedIndicatorSearch,
           sortBy: indicatorSortBy,

@@ -32,7 +32,11 @@ router.use(validateToken());
 router.get("/me", getMySubscription);
 router.get("/payments", getPaymentHistory);
 router.get("/payments/:paymentId", getPayment);
-router.post("/checkout", validateBody(SubscriptionSchema.checkout), createCheckout);
+router.post(
+  "/checkout",
+  validateBody(SubscriptionSchema.checkout),
+  createCheckout,
+);
 router.post(
   "/payments/:paymentId/verify",
   validateBody(SubscriptionSchema.verifyTransaction),

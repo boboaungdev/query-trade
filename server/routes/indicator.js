@@ -22,8 +22,7 @@ const router = express.Router();
 router.use(validateToken());
 
 router
-  .route("/")
-  .get(validateQuery(IndicatorSchema.query.getIndicators), getIndicators)
+  .route("/admin")
   .post(
     validateRole("admin"),
     validateBody(IndicatorSchema.create),
@@ -31,8 +30,7 @@ router
   );
 
 router
-  .route("/:indicatorId")
-  .get(validateParam(IndicatorSchema.params.indicatorId), getIndicatorById)
+  .route("/admin/:indicatorId")
   .patch(
     validateRole("admin"),
     validateParam(IndicatorSchema.params.indicatorId),
@@ -44,5 +42,13 @@ router
     validateParam(IndicatorSchema.params.indicatorId),
     deleteIndicator,
   );
+
+router
+  .route("/")
+  .get(validateQuery(IndicatorSchema.query.getIndicators), getIndicators);
+
+router
+  .route("/:indicatorId")
+  .get(validateParam(IndicatorSchema.params.indicatorId), getIndicatorById);
 
 export const indicatorRouter = router;
