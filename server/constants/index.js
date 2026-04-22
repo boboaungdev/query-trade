@@ -19,3 +19,18 @@ export const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY;
 export const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET;
 
 export const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+
+// Subscription related constants
+export const SUBSCRIPTION_PAYMENT_MODE =
+  process.env.SUBSCRIPTION_PAYMENT_MODE || "manual";
+const parsedBscMinConfirmations = parseInt(
+  process.env.BSC_MIN_CONFIRMATIONS ?? "3",
+  10,
+);
+export const BSC_MIN_CONFIRMATIONS =
+  Number.isInteger(parsedBscMinConfirmations) && parsedBscMinConfirmations > 0
+    ? parsedBscMinConfirmations
+    : 3;
+export const BSC_RPC_URL = process.env.BSC_RPC_URL;
+export const USDT_BSC_CONTRACT = process.env.USDT_BSC_CONTRACT;
+export const USDT_RECEIVE_ADDRESS = process.env.USDT_RECEIVE_ADDRESS;

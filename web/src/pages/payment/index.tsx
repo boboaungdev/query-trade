@@ -124,22 +124,31 @@ export default function PaymentPage() {
   const canVerifyTxHash = txHashPattern.test(trimmedTxHash)
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
-      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-normal">Pay With USDT</h1>
-          <p className="max-w-2xl text-sm text-muted-foreground">
-            Send exactly {formatAmount(amount)} USDT on BNB Smart Chain.
-          </p>
-        </div>
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+      <Card className="min-w-0 border-border/70">
+        <CardHeader>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="space-y-1">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/8 px-2.5 py-1 text-[11px] font-medium tracking-[0.16em] text-primary uppercase">
+                Payment Details
+              </span>
+              <CardTitle className="text-xl tracking-tight">
+                Pay With USDT
+              </CardTitle>
+              <CardDescription className="max-w-2xl text-sm leading-6">
+                Send exactly {formatAmount(amount)} USDT on BNB Smart Chain.
+              </CardDescription>
+            </div>
 
-        <Button asChild variant="outline">
-          <Link to="/billing">
-            <WalletCards className="size-4" />
-            Billing
-          </Link>
-        </Button>
-      </div>
+            <Button asChild variant="outline">
+              <Link to="/billing">
+                <WalletCards className="size-4" />
+                Billing
+              </Link>
+            </Button>
+          </div>
+        </CardHeader>
+      </Card>
 
       <Card className="rounded-lg border">
         <CardHeader>

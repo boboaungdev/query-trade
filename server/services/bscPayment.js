@@ -1,5 +1,11 @@
 import { ethers } from "ethers";
 
+import {
+  BSC_MIN_CONFIRMATIONS,
+  BSC_RPC_URL,
+  USDT_BSC_CONTRACT,
+  USDT_RECEIVE_ADDRESS,
+} from "../constants/index.js";
 import { resError } from "../utils/response.js";
 
 const TRANSFER_ABI = [
@@ -7,33 +13,27 @@ const TRANSFER_ABI = [
 ];
 
 const getProvider = () => {
-  const rpcUrl = process.env.BSC_RPC_URL;
-
-  if (!rpcUrl) {
+  if (!BSC_RPC_URL) {
     throw resError(503, "BSC RPC URL is not configured.");
   }
 
-  return new ethers.JsonRpcProvider(rpcUrl);
+  return new ethers.JsonRpcProvider(BSC_RPC_URL);
 };
 
 const getUsdtContractAddress = () => {
-  const contract = process.env.USDT_BSC_CONTRACT;
-
-  if (!contract || !ethers.isAddress(contract)) {
+  if (!USDT_BSC_CONTRACT || !ethers.isAddress(USDT_BSC_CONTRACT)) {
     throw resError(503, "USDT BSC contract address is not configured.");
   }
 
-  return ethers.getAddress(contract);
+  return ethers.getAddress(USDT_BSC_CONTRACT);
 };
 
 export const getReceiveAddress = () => {
-  const receiveAddress = process.env.USDT_RECEIVE_ADDRESS;
-
-  if (!receiveAddress || !ethers.isAddress(receiveAddress)) {
+  if (!USDT_RECEIVE_ADDRESS || !ethers.isAddress(USDT_RECEIVE_ADDRESS)) {
     throw resError(503, "USDT receive address is not configured.");
   }
 
-  return ethers.getAddress(receiveAddress);
+  return ethers.getAddress(USDT_RECEIVE_ADDRESS);
 };
 
 export const verifyUsdtBscPayment = async ({
@@ -55,7 +55,7 @@ export const verifyUsdtBscPayment = async ({
   }
 
   const currentBlock = await provider.getBlockNumber();
-  const minConfirmations = Number(process.env.BSC_MIN_CONFIRMATIONS || 3);
+  const minConfirmations = BSC_MIN_CONFIRMATIONS;
   const confirmations = currentBlock - receipt.blockNumber + 1;
 
   if (confirmations < minConfirmations) {
@@ -89,10 +89,7 @@ export const verifyUsdtBscPayment = async ({
     const parsedLog = iface.parseLog(log);
     const [from, to, value] = parsedLog.args;
 
-    if (
-      ethers.getAddress(to) === receiveAddress &&
-      value === expectedValue
-    ) {
+    if (ethers.getAddress(to) === receiveAddress && value === expectedValue) {
       return {
         from: ethers.getAddress(from),
         to: ethers.getAddress(to),

@@ -6,7 +6,6 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarMenu,
-  SidebarMenuAction,
   SidebarMenuItem,
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
@@ -19,7 +18,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { useSidebar } from "@/components/ui/sidebar";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 import {
   Home,
@@ -27,13 +26,15 @@ import {
   Target,
   Bookmark,
   CandlestickChart,
+  ChevronsUpDown,
+  PanelLeftClose,
+  PanelLeft,
   Settings,
   WalletCards,
   ShieldCheck,
   UserRound,
   CircleHelp,
   LogOut,
-  MoreVertical,
 } from "lucide-react";
 
 import { useAuthStore } from "@/store/auth";
@@ -41,10 +42,9 @@ import { useState } from "react";
 import { getApiErrorMessage } from "@/api/axios";
 import { signout } from "@/api/auth";
 import { toast } from "sonner";
-import { APP_NAME } from "@/constants";
-
 export function AppSidebar() {
-  const { isMobile, setOpen, setOpenMobile } = useSidebar();
+  const { isMobile, openMobile, setOpen, setOpenMobile, toggleSidebar, state } =
+    useSidebar();
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
 
@@ -86,6 +86,9 @@ export function AppSidebar() {
     );
   };
 
+  const isMenuOpen = isMobile ? openMobile : state === "expanded";
+  const MenuToggleIcon = isMenuOpen ? PanelLeftClose : PanelLeft;
+
   return (
     <Sidebar
       side="left"
@@ -96,30 +99,21 @@ export function AppSidebar() {
         if (!menuOpen) setOpen(false);
       }}
     >
-      <SidebarHeader className="min-w-0 overflow-hidden px-2 pt-4 pb-2">
-        <Link
-          to="/"
-          onClick={handleMenuNavigation}
-          className="grid w-full min-w-0 max-w-full grid-cols-[2.25rem_minmax(0,1fr)] items-center gap-2 overflow-hidden rounded-xl px-2 py-1.5 transition-colors hover:bg-sidebar-accent/40 group-data-[collapsible=icon]:grid-cols-1 group-data-[collapsible=icon]:justify-items-center group-data-[collapsible=icon]:px-0"
+      <SidebarHeader className="px-2 pt-4 pb-2">
+        <button
+          type="button"
+          onClick={toggleSidebar}
+          className="flex h-10 w-full items-center gap-2 rounded-md px-2 text-left text-sm font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
         >
-          <img
-            src="/query-trade.svg"
-            alt={`${APP_NAME} logo`}
-            className="h-9 w-9 shrink-0"
-          />
-          <div className="min-w-0 flex-1 overflow-hidden group-data-[collapsible=icon]:hidden">
-            <p className="truncate text-sm font-semibold text-sidebar-foreground">
-              {APP_NAME}
-            </p>
-            <p className="truncate text-xs text-sidebar-foreground/70">
-              Navigation
-            </p>
-          </div>
-        </Link>
+          <span className="flex size-4 shrink-0 items-center justify-center">
+            <MenuToggleIcon className="h-4 w-4" />
+          </span>
+          <span className="group-data-[collapsible=icon]:hidden">Menu</span>
+        </button>
       </SidebarHeader>
 
       {/* TOP MENU */}
-      <SidebarContent className="pl-2">
+      <SidebarContent className="px-2">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild isActive={isRouteActive("/")}>
@@ -201,43 +195,50 @@ export function AppSidebar() {
       </SidebarContent>
 
       {/* BOTTOM USER */}
-      <SidebarFooter className="pb-5 pl-1">
+      <SidebarFooter className="px-2 pb-5">
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
-              <SidebarMenuButton asChild>
-                <Link to={profileHref} onClick={handleMenuNavigation}>
-                  <Avatar className="h-6 w-6">
-                    <AvatarImage src={user?.avatar} />
-                    <AvatarFallback>{initials}</AvatarFallback>
-                  </Avatar>
+              <DropdownMenuTrigger asChild>
+                <SidebarMenuButton className="w-full">
+                  <span className="flex size-4 items-center justify-center">
+                    <UserRound className="h-4 w-4" />
+                  </span>
 
                   <span className="truncate group-data-[collapsible=icon]:hidden">
                     {user?.name || "User"}
                   </span>
-                </Link>
-              </SidebarMenuButton>
-
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuAction
-                  className="group-data-[collapsible=icon]:hidden"
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  <MoreVertical size={16} />
-                </SidebarMenuAction>
+                  <ChevronsUpDown className="ml-auto h-4 w-4 shrink-0 text-muted-foreground group-data-[collapsible=icon]:hidden" />
+                </SidebarMenuButton>
               </DropdownMenuTrigger>
 
-              <DropdownMenuContent side="right" align="end" className="w-44">
+              <DropdownMenuContent
+                side="top"
+                align="start"
+                className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)]"
+              >
                 <DropdownMenuItem asChild>
                   <Link
                     to={profileHref}
-                    className="flex items-center gap-2"
+                    className="flex w-full min-w-0 items-start gap-2"
                     onClick={handleMenuNavigation}
                   >
-                    <UserRound className="h-4 w-4" />
-                    <span>Profile</span>
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={user?.avatar} />
+                      <AvatarFallback>{initials}</AvatarFallback>
+                    </Avatar>
+                    <span className="flex min-w-0 flex-col items-start">
+                      <span className="w-full truncate font-medium">
+                        {user?.name || "User"}
+                      </span>
+                      <span className="w-full truncate text-xs text-muted-foreground">
+                        @{user?.username || "unknown"}
+                      </span>
+                    </span>
                   </Link>
                 </DropdownMenuItem>
+
+                <DropdownMenuSeparator />
 
                 <DropdownMenuItem asChild>
                   <Link
@@ -247,6 +248,17 @@ export function AppSidebar() {
                   >
                     <CircleHelp className="h-4 w-4" />
                     <span>Help</span>
+                  </Link>
+                </DropdownMenuItem>
+
+                <DropdownMenuItem asChild>
+                  <Link
+                    to="/billing"
+                    className="flex items-center gap-2"
+                    onClick={handleMenuNavigation}
+                  >
+                    <WalletCards className="h-4 w-4" />
+                    <span>Billing</span>
                   </Link>
                 </DropdownMenuItem>
 

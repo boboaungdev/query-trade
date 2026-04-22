@@ -18,10 +18,11 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { getApiErrorMessage } from "@/api/axios";
 import { signout } from "@/api/auth";
 import { toast } from "sonner";
-import { CircleHelp, Settings, LogOut } from "lucide-react";
+import { CircleHelp, Settings, LogOut, WalletCards } from "lucide-react";
 
 export default function Navbar() {
   const user = useAuthStore((state) => state.user);
@@ -30,6 +31,7 @@ export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const isAuthPage = location.pathname === "/auth";
+  const isMobile = useIsMobile();
   const profileHref = user?.username ? `/${user.username}` : "/profile";
 
   const handleSignout = async () => {
@@ -54,7 +56,7 @@ export default function Navbar() {
       {/* LEFT */}
       <div className="flex items-center gap-3">
         {/* Sidebar toggle only when logged in */}
-        {user && <SidebarTrigger />}
+        {user && isMobile ? <SidebarTrigger /> : null}
 
         <Link
           to="/"
@@ -91,7 +93,7 @@ export default function Navbar() {
 
             <DropdownMenuContent
               align="end"
-              className="w-auto min-w-48 max-w-72"
+              className="w-auto min-w-40 max-w-72"
             >
               <DropdownMenuItem asChild>
                 <Link
@@ -119,6 +121,13 @@ export default function Navbar() {
                 <Link to="/help" className="flex items-center gap-2">
                   <CircleHelp className="h-4 w-4" />
                   <span>Help</span>
+                </Link>
+              </DropdownMenuItem>
+
+              <DropdownMenuItem asChild>
+                <Link to="/billing" className="flex items-center gap-2">
+                  <WalletCards className="h-4 w-4" />
+                  <span>Billing</span>
                 </Link>
               </DropdownMenuItem>
 

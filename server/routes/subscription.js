@@ -31,7 +31,11 @@ router.use(validateToken());
 
 router.get("/me", getMySubscription);
 router.get("/payments", getPaymentHistory);
-router.get("/payments/:paymentId", getPayment);
+router.get(
+  "/payments/:paymentId",
+  validateParam(SubscriptionSchema.params.paymentId),
+  getPayment,
+);
 router.post(
   "/checkout",
   validateBody(SubscriptionSchema.checkout),
@@ -39,6 +43,7 @@ router.post(
 );
 router.post(
   "/payments/:paymentId/verify",
+  validateParam(SubscriptionSchema.params.paymentId),
   validateBody(SubscriptionSchema.verifyTransaction),
   verifyTransaction,
 );
@@ -60,13 +65,13 @@ router
   .route("/admin/plans/:planId")
   .patch(
     validateRole("admin"),
-    validateParam(SubscriptionSchema.plan.params),
+    validateParam(SubscriptionSchema.params.planId),
     validateBody(SubscriptionSchema.plan.update),
     updatePlan,
   )
   .delete(
     validateRole("admin"),
-    validateParam(SubscriptionSchema.plan.params),
+    validateParam(SubscriptionSchema.params.planId),
     deactivatePlan,
   );
 

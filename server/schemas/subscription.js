@@ -76,9 +76,14 @@ export const SubscriptionSchema = {
         .default("sortOrder"),
       order: Joi.string().valid("asc", "desc").default("asc"),
     }),
+  },
 
-    params: Joi.object({
+  params: {
+    planId: Joi.object({
       planId: Joi.string().hex().length(24).required(),
+    }),
+    paymentId: Joi.object({
+      paymentId: Joi.string().hex().length(24).required(),
     }),
   },
 };

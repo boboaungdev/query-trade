@@ -123,22 +123,29 @@ export default function Billing() {
   const isPaidPlan = plan !== "free"
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
-      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-normal">Billing</h1>
-          <p className="max-w-2xl text-sm text-muted-foreground">
-            Manage your crypto access pass and payment status.
-          </p>
-        </div>
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+      <Card className="min-w-0 border-border/70">
+        <CardHeader>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="space-y-1">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/8 px-2.5 py-1 text-[11px] font-medium tracking-[0.16em] text-primary uppercase">
+                Payment Center
+              </span>
+              <CardTitle className="text-xl tracking-tight">Billing</CardTitle>
+              <CardDescription className="max-w-2xl text-sm leading-6">
+                Manage your crypto access pass and payment status.
+              </CardDescription>
+            </div>
 
-        <Button asChild>
-          <Link to="/pricing">
-            <WalletCards className="size-4" />
-            Upgrade
-          </Link>
-        </Button>
-      </div>
+            <Button asChild>
+              <Link to="/pricing">
+                <WalletCards className="size-4" />
+                Upgrade
+              </Link>
+            </Button>
+          </div>
+        </CardHeader>
+      </Card>
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="rounded-lg border">

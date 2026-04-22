@@ -29,6 +29,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { useAuthStore } from "@/store/auth";
@@ -293,12 +299,19 @@ export default function Settings() {
 
   return (
     <div className="mx-auto w-full max-w-6xl min-w-0 space-y-6 overflow-x-hidden">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold">Settings</h1>
-        <p className="max-w-2xl text-muted-foreground">
-          Manage your account details and app preferences in one place.
-        </p>
-      </div>
+      <Card className="min-w-0 border-border/70">
+        <CardHeader>
+          <div className="space-y-1">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/8 px-2.5 py-1 text-[11px] font-medium tracking-[0.16em] text-primary uppercase">
+              Account Center
+            </span>
+            <CardTitle className="text-xl tracking-tight">Settings</CardTitle>
+            <CardDescription className="max-w-2xl text-sm leading-6">
+              Manage your account details and app preferences in one place.
+            </CardDescription>
+          </div>
+        </CardHeader>
+      </Card>
 
       <div className="space-y-2 md:hidden">
         <Label>Settings Category</Label>

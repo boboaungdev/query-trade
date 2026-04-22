@@ -1,3 +1,5 @@
+import { SUBSCRIPTION_PAYMENT_MODE } from "./index.js";
+
 export const SUBSCRIPTION_PROVIDER = "manual";
 
 export const PAYMENT_MODES = {
@@ -6,7 +8,7 @@ export const PAYMENT_MODES = {
 };
 
 export const getPaymentMode = () => {
-  const mode = process.env.SUBSCRIPTION_PAYMENT_MODE;
+  const mode = SUBSCRIPTION_PAYMENT_MODE;
 
   if (Object.values(PAYMENT_MODES).includes(mode)) {
     return mode;

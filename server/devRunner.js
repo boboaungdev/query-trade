@@ -92,5 +92,7 @@ process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);
 
 clearTerminal();
-console.log("=> Dev runner ready. Press 'r' to clear and restart, Ctrl+C to exit.");
+console.log(
+  "=> Dev runner ready. Press 'r' to clear and restart, Ctrl+C to exit.",
+);
 startServer();

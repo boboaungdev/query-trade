@@ -244,7 +244,9 @@ function getCachedAdminPlans(
   return request;
 }
 
-function getCachedAdminIndicators(params: Parameters<typeof fetchIndicators>[0]) {
+function getCachedAdminIndicators(
+  params: Parameters<typeof fetchIndicators>[0],
+) {
   const cacheKey = JSON.stringify(params);
   const cached = adminIndicatorsRequestCache.get(cacheKey);
 
@@ -1239,7 +1241,7 @@ export default function AdminDashboard() {
       if (deleteTarget.type === "plan") {
         await deactivateAdminSubscriptionPlan(deleteTarget.item._id);
         setPlanReloadKey((value) => value + 1);
-        toast.success("Plan deleted.");
+        toast.success("Plan deactivated.");
       } else {
         await deleteIndicator(deleteTarget.item._id);
         setIndicatorReloadKey((value) => value + 1);
@@ -1584,8 +1586,9 @@ export default function AdminDashboard() {
                         <Button
                           variant="destructive"
                           size="icon-sm"
-                          aria-label="Delete plan"
-                          title="Delete plan"
+                          aria-label="Deactivate plan"
+                          title="Deactivate plan"
+                          disabled={plan.key === "free" || !plan.isActive}
                           onClick={() =>
                             setDeleteTarget({ type: "plan", item: plan })
                           }
@@ -2601,10 +2604,14 @@ export default function AdminDashboard() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Delete {deleteTarget?.type === "plan" ? "plan" : "indicator"}?
+              {deleteTarget?.type === "plan"
+                ? "Deactivate plan?"
+                : "Delete indicator?"}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              This item will be removed from the admin list immediately.
+              {deleteTarget?.type === "plan"
+                ? "This plan will be hidden from future checkouts while existing subscription history stays intact."
+                : "This item will be removed from the admin list immediately."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -2620,6 +2627,8 @@ export default function AdminDashboard() {
             >
               {isDeleting ? (
                 <Loader2 className="size-4 animate-spin" />
+              ) : deleteTarget?.type === "plan" ? (
+                "Deactivate"
               ) : (
                 "Delete"
               )}

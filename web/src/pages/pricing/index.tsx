@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react"
-import { Link, useNavigate } from "react-router-dom"
-import { Check, Crown, Loader2, ShieldAlert, WalletCards } from "lucide-react"
-import { toast } from "sonner"
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Check, Crown, Loader2, WalletCards } from "lucide-react";
+import { toast } from "sonner";
 
 import {
   createSubscriptionCheckout,
@@ -10,9 +10,9 @@ import {
   type PayCurrency,
   type Subscription,
   type SubscriptionPlan,
-} from "@/api/subscription"
-import { getApiErrorMessage } from "@/api/axios"
-import { Button } from "@/components/ui/button"
+} from "@/api/subscription";
+import { getApiErrorMessage } from "@/api/axios";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardAction,
@@ -20,69 +20,69 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { useAuthStore } from "@/store/auth"
-import { cn } from "@/lib/utils"
+} from "@/components/ui/card";
+import { useAuthStore } from "@/store/auth";
+import { cn } from "@/lib/utils";
 
-const defaultCurrency: PayCurrency = "usdtbsc"
+const defaultCurrency: PayCurrency = "usdtbsc";
 
 function formatUsdtAmount(amount: number) {
   return amount.toLocaleString(undefined, {
     maximumFractionDigits: 8,
-  })
+  });
 }
 
 function formatExpiry(subscription?: Subscription | null) {
-  if (!subscription?.currentPeriodEnd) return null
+  if (!subscription?.currentPeriodEnd) return null;
 
   return new Intl.DateTimeFormat(undefined, {
     month: "short",
     day: "numeric",
     year: "numeric",
-  }).format(new Date(subscription.currentPeriodEnd))
+  }).format(new Date(subscription.currentPeriodEnd));
 }
 
 export default function Pricing() {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
-  const navigate = useNavigate()
-  const [plans, setPlans] = useState<SubscriptionPlan[]>([])
-  const [subscription, setSubscription] = useState<Subscription | null>(null)
-  const [loadingPlan, setLoadingPlan] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const navigate = useNavigate();
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    let ignore = false
+    let ignore = false;
 
     async function loadPricing() {
-      setIsLoading(true)
+      setIsLoading(true);
 
       try {
         const [planData, subscriptionData] = await Promise.all([
           getSubscriptionPlans(),
           isAuthenticated ? getMySubscription() : Promise.resolve(null),
-        ])
+        ]);
 
-        if (ignore) return
+        if (ignore) return;
 
-        setPlans(planData.plans)
-        setSubscription(subscriptionData?.subscription ?? null)
+        setPlans(planData.plans);
+        setSubscription(subscriptionData?.subscription ?? null);
       } catch (error) {
         if (!ignore) {
-          toast.error(getApiErrorMessage(error, "Failed to load pricing."))
+          toast.error(getApiErrorMessage(error, "Failed to load pricing."));
         }
       } finally {
         if (!ignore) {
-          setIsLoading(false)
+          setIsLoading(false);
         }
       }
     }
 
-    loadPricing()
+    loadPricing();
 
     return () => {
-      ignore = true
-    }
-  }, [isAuthenticated])
+      ignore = true;
+    };
+  }, [isAuthenticated]);
 
   const sortedPlans = useMemo(
     () =>
@@ -91,56 +91,59 @@ export default function Pricing() {
           left.sortOrder - right.sortOrder || left.amountUsd - right.amountUsd,
       ),
     [plans],
-  )
+  );
 
   const planRanks = useMemo(
     () =>
-      sortedPlans.reduce<Record<string, number>>((result, plan, index) => {
-        result[plan.id] = index
-        return result
-      }, { free: 0 }),
+      sortedPlans.reduce<Record<string, number>>(
+        (result, plan, index) => {
+          result[plan.id] = index;
+          return result;
+        },
+        { free: 0 },
+      ),
     [sortedPlans],
-  )
+  );
 
   const handleCheckout = async (plan: SubscriptionPlan) => {
-    if (plan.id === "free") return
+    if (plan.id === "free") return;
 
     if (!isAuthenticated) {
-      navigate("/auth")
-      return
+      navigate("/auth");
+      return;
     }
 
-    setLoadingPlan(plan.id)
+    setLoadingPlan(plan.id);
 
     try {
       const checkout = await createSubscriptionCheckout({
         plan: plan.id,
         payCurrency: defaultCurrency,
-      })
+      });
 
       if (checkout.mock) {
-        toast.success("Mock payment confirmed.")
-        navigate("/billing")
-        return
+        toast.success("Mock payment confirmed.");
+        navigate("/billing");
+        return;
       }
 
       if (checkout.manualPayment || checkout.payment?._id) {
-        navigate(`/payment/${checkout.payment._id}`)
-        return
+        navigate(`/payment/${checkout.payment._id}`);
+        return;
       }
 
-      throw new Error("Payment details were not returned.")
+      throw new Error("Payment details were not returned.");
     } catch (error) {
-      toast.error(getApiErrorMessage(error, "Failed to create checkout."))
+      toast.error(getApiErrorMessage(error, "Failed to create checkout."));
     } finally {
-      setLoadingPlan(null)
+      setLoadingPlan(null);
     }
-  }
+  };
 
-  const activePlan = subscription?.plan ?? "free"
-  const expiryDate = formatExpiry(subscription)
+  const activePlan = subscription?.plan ?? "free";
+  const expiryDate = formatExpiry(subscription);
   const hasActivePaidPlan =
-    subscription?.status === "active" && activePlan !== "free"
+    subscription?.status === "active" && activePlan !== "free";
 
   const getPlanAction = (plan: SubscriptionPlan) => {
     if (plan.id === "free") {
@@ -149,7 +152,7 @@ export default function Pricing() {
         label: "Included",
         variant: "outline" as const,
         note: null,
-      }
+      };
     }
 
     if (
@@ -162,7 +165,7 @@ export default function Pricing() {
         label: "Available after expiry",
         variant: "outline" as const,
         note: "Downgrades unlock after your current plan expires.",
-      }
+      };
     }
 
     if (plan.id === activePlan) {
@@ -171,7 +174,7 @@ export default function Pricing() {
         label: "Extend access",
         variant: "outline" as const,
         note: `Adds ${plan.durationDays} days to your current plan.`,
-      }
+      };
     }
 
     if (
@@ -183,7 +186,7 @@ export default function Pricing() {
         label: `Upgrade to ${plan.name}`,
         variant: "default" as const,
         note: `Starts a fresh ${plan.durationDays}-day ${plan.name} period from today.`,
-      }
+      };
     }
 
     return {
@@ -191,34 +194,34 @@ export default function Pricing() {
       label: "Choose plan",
       variant: "default" as const,
       note: null,
-    }
-  }
+    };
+  };
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-normal">Pricing</h1>
-          <p className="max-w-2xl text-sm text-muted-foreground">
-            Choose a 30-day access pass and pay with USDT on BNB Smart Chain.
-          </p>
-        </div>
+      <Card className="min-w-0 border-border/70">
+        <CardHeader>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="space-y-1">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/8 px-2.5 py-1 text-[11px] font-medium tracking-[0.16em] text-primary uppercase">
+                Access Plans
+              </span>
+              <CardTitle className="text-xl tracking-tight">Pricing</CardTitle>
+              <CardDescription className="max-w-2xl text-sm leading-6">
+                Pick a plan and complete payment with USDT on BNB Smart Chain.
+              </CardDescription>
+            </div>
 
-        <Button asChild variant="outline">
-          <Link to="/billing">
-            <WalletCards className="size-4" />
-            Billing
-          </Link>
-        </Button>
-      </div>
+            <Button asChild variant="outline">
+              <Link to="/billing">
+                <WalletCards className="size-4" />
+                Billing
+              </Link>
+            </Button>
+          </div>
 
-      <div className="flex items-start gap-3 rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">
-        <ShieldAlert className="mt-0.5 size-4 shrink-0 text-amber-500" />
-        <p>
-          Send only USDT on BNB Smart Chain / BEP20. Payments sent on another
-          network may not be recoverable.
-        </p>
-      </div>
+        </CardHeader>
+      </Card>
 
       {isLoading ? (
         <div className="flex min-h-64 items-center justify-center rounded-lg border">
@@ -227,9 +230,9 @@ export default function Pricing() {
       ) : (
         <div className="grid gap-4 lg:grid-cols-3">
           {sortedPlans.map((plan) => {
-            const isPaid = plan.id !== "free"
-            const isActive = activePlan === plan.id
-            const action = getPlanAction(plan)
+            const isPaid = plan.id !== "free";
+            const isActive = activePlan === plan.id;
+            const action = getPlanAction(plan);
 
             return (
               <Card
@@ -313,10 +316,10 @@ export default function Pricing() {
                   </Button>
                 </CardContent>
               </Card>
-            )
+            );
           })}
         </div>
       )}
     </div>
-  )
+  );
 }

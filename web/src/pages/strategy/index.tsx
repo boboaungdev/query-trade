@@ -612,7 +612,6 @@ export default function StrategyPage() {
                 </span>
               </div>
             </div>
-
           </div>
 
           <div className="grid gap-3">
@@ -1151,10 +1150,10 @@ export default function StrategyPage() {
                 className={
                   createSheetControls?.isSubmitting ? "opacity-0" : undefined
                 }
-            >
-              {createSheetControls?.submitLabel ?? "Create Strategy"}
-            </span>
-          </Button>
+              >
+                {createSheetControls?.submitLabel ?? "Create Strategy"}
+              </span>
+            </Button>
             {createSheetControls?.helperText ? (
               <p className="w-full text-xs text-muted-foreground">
                 {createSheetControls.helperText}
@@ -2533,17 +2532,17 @@ function ConditionEditor({
             </p>
           </div>
         </div>
-      <Button
-        type="button"
-        variant="destructive"
-        size="icon-sm"
-        className="absolute top-3 right-3"
-        onClick={onRemove}
-        aria-label="Remove group"
-        title="Remove group"
-      >
-        <Trash2 className="size-4" />
-      </Button>
+        <Button
+          type="button"
+          variant="destructive"
+          size="icon-sm"
+          className="absolute top-3 right-3"
+          onClick={onRemove}
+          aria-label="Remove group"
+          title="Remove group"
+        >
+          <Trash2 className="size-4" />
+        </Button>
 
         <div className="space-y-3">
           {node.conditions.length > 1 && (
@@ -3719,7 +3718,9 @@ export function StrategyBuilder({
 
         handleStrategyLoadFailure(
           responseMessage ??
-            (error instanceof Error ? error.message : "Failed to load strategy"),
+            (error instanceof Error
+              ? error.message
+              : "Failed to load strategy"),
         );
       } finally {
         setIsLoadingStrategy(false);
@@ -3727,12 +3728,7 @@ export function StrategyBuilder({
     };
 
     void loadStrategy();
-  }, [
-    duplicateStrategyId,
-    isDuplicating,
-    isEditing,
-    strategyId,
-  ]);
+  }, [duplicateStrategyId, isDuplicating, isEditing, strategyId]);
 
   const indicatorMap = useMemo(
     () => new Map(indicatorOptions.map((item) => [item._id, item])),

@@ -19,18 +19,17 @@ export const getEffectiveSubscription = async (userId) => {
   if (
     subscription.plan !== "free" &&
     subscription.currentPeriodEnd &&
-    subscription.currentPeriodEnd <= now &&
-    subscription.status !== "expired"
+    subscription.currentPeriodEnd <= now
   ) {
     await SubscriptionDB.updateOne(
       { _id: subscription._id },
-      { $set: { plan: "free", status: "expired" } },
+      { $set: { plan: "free", status: "active" } },
     );
 
     return {
       ...subscription,
       plan: "free",
-      status: "expired",
+      status: "active",
     };
   }
 
