@@ -212,20 +212,22 @@ export default function Pricing() {
               </CardDescription>
             </div>
 
-            <Button asChild variant="outline">
-              <Link to="/billing">
-                <WalletCards className="size-4" />
-                Billing
-              </Link>
-            </Button>
+            {isAuthenticated ? (
+              <Button asChild variant="outline">
+                <Link to="/billing">
+                  <WalletCards className="size-4" />
+                  Billing
+                </Link>
+              </Button>
+            ) : null}
           </div>
 
         </CardHeader>
       </Card>
 
       {isLoading ? (
-        <div className="flex min-h-64 items-center justify-center rounded-lg border">
-          <Loader2 className="size-5 animate-spin text-muted-foreground" />
+        <div className="flex min-h-24 items-center justify-center">
+          <Loader2 className="size-4 animate-spin text-muted-foreground" />
         </div>
       ) : (
         <div className="grid gap-4 lg:grid-cols-3">
@@ -237,10 +239,7 @@ export default function Pricing() {
             return (
               <Card
                 key={plan.id}
-                className={cn(
-                  "rounded-lg border",
-                  plan.id === "pro" && "border-primary/60",
-                )}
+                className={cn("rounded-lg", isActive && "border border-primary")}
               >
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">

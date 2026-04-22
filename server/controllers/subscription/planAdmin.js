@@ -1,4 +1,6 @@
 import { SubscriptionPlanDB } from "../../models/subscriptionPlan.js";
+import { SubscriptionDB } from "../../models/subscription.js";
+import { PaymentDB } from "../../models/payment.js";
 import { serializePlan } from "../../services/subscription/calculatePlanPricing.js";
 import { resError, resJson } from "../../utils/response.js";
 
@@ -108,6 +110,14 @@ export const createPlan = async (req, res, next) => {
 
 export const updatePlan = async (req, res, next) => {
   try {
+    const existingPlan = await SubscriptionPlanDB.findById(req.params.planId).lean();
+
+    if (!existingPlan) {
+      throw resError(404, "Subscription plan not found.");
+    }
+
+    let nextKey = existingPlan.key;
+
     if (typeof req.body.name === "string") {
       const nextName = req.body.name.trim();
 
@@ -118,6 +128,17 @@ export const updatePlan = async (req, res, next) => {
 
       if (existingNamePlan) {
         throw resError(409, "Plan name already exists.");
+      }
+
+      nextKey = generatePlanKey(nextName);
+
+      const existingKeyPlan = await SubscriptionPlanDB.findOne({
+        _id: { $ne: req.params.planId },
+        key: nextKey,
+      }).lean();
+
+      if (existingKeyPlan) {
+        throw resError(409, "Generated plan key already exists.");
       }
     }
 
@@ -132,9 +153,35 @@ export const updatePlan = async (req, res, next) => {
       }
     }
 
+    if (nextKey !== existingPlan.key) {
+      await Promise.all([
+        SubscriptionDB.updateMany(
+          { plan: existingPlan.key },
+          { $set: { plan: nextKey } },
+        ),
+        PaymentDB.updateMany(
+          { plan: existingPlan.key },
+          {
+            $set: {
+              plan: nextKey,
+              "planSnapshot.key": nextKey,
+              ...(typeof req.body.name === "string"
+                ? { "planSnapshot.name": req.body.name.trim() }
+                : {}),
+            },
+          },
+        ),
+      ]);
+    } else if (typeof req.body.name === "string") {
+      await PaymentDB.updateMany(
+        { "planSnapshot.key": existingPlan.key },
+        { $set: { "planSnapshot.name": req.body.name.trim() } },
+      );
+    }
+
     const plan = await SubscriptionPlanDB.findByIdAndUpdate(
       req.params.planId,
-      { $set: req.body },
+      { $set: { ...req.body, key: nextKey } },
       { returnDocument: "after", runValidators: true },
     ).lean();
 
@@ -150,7 +197,7 @@ export const updatePlan = async (req, res, next) => {
   }
 };
 
-export const deactivatePlan = async (req, res, next) => {
+export const deletePlan = async (req, res, next) => {
   try {
     const existingPlan = await SubscriptionPlanDB.findById(
       req.params.planId,
@@ -161,21 +208,30 @@ export const deactivatePlan = async (req, res, next) => {
     }
 
     if (existingPlan.key === "free") {
-      throw resError(400, "The free plan cannot be deactivated.");
+      throw resError(400, "The free plan cannot be deleted.");
     }
 
-    const plan = await SubscriptionPlanDB.findByIdAndUpdate(
-      req.params.planId,
-      { $set: { isActive: false } },
-      { returnDocument: "after", runValidators: true },
-    ).lean();
+    const activeSubscriptionCount = await SubscriptionDB.countDocuments({
+      plan: existingPlan.key,
+      status: "active",
+      $or: [
+        { currentPeriodEnd: { $exists: false } },
+        { currentPeriodEnd: null },
+        { currentPeriodEnd: { $gt: new Date() } },
+      ],
+    });
 
-    if (!plan) {
-      throw resError(404, "Subscription plan not found.");
+    if (activeSubscriptionCount > 0) {
+      throw resError(
+        409,
+        "This plan cannot be deleted because one or more users still have active access on it.",
+      );
     }
 
-    return resJson(res, 200, "Subscription plan deactivated.", {
-      plan: serializePlan(plan),
+    await SubscriptionPlanDB.deleteOne({ _id: req.params.planId });
+
+    return resJson(res, 200, "Subscription plan deleted.", {
+      plan: serializePlan(existingPlan),
     });
   } catch (error) {
     next(error);

@@ -230,7 +230,7 @@ export async function updateAdminSubscriptionPlan({
   return data.result
 }
 
-export async function deactivateAdminSubscriptionPlan(planId: string) {
+export async function deleteAdminSubscriptionPlan(planId: string) {
   const { data } = await api.delete<{
     result: {
       plan: SubscriptionPlan

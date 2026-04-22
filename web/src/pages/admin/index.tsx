@@ -28,7 +28,7 @@ import {
 } from "@/api/indicator";
 import {
   createAdminSubscriptionPlan,
-  deactivateAdminSubscriptionPlan,
+  deleteAdminSubscriptionPlan,
   getAdminSubscriptionPlans,
   updateAdminSubscriptionPlan,
   type AdminPlanSortBy,
@@ -279,9 +279,20 @@ function getEmptyIndicatorDraft(): IndicatorDraft {
   };
 }
 
+function buildPlanKeyPreview(name: string, fallback = "") {
+  const nextKey = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40);
+
+  return nextKey.length >= 2 ? nextKey : fallback;
+}
+
 function toDraft(plan: SubscriptionPlan): PlanDraft {
   return {
-    key: plan.key,
+    key: buildPlanKeyPreview(plan.name, plan.key),
     name: plan.name,
     amountUsd: String(plan.originalAmountUsd ?? plan.amountUsd),
     durationDays: String(plan.durationDays),
@@ -455,6 +466,13 @@ function buildPlanPayload(draft: PlanDraft): SubscriptionPlanPayload {
         }
       : {}),
   };
+}
+
+function hasPlanDraftChanges(plan: SubscriptionPlan, draft: PlanDraft) {
+  return (
+    JSON.stringify(buildPlanPayload(toDraft(plan))) !==
+    JSON.stringify(buildPlanPayload(draft))
+  );
 }
 
 function buildIndicatorPayload(
@@ -1069,6 +1087,10 @@ export default function AdminDashboard() {
       return;
     }
 
+    if (!hasPlanDraftChanges(editingPlan, planDraft)) {
+      return;
+    }
+
     setIsSaving(true);
     setPlanErrors({});
 
@@ -1239,9 +1261,9 @@ export default function AdminDashboard() {
 
     try {
       if (deleteTarget.type === "plan") {
-        await deactivateAdminSubscriptionPlan(deleteTarget.item._id);
+        await deleteAdminSubscriptionPlan(deleteTarget.item._id);
         setPlanReloadKey((value) => value + 1);
-        toast.success("Plan deactivated.");
+        toast.success("Plan deleted.");
       } else {
         await deleteIndicator(deleteTarget.item._id);
         setIndicatorReloadKey((value) => value + 1);
@@ -1279,7 +1301,11 @@ export default function AdminDashboard() {
     activeSection === "plans" ? planHasNextPage : indicatorHasNextPage;
   const editorSheetSide = isMobile ? "bottom" : "right";
   const canCreatePlan = isPlanDraftValid(newPlanDraft);
-  const canSavePlan = planDraft ? isPlanDraftValid(planDraft) : false;
+  const canSavePlan =
+    editingPlan && planDraft
+      ? isPlanDraftValid(planDraft) &&
+        hasPlanDraftChanges(editingPlan, planDraft)
+      : false;
   const canCreateIndicator =
     isIndicatorDraftValid(newIndicatorDraft) && !newIndicatorErrors.name;
   const canSaveIndicator = indicatorDraft
@@ -1586,9 +1612,9 @@ export default function AdminDashboard() {
                         <Button
                           variant="destructive"
                           size="icon-sm"
-                          aria-label="Deactivate plan"
-                          title="Deactivate plan"
-                          disabled={plan.key === "free" || !plan.isActive}
+                          aria-label="Delete plan"
+                          title="Delete plan"
+                          disabled={plan.key === "free"}
                           onClick={() =>
                             setDeleteTarget({ type: "plan", item: plan })
                           }
@@ -1777,6 +1803,7 @@ export default function AdminDashboard() {
                       }));
                       setNewPlanDraft({
                         ...newPlanDraft,
+                        key: buildPlanKeyPreview(name, newPlanDraft.key),
                         name,
                       });
                     }}
@@ -1991,13 +2018,6 @@ export default function AdminDashboard() {
                 "Create"
               )}
             </Button>
-            <Button
-              variant="outline"
-              disabled={isSaving}
-              onClick={() => setIsCreatePlanOpen(false)}
-            >
-              Cancel
-            </Button>
           </SheetFooter>
         </SheetContent>
       </Sheet>
@@ -2070,6 +2090,7 @@ export default function AdminDashboard() {
                         }));
                         setPlanDraft({
                           ...planDraft,
+                          key: buildPlanKeyPreview(name, planDraft.key),
                           name,
                         });
                       }}
@@ -2135,21 +2156,6 @@ export default function AdminDashboard() {
                           durationDays: sanitizeIntegerInput(
                             event.target.value,
                           ),
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-muted-foreground">Sort</Label>
-                    <Input
-                      type="text"
-                      inputMode="numeric"
-                      value={planDraft.sortOrder}
-                      placeholder="3"
-                      onChange={(event) =>
-                        setPlanDraft({
-                          ...planDraft,
-                          sortOrder: sanitizeIntegerInput(event.target.value),
                         })
                       }
                     />
@@ -2307,13 +2313,6 @@ export default function AdminDashboard() {
             >
               {isSaving ? <Loader2 className="size-4 animate-spin" /> : "Save"}
             </Button>
-            <Button
-              variant="outline"
-              disabled={isSaving}
-              onClick={() => closePlanDialog(false)}
-            >
-              Cancel
-            </Button>
           </SheetFooter>
         </SheetContent>
       </Sheet>
@@ -2439,13 +2438,6 @@ export default function AdminDashboard() {
               disabled={isSaving || !canSaveIndicator}
             >
               {isSaving ? <Loader2 className="size-4 animate-spin" /> : "Save"}
-            </Button>
-            <Button
-              variant="outline"
-              disabled={isSaving}
-              onClick={() => closeIndicatorDialog(false)}
-            >
-              Cancel
             </Button>
           </SheetFooter>
         </SheetContent>
@@ -2582,13 +2574,6 @@ export default function AdminDashboard() {
                 "Create"
               )}
             </Button>
-            <Button
-              variant="outline"
-              disabled={isSaving}
-              onClick={() => setIsCreateIndicatorOpen(false)}
-            >
-              Cancel
-            </Button>
           </SheetFooter>
         </SheetContent>
       </Sheet>
@@ -2605,12 +2590,12 @@ export default function AdminDashboard() {
           <AlertDialogHeader>
             <AlertDialogTitle>
               {deleteTarget?.type === "plan"
-                ? "Deactivate plan?"
+                ? "Delete plan?"
                 : "Delete indicator?"}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {deleteTarget?.type === "plan"
-                ? "This plan will be hidden from future checkouts while existing subscription history stays intact."
+                ? "This permanently removes the plan if it has never been used by any subscription or payment."
                 : "This item will be removed from the admin list immediately."}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -2628,7 +2613,7 @@ export default function AdminDashboard() {
               {isDeleting ? (
                 <Loader2 className="size-4 animate-spin" />
               ) : deleteTarget?.type === "plan" ? (
-                "Deactivate"
+                "Delete"
               ) : (
                 "Delete"
               )}

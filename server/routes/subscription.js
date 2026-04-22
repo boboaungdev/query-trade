@@ -17,7 +17,7 @@ import {
 } from "../controllers/subscription/get.js";
 import {
   createPlan,
-  deactivatePlan,
+  deletePlan,
   getAdminPlans,
   updatePlan,
 } from "../controllers/subscription/planAdmin.js";
@@ -72,7 +72,7 @@ router
   .delete(
     validateRole("admin"),
     validateParam(SubscriptionSchema.params.planId),
-    deactivatePlan,
+    deletePlan,
   );
 
 export const subscriptionRouter = router;

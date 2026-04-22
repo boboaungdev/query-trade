@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react"
-import { Link, Navigate, useParams } from "react-router-dom"
+import { useEffect, useState } from "react";
+import { Link, Navigate, useParams } from "react-router-dom";
 import {
   CheckCircle2,
   Clock,
@@ -7,121 +7,159 @@ import {
   Loader2,
   SearchCheck,
   WalletCards,
-} from "lucide-react"
-import { toast } from "sonner"
+} from "lucide-react";
+import { toast } from "sonner";
 
 import {
   getPayment,
   verifySubscriptionPayment,
   type Payment,
-} from "@/api/subscription"
-import { getApiErrorMessage } from "@/api/axios"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+} from "@/api/subscription";
+import { getApiErrorMessage } from "@/api/axios";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from "@/components/ui/card";
 
 function formatPlanName(plan: string) {
-  return plan.charAt(0).toUpperCase() + plan.slice(1)
+  return plan.charAt(0).toUpperCase() + plan.slice(1);
 }
 
 function formatAmount(amount?: number) {
   return Number(amount ?? 0).toLocaleString(undefined, {
     maximumFractionDigits: 8,
-  })
+  });
 }
 
-const txHashPattern = /^0x[a-fA-F0-9]{64}$/
+const txHashPattern = /^0x[a-fA-F0-9]{64}$/;
 
 export default function PaymentPage() {
-  const { paymentId } = useParams()
-  const [payment, setPayment] = useState<Payment | null>(null)
-  const [txHash, setTxHash] = useState("")
-  const [isLoading, setIsLoading] = useState(true)
-  const [isVerifying, setIsVerifying] = useState(false)
+  const { paymentId } = useParams();
+  const [payment, setPayment] = useState<Payment | null>(null);
+  const [txHash, setTxHash] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isVerifying, setIsVerifying] = useState(false);
 
   useEffect(() => {
-    if (!paymentId) return
+    if (!paymentId) return;
 
-    let ignore = false
+    let ignore = false;
 
     async function loadPayment() {
       try {
-        const data = await getPayment(paymentId!)
+        const data = await getPayment(paymentId!);
 
         if (!ignore) {
-          setPayment(data.payment)
+          setPayment(data.payment);
         }
       } catch (error) {
         if (!ignore) {
-          toast.error(getApiErrorMessage(error, "Failed to load payment."))
+          toast.error(getApiErrorMessage(error, "Failed to load payment."));
         }
       } finally {
         if (!ignore) {
-          setIsLoading(false)
+          setIsLoading(false);
         }
       }
     }
 
-    loadPayment()
+    loadPayment();
 
     return () => {
-      ignore = true
-    }
-  }, [paymentId])
+      ignore = true;
+    };
+  }, [paymentId]);
 
   const copyText = async (value: string, label: string) => {
-    await navigator.clipboard.writeText(value)
-    toast.success(`${label} copied.`)
-  }
+    await navigator.clipboard.writeText(value);
+    toast.success(`${label} copied.`);
+  };
 
   const submitTxHash = async () => {
-    if (!paymentId || !txHash.trim()) return
+    if (!paymentId || !txHash.trim()) return;
 
-    setIsVerifying(true)
+    setIsVerifying(true);
 
     try {
       const data = await verifySubscriptionPayment({
         paymentId,
         txHash: txHash.trim(),
-      })
+      });
 
-      setPayment(data.payment)
-      toast.success("Transaction verified.")
+      setPayment(data.payment);
+      toast.success("Transaction verified.");
     } catch (error) {
-      toast.error(getApiErrorMessage(error, "Transaction verification failed."))
+      toast.error(
+        getApiErrorMessage(error, "Transaction verification failed."),
+      );
     } finally {
-      setIsVerifying(false)
+      setIsVerifying(false);
     }
-  }
+  };
 
   if (!paymentId) {
-    return <Navigate to="/pricing" replace />
+    return <Navigate to="/pricing" replace />;
   }
+
+  if (!isLoading && !payment) {
+    return <Navigate to="/pricing" replace />;
+  }
+
+  const trimmedTxHash = txHash.trim();
+  const showTxHashError =
+    trimmedTxHash.length > 0 && !txHashPattern.test(trimmedTxHash);
+  const canVerifyTxHash = txHashPattern.test(trimmedTxHash);
+  const headerDescription =
+    "Send the required USDT amount on BNB Smart Chain to continue your payment.";
 
   if (isLoading) {
     return (
-      <div className="flex min-h-72 items-center justify-center">
-        <Loader2 className="size-5 animate-spin text-muted-foreground" />
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+        <Card className="min-w-0 border-border/70">
+          <CardHeader>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="space-y-1">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/8 px-2.5 py-1 text-[11px] font-medium tracking-[0.16em] text-primary uppercase">
+                  Payment Details
+                </span>
+                <CardTitle className="text-xl tracking-tight">
+                  Pay With USDT
+                </CardTitle>
+                <CardDescription className="max-w-2xl text-sm leading-6">
+                  {headerDescription}
+                </CardDescription>
+              </div>
+
+              <Button asChild variant="outline">
+                <Link to="/billing">
+                  <WalletCards className="size-4" />
+                  Billing
+                </Link>
+              </Button>
+            </div>
+          </CardHeader>
+        </Card>
+
+        <div className="flex min-h-24 items-center justify-center">
+          <Loader2 className="size-4 animate-spin text-muted-foreground" />
+        </div>
       </div>
-    )
+    );
   }
 
   if (!payment) {
-    return <Navigate to="/pricing" replace />
+    return <Navigate to="/pricing" replace />;
   }
 
-  const amount = payment.payAmount ?? payment.amountUsd
-  const isConfirmed = payment.status === "confirmed"
-  const isExpired = payment.status === "expired"
-  const trimmedTxHash = txHash.trim()
-  const showTxHashError = trimmedTxHash.length > 0 && !txHashPattern.test(trimmedTxHash)
-  const canVerifyTxHash = txHashPattern.test(trimmedTxHash)
+  const loadedPayment = payment;
+  const amount = loadedPayment.payAmount ?? loadedPayment.amountUsd;
+  const isConfirmed = loadedPayment.status === "confirmed";
+  const isExpired = loadedPayment.status === "expired";
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
@@ -136,7 +174,7 @@ export default function PaymentPage() {
                 Pay With USDT
               </CardTitle>
               <CardDescription className="max-w-2xl text-sm leading-6">
-                Send exactly {formatAmount(amount)} USDT on BNB Smart Chain.
+                {headerDescription}
               </CardDescription>
             </div>
 
@@ -153,7 +191,7 @@ export default function PaymentPage() {
       <Card className="rounded-lg border">
         <CardHeader>
           <CardTitle>
-            {formatPlanName(payment.plan)} - {formatAmount(amount)} USDT
+            {formatPlanName(loadedPayment.plan)} - {formatAmount(amount)} USDT
           </CardTitle>
           <CardDescription>
             Use USDT BEP20 only. Payments on another network may not be
@@ -169,7 +207,7 @@ export default function PaymentPage() {
             ) : (
               <Clock className="size-4 text-amber-500" />
             )}
-            <span>Status: {isExpired ? "expired" : payment.status}</span>
+            <span>Status: {isExpired ? "expired" : loadedPayment.status}</span>
           </div>
 
           <div className="space-y-2">
@@ -193,14 +231,14 @@ export default function PaymentPage() {
             <p className="text-sm font-medium">Address</p>
             <div className="flex gap-2">
               <div className="min-w-0 flex-1 break-all rounded-lg border bg-muted/30 px-3 py-2 font-mono text-sm">
-                {payment.payAddress}
+                {loadedPayment.payAddress}
               </div>
               <Button
                 variant="outline"
                 size="icon"
                 onClick={() =>
-                  payment.payAddress
-                    ? void copyText(payment.payAddress, "Address")
+                  loadedPayment.payAddress
+                    ? void copyText(loadedPayment.payAddress, "Address")
                     : undefined
                 }
                 aria-label="Copy address"
@@ -214,7 +252,7 @@ export default function PaymentPage() {
             <div className="space-y-2 rounded-lg border bg-muted/30 p-3 text-sm">
               <p className="font-medium">Verified transaction</p>
               <p className="break-all font-mono text-muted-foreground">
-                {payment.txHash}
+                {loadedPayment.txHash}
               </p>
             </div>
           ) : isExpired ? (
@@ -261,5 +299,5 @@ export default function PaymentPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
