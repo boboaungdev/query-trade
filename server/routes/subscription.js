@@ -21,6 +21,7 @@ import {
   getAdminPlans,
   updatePlan,
 } from "../controllers/subscription/planAdmin.js";
+import { cancelPayment } from "../controllers/subscription/cancelPayment.js";
 import { verifyTransaction } from "../controllers/subscription/verifyTransaction.js";
 
 const router = express.Router();
@@ -30,7 +31,11 @@ router.get("/plans", getPlans);
 router.use(validateToken());
 
 router.get("/me", getMySubscription);
-router.get("/payments", getPaymentHistory);
+router.get(
+  "/payments",
+  validateQuery(SubscriptionSchema.paymentsQuery),
+  getPaymentHistory,
+);
 router.get(
   "/payments/:paymentId",
   validateParam(SubscriptionSchema.params.paymentId),
@@ -46,6 +51,11 @@ router.post(
   validateParam(SubscriptionSchema.params.paymentId),
   validateBody(SubscriptionSchema.verifyTransaction),
   verifyTransaction,
+);
+router.post(
+  "/payments/:paymentId/cancel",
+  validateParam(SubscriptionSchema.params.paymentId),
+  cancelPayment,
 );
 
 router

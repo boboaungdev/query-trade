@@ -25,11 +25,39 @@ import { useAuthStore } from "@/store/auth";
 import { cn } from "@/lib/utils";
 
 const defaultCurrency: PayCurrency = "usdtbsc";
+let pricingPlansRequest: Promise<Awaited<ReturnType<typeof getSubscriptionPlans>>> | null =
+  null;
+let pricingSubscriptionRequest: Promise<Awaited<ReturnType<typeof getMySubscription>>> | null =
+  null;
 
 function formatUsdtAmount(amount: number) {
   return amount.toLocaleString(undefined, {
     maximumFractionDigits: 8,
   });
+}
+
+async function loadPricingPlansOnce() {
+  if (pricingPlansRequest) {
+    return pricingPlansRequest;
+  }
+
+  pricingPlansRequest = getSubscriptionPlans().finally(() => {
+    pricingPlansRequest = null;
+  });
+
+  return pricingPlansRequest;
+}
+
+async function loadMySubscriptionOnce() {
+  if (pricingSubscriptionRequest) {
+    return pricingSubscriptionRequest;
+  }
+
+  pricingSubscriptionRequest = getMySubscription().finally(() => {
+    pricingSubscriptionRequest = null;
+  });
+
+  return pricingSubscriptionRequest;
 }
 
 function formatExpiry(subscription?: Subscription | null) {
@@ -58,8 +86,8 @@ export default function Pricing() {
 
       try {
         const [planData, subscriptionData] = await Promise.all([
-          getSubscriptionPlans(),
-          isAuthenticated ? getMySubscription() : Promise.resolve(null),
+          loadPricingPlansOnce(),
+          isAuthenticated ? loadMySubscriptionOnce() : Promise.resolve(null),
         ]);
 
         if (ignore) return;
@@ -310,8 +338,9 @@ export default function Pricing() {
                   >
                     {loadingPlan === plan.id ? (
                       <Loader2 className="size-4 animate-spin" />
-                    ) : null}
-                    {action.label}
+                    ) : (
+                      action.label
+                    )}
                   </Button>
                 </CardContent>
               </Card>

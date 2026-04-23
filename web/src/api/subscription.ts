@@ -10,7 +10,12 @@ export type AdminPlanSortBy =
 export type PlanId = string
 export type PayCurrency = "usdtbsc"
 export type SubscriptionStatus = "active" | "expired" | "pending"
-export type PaymentStatus = "pending" | "confirmed" | "failed" | "expired"
+export type PaymentStatus =
+  | "pending"
+  | "confirmed"
+  | "cancelled"
+  | "failed"
+  | "expired"
 
 export type SubscriptionPlan = {
   _id: string
@@ -96,12 +101,29 @@ export async function getMySubscription() {
   return data.result
 }
 
-export async function getPaymentHistory() {
+export async function getPaymentHistory({
+  page,
+  limit,
+}: {
+  page?: number
+  limit?: number
+} = {}) {
   const { data } = await api.get<{
     result: {
       payments: Payment[]
+      total?: number
+      totalPage?: number
+      currentPage?: number
+      limitPerPage?: number
+      hasNextPage?: boolean
+      hasPrevPage?: boolean
     }
-  }>("/subscription/payments")
+  }>("/subscription/payments", {
+    params: {
+      page,
+      limit,
+    },
+  })
 
   return data.result
 }
@@ -153,6 +175,16 @@ export async function verifySubscriptionPayment({
   }>(`/subscription/payments/${paymentId}/verify`, {
     txHash,
   })
+
+  return data.result
+}
+
+export async function cancelSubscriptionPayment(paymentId: string) {
+  const { data } = await api.post<{
+    result: {
+      payment: Payment
+    }
+  }>(`/subscription/payments/${paymentId}/cancel`)
 
   return data.result
 }

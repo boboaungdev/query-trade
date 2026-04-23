@@ -37,6 +37,7 @@ export const PAYMENT_CURRENCIES = {
 export const PAYMENT_STATUSES = {
   pending: "pending",
   confirmed: "confirmed",
+  cancelled: "cancelled",
   failed: "failed",
   expired: "expired",
 };

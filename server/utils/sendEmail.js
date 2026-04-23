@@ -65,7 +65,7 @@ const classifySendEmailError = (error) => {
   }
 };
 
-const verifyEmailTransporter = async () => {
+export const verifyEmailTransporter = async () => {
   try {
     await transporter.verify();
     await ErrorDB.deleteOne({ source: "send_email" });
@@ -75,8 +75,6 @@ const verifyEmailTransporter = async () => {
     console.error("=> Email transporter verification failed:", error.message);
   }
 };
-
-void verifyEmailTransporter();
 
 export const sendEmail = async ({ to, subject, html }) => {
   try {

@@ -46,20 +46,22 @@ function formatAmount(amount?: number) {
   });
 }
 
+function sanitizeTxHashInput(value: string) {
+  return value.replace(/\s+/g, "");
+}
+
 const txHashPattern = /^0x[a-fA-F0-9]{64}$/;
 const headerDescription =
-  "Send the required USDT amount on BNB Smart Chain to continue your payment.";
+  "Send the required USDT amount on BNB Smart Chain (BEP20) to continue your payment.";
+const paymentRequestCache = new Map<
+  string,
+  Promise<Awaited<ReturnType<typeof getPayment>>>
+>();
 const usdtLogoDataUri = `data:image/svg+xml;utf8,${encodeURIComponent(`
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <circle cx="30" cy="30" r="22" fill="#26A17B"/>
-  <path fill="#fff" d="M35.7 15.8H24.3v4h4.3v3.7c-6.5.3-11.3 1.7-11.3 3.3s4.8 3 11.3 3.3V44h2.8V30.2c6.4-.3 11.2-1.7 11.2-3.2s-4.8-2.9-11.2-3.2v-4h4.3v-4Zm-5.7 11.9c-5.8 0-10.6-.8-10.6-1.7s4.7-1.7 10.6-1.7 10.6.8 10.6 1.7-4.8 1.7-10.6 1.7Z"/>
-  <circle cx="45.5" cy="45.5" r="13.5" fill="#ffffff"/>
-  <g transform="translate(45.5 45.5)">
-    <rect x="-4.5" y="-4.5" width="9" height="9" transform="rotate(45)" fill="#F0B90B"/>
-    <rect x="-1.75" y="-9.75" width="3.5" height="3.5" transform="rotate(45)" fill="#F0B90B"/>
-    <rect x="-1.75" y="6.25" width="3.5" height="3.5" transform="rotate(45)" fill="#F0B90B"/>
-    <rect x="-9.75" y="-1.75" width="3.5" height="3.5" transform="rotate(45)" fill="#F0B90B"/>
-    <rect x="6.25" y="-1.75" width="3.5" height="3.5" transform="rotate(45)" fill="#F0B90B"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <g fill="none" fill-rule="evenodd">
+    <circle cx="16" cy="16" r="16" fill="#26A17B"/>
+    <path fill="#FFF" d="M17.922 17.383v-.002c-.11.008-.677.042-1.942.042-1.01 0-1.721-.03-1.971-.042v.003c-3.888-.171-6.79-.848-6.79-1.658 0-.809 2.902-1.486 6.79-1.66v2.644c.254.018.982.061 1.988.061 1.207 0 1.812-.05 1.925-.06v-2.643c3.88.173 6.775.85 6.775 1.658 0 .81-2.895 1.485-6.775 1.657m0-3.59v-2.366h5.414V7.819H8.595v3.608h5.414v2.365c-4.4.202-7.709 1.074-7.709 2.118 0 1.044 3.309 1.915 7.709 2.118v7.582h3.913v-7.584c4.393-.202 7.694-1.073 7.694-2.116 0-1.043-3.301-1.914-7.694-2.117"/>
   </g>
 </svg>
 `)}`;
@@ -82,7 +84,16 @@ export default function PaymentPage() {
 
     async function loadPayment() {
       try {
-        const data = await getPayment(currentPaymentId);
+        let request = paymentRequestCache.get(currentPaymentId);
+
+        if (!request) {
+          request = getPayment(currentPaymentId).finally(() => {
+            paymentRequestCache.delete(currentPaymentId);
+          });
+          paymentRequestCache.set(currentPaymentId, request);
+        }
+
+        const data = await request;
 
         if (!ignore) {
           setPayment(data.payment);
@@ -159,7 +170,9 @@ export default function PaymentPage() {
   };
 
   const handleTxHashPaste = (event: ClipboardEvent<HTMLInputElement>) => {
-    const pastedValue = event.clipboardData.getData("text").trim();
+    const pastedValue = sanitizeTxHashInput(
+      event.clipboardData.getData("text"),
+    );
 
     event.preventDefault();
     setTxHash(pastedValue);
@@ -172,7 +185,9 @@ export default function PaymentPage() {
 
   const handlePasteButtonClick = async () => {
     try {
-      const pastedValue = (await navigator.clipboard.readText()).trim();
+      const pastedValue = sanitizeTxHashInput(
+        await navigator.clipboard.readText(),
+      );
       setTxHash(pastedValue);
       if (txHashError) {
         setTxHashError(null);
@@ -184,7 +199,7 @@ export default function PaymentPage() {
   };
 
   const submitTxHash = async () => {
-    const nextTxHash = txHash.trim();
+    const nextTxHash = sanitizeTxHashInput(txHash);
 
     if (!paymentId || !nextTxHash) {
       setTxHashError("Transaction hash is required.");
@@ -270,7 +285,7 @@ export default function PaymentPage() {
           <CardTitle>Complete Your Payment</CardTitle>
           <CardDescription>
             Scan the QR code with your wallet. We only accept USDT on BNB Smart
-            Chain for this payment.
+            Chain (BEP20) for this payment.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 pt-1">
@@ -299,7 +314,7 @@ export default function PaymentPage() {
               <div className="flex flex-wrap items-center justify-center gap-1">
                 <div className="inline-flex max-w-full items-center rounded-full px-2 py-1.5 text-sm text-muted-foreground">
                   <span className="max-w-[180px] truncate font-mono sm:max-w-[240px]">
-                    Address: {shortAddress}
+                   {shortAddress}
                   </span>
                 </div>
                 <Button
@@ -320,7 +335,7 @@ export default function PaymentPage() {
               </div>
             </div>
 
-            <div className="space-y-3 md:text-left">
+            <div className="space-y-3 text-left md:text-left">
               <div className="space-y-2">
                 <p className="text-3xl font-semibold tracking-tight">
                   {formatAmount(amount)} USDT
@@ -332,7 +347,7 @@ export default function PaymentPage() {
                     : ""}
                 </p>
                 <div
-                  className={`flex items-center justify-center gap-2 text-sm md:justify-start ${statusTone}`}
+                  className={`flex items-center justify-start gap-2 text-sm ${statusTone}`}
                 >
                   {isConfirmed ? (
                     <CheckCircle2 className="size-4 text-emerald-500" />
@@ -346,17 +361,17 @@ export default function PaymentPage() {
               </div>
 
               <div className="max-w-2xl py-1 text-sm">
-                <div className="flex items-start justify-center gap-2 text-left md:justify-start">
+                <div className="flex items-start justify-start gap-2 text-left">
                   <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600" />
                   <p className="leading-6 text-amber-800">
-                    Send only USDT via BNB Chain. Payments sent on the wrong
-                    network may be lost and could be unrecoverable.
+                    Send only USDT via BNB Smart Chain (BEP20). Payments sent
+                    on the wrong network may be lost and could be unrecoverable.
                   </p>
                 </div>
               </div>
 
               {!showTxHashInput ? (
-                <div className="flex justify-center md:justify-start">
+                <div className="flex justify-start">
                   <Button
                     onClick={() => setShowTxHashInput(true)}
                     className="w-full sm:w-auto"
@@ -420,7 +435,7 @@ export default function PaymentPage() {
                   id="payment-tx-hash"
                   value={txHash}
                   onChange={(event) => {
-                    setTxHash(event.target.value);
+                    setTxHash(sanitizeTxHashInput(event.target.value));
                     if (txHashError) {
                       setTxHashError(null);
                     }
