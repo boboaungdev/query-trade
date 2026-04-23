@@ -9,6 +9,7 @@ import {
 import {
   Bookmark,
   BookmarkCheck,
+  BadgeCheck,
   CandlestickChart,
   Check,
   CheckCircle2,
@@ -99,9 +100,7 @@ const USERNAME_REGEX = /^[a-z0-9]{6,20}$/;
 const NAME_WORD_LIMIT = 3;
 
 function sanitizeUsername(value: string) {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, "");
+  return value.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
 function sanitizeName(value: string) {
@@ -137,6 +136,12 @@ type PublicProfileUser = {
     backtestCount?: number;
   };
   isFollowing?: boolean;
+  membership?: {
+    plan?: "free" | "plus" | "pro" | string;
+    badgeLabel?: string | null;
+    badgeVariant?: "free" | "plus" | "pro" | string;
+    verifiedVariant?: "free" | "plus" | "pro" | string;
+  };
 };
 
 type PublicProfileResponse = {
@@ -301,6 +306,37 @@ function getProfileBacktestSummaryMetrics(item: ProfileBacktestListItem) {
       valueClassName: "text-foreground",
     },
   ];
+}
+
+function getProfileMembershipMeta(
+  membership?: PublicProfileUser["membership"],
+) {
+  switch (membership?.verifiedVariant) {
+    case "pro":
+      return {
+        Icon: BadgeCheck,
+        iconClassName: "fill-amber-500 text-white",
+        iconWrapperClassName: "text-amber-500",
+        labelClassName: "text-amber-500",
+        badgeLabel: membership.badgeLabel ?? "Pro",
+      };
+    case "plus":
+      return {
+        Icon: BadgeCheck,
+        iconClassName: "fill-sky-500 text-white",
+        iconWrapperClassName: "text-sky-500",
+        labelClassName: "text-sky-500",
+        badgeLabel: membership.badgeLabel ?? "Plus",
+      };
+    default:
+      return {
+        Icon: null,
+        iconClassName: "",
+        iconWrapperClassName: "",
+        labelClassName: "",
+        badgeLabel: null,
+      };
+  }
 }
 
 export default function Profile() {
@@ -1646,6 +1682,8 @@ export default function Profile() {
   const profileDisplayUsername = canEditProfile
     ? form.username || user?.username || routeUsername
     : viewedUser?.username || routeUsername;
+  const profileMembership = viewedUser?.membership;
+  const profileMembershipMeta = getProfileMembershipMeta(profileMembership);
   const joinedDateLabel = new Date(
     (canEditProfile ? user?.createdAt : viewedUser?.createdAt) || Date.now(),
   ).toLocaleDateString(undefined, {
@@ -1687,9 +1725,41 @@ export default function Profile() {
 
                     <div className="flex min-h-24 min-w-0 flex-1 flex-col justify-center space-y-3 md:min-h-28">
                       <div className="min-w-0 space-y-0.5">
-                        <h2 className="break-words text-xl font-bold tracking-tight text-foreground md:text-2xl">
-                          {profileDisplayName}
-                        </h2>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h2 className="break-words text-xl font-bold tracking-tight text-foreground md:text-2xl">
+                            {profileDisplayName}
+                          </h2>
+                          {profileMembershipMeta.Icon ? (
+                            <span
+                              className={cn(
+                                "inline-flex items-center",
+                                profileMembershipMeta.iconWrapperClassName,
+                              )}
+                              title={
+                                profileMembership?.plan === "pro"
+                                  ? "Pro member"
+                                  : "Plus member"
+                              }
+                            >
+                              <profileMembershipMeta.Icon
+                                className={cn(
+                                  "size-4 md:size-5",
+                                  profileMembershipMeta.iconClassName,
+                                )}
+                              />
+                            </span>
+                          ) : null}
+                          {profileMembershipMeta.badgeLabel ? (
+                            <span
+                              className={cn(
+                                "inline-flex items-center text-sm font-semibold tracking-tight",
+                                profileMembershipMeta.labelClassName,
+                              )}
+                            >
+                              {profileMembershipMeta.badgeLabel}
+                            </span>
+                          ) : null}
+                        </div>
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
                           <p className="break-all">@{profileDisplayUsername}</p>
                           <span className="hidden h-1 w-1 rounded-full bg-border sm:block" />
