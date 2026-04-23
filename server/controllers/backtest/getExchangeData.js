@@ -1,4 +1,4 @@
-import { resJson } from "../../utils/response.js";
+import { resError, resJson } from "../../utils/response.js";
 import { getExchange } from "../../services/backtest/getExchange.js";
 
 export const getExchangeData = async (req, res, next) => {
@@ -23,7 +23,9 @@ export const getExchangeData = async (req, res, next) => {
     return resJson(res, 200, "Success fetch exchange data", {
       data,
     });
-  } catch (error) {
-    next(error);
+  } catch {
+    next(
+      resError(500, "Unable to load exchange data. Please try again later."),
+    );
   }
 };

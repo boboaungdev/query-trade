@@ -13,6 +13,13 @@ export const getExchange = ({ exchange, marketType = "spot" }) => {
     enableRateLimit: true,
     options: {
       defaultType: marketType,
+      ...(exchange === "binance" && marketType === "spot"
+        ? {
+            fetchMarkets: {
+              types: ["spot"],
+            },
+          }
+        : {}),
     },
   });
 };

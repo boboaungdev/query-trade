@@ -785,6 +785,7 @@ export default function BookmarkPage() {
   const isSearchPending = search.trim() !== debouncedSearch;
   const listStatus =
     isSearchPending || isSearching ? "searching" : isLoading ? "loading" : null;
+  const hasVisibleBookmarks = bookmarks.length > 0;
 
   const onCopyBookmarkLink = async (bookmark: BookmarkItem) => {
     const targetId = bookmark.target?._id;
@@ -1009,7 +1010,7 @@ export default function BookmarkPage() {
             </>
           )}
         </div>
-      ) : totalCount === 0 ? (
+      ) : !hasVisibleBookmarks ? (
         <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
           {search.trim()
             ? "No bookmarks matched your search."

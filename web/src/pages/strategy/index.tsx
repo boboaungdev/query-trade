@@ -484,6 +484,26 @@ export default function StrategyPage() {
     });
   };
 
+  const getBacktestStrategyState = (strategy: StrategyItem) => ({
+    strategy: {
+      _id: strategy._id,
+      name: strategy.name,
+      description: strategy.description,
+      isPublic: strategy.isPublic,
+      stats: strategy.stats,
+      user: strategy.user
+        ? {
+            _id: strategy.user._id,
+            username: strategy.user.username,
+            avatar: strategy.user.avatar,
+            membership: strategy.user.membership,
+          }
+        : undefined,
+    },
+    strategyId: strategy._id,
+    strategyName: strategy.name,
+  });
+
   const openCreateSheet = () => {
     setSheetStrategyId("");
     setDuplicateSheetStrategyId("");
@@ -930,14 +950,15 @@ export default function StrategyPage() {
                                 <Copy className="h-4 w-4" />
                                 Copy link
                               </DropdownMenuItem>
-                              <DropdownMenuItem asChild>
-                                <a
-                                  href="/backtest"
-                                  className="flex items-center gap-2"
-                                >
-                                  <CandlestickChart className="h-4 w-4" />
-                                  Backtest
-                                </a>
+                              <DropdownMenuItem
+                                onSelect={() => {
+                                  navigate("/backtest", {
+                                    state: getBacktestStrategyState(item),
+                                  });
+                                }}
+                              >
+                                <CandlestickChart className="h-4 w-4" />
+                                Backtest
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onSelect={() => {
