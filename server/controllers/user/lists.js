@@ -4,7 +4,9 @@ import { FollowDB } from "../../models/follow.js";
 import { StrategyDB } from "../../models/strategy.js";
 import { BacktestDB } from "../../models/backtest.js";
 import { BookmarkDB } from "../../models/bookmark.js";
+import { SubscriptionDB } from "../../models/subscription.js";
 import { UserDB } from "../../models/user.js";
+import { serializePublicUser } from "../../services/user/serializePublicUser.js";
 import { resError, resJson } from "../../utils/response.js";
 import {
   buildPaginationResult,
@@ -90,7 +92,24 @@ export const getUserFollows = async (req, res, next) => {
     const [result] = await FollowDB.aggregate(pipeline);
     const total = result?.metadata?.[0]?.total ?? 0;
     const items = result?.items ?? [];
+    let subscriptionMap = new Map();
 
+    if (items.length > 0) {
+      const subscriptions = await SubscriptionDB.find({
+        user: { $in: items.map((item) => item._id) },
+      })
+        .select("user plan currentPeriodEnd")
+        .lean();
+
+      subscriptionMap = new Map(
+        subscriptions.map((subscription) => [
+          String(subscription.user),
+          subscription,
+        ]),
+      );
+    }
+
+    let followingSet = new Set();
     if (req.user?._id && items.length > 0) {
       const followingItems = await FollowDB.find({
         follower: req.user._id,
@@ -99,21 +118,26 @@ export const getUserFollows = async (req, res, next) => {
         .select("following")
         .lean();
 
-      const followingSet = new Set(
+      followingSet = new Set(
         followingItems.map((item) => String(item.following)),
       );
-
-      items.forEach((item) => {
-        item.isFollowing = followingSet.has(String(item._id));
-      });
     }
+
+    const serializedItems = items.map((item) =>
+      serializePublicUser(item, {
+        subscription: subscriptionMap.get(String(item._id)),
+        extra: {
+          isFollowing: followingSet.has(String(item._id)),
+        },
+      }),
+    );
 
     return resJson(
       res,
       200,
       `User ${type} fetched successfully.`,
       buildPaginationResult({
-        items,
+        items: serializedItems,
         total,
         page,
         limit,

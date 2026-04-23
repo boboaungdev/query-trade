@@ -25,6 +25,11 @@ import {
   type BookmarkTargetType,
 } from "@/api/bookmark";
 import {
+  getUserAvatarRingClass,
+  UserMembershipMark,
+  type UserMembership,
+} from "@/components/user-membership";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -68,7 +73,13 @@ type BookmarkTarget = {
   isPublic?: boolean;
   user?:
     | string
-    | { _id?: string; name?: string; username?: string; avatar?: string };
+    | {
+        _id?: string;
+        name?: string;
+        username?: string;
+        avatar?: string;
+        membership?: UserMembership;
+      };
   symbol?: string;
   timeframe?: string;
   startDate?: string;
@@ -211,7 +222,14 @@ function renderBookmarkStrategyCard({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1 space-y-1">
             <div className="flex min-w-0 items-center gap-2">
-              <Avatar size="sm">
+              <Avatar
+                size="sm"
+                className={getUserAvatarRingClass(
+                  typeof target?.user === "object"
+                    ? target.user?.membership
+                    : undefined,
+                )}
+              >
                 <AvatarImage
                   src={targetAvatar}
                   alt={targetUsername || "Creator"}
@@ -229,8 +247,16 @@ function renderBookmarkStrategyCard({
               </h3>
             </div>
 
-            <div className="truncate text-xs text-muted-foreground">
-              @{targetUsername || "unknown"}
+            <div className="inline-flex min-w-0 items-center gap-1 truncate text-xs text-muted-foreground">
+              <span className="truncate">@{targetUsername || "unknown"}</span>
+              <UserMembershipMark
+                membership={
+                  typeof target?.user === "object"
+                    ? target.user?.membership
+                    : undefined
+                }
+                className="size-3"
+              />
             </div>
           </div>
 
@@ -390,7 +416,14 @@ function renderBookmarkBacktestCard({
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1">
             <div className="flex min-w-0 items-center gap-2">
-              <Avatar size="sm">
+              <Avatar
+                size="sm"
+                className={getUserAvatarRingClass(
+                  typeof target?.user === "object"
+                    ? target.user?.membership
+                    : undefined,
+                )}
+              >
                 <AvatarImage
                   src={targetAvatar}
                   alt={targetUsername || "Trader"}
@@ -407,8 +440,16 @@ function renderBookmarkBacktestCard({
                 {target?.symbol || "Backtest"}
               </CardTitle>
             </div>
-            <CardDescription className="truncate text-xs">
-              @{targetUsername || "unknown"}
+            <CardDescription className="inline-flex min-w-0 items-center gap-1 truncate text-xs">
+              <span className="truncate">@{targetUsername || "unknown"}</span>
+              <UserMembershipMark
+                membership={
+                  typeof target?.user === "object"
+                    ? target.user?.membership
+                    : undefined
+                }
+                className="size-3"
+              />
             </CardDescription>
             <CardDescription className="flex min-w-0 flex-wrap items-center gap-2">
               <span>{target?.timeframe || "-"}</span>

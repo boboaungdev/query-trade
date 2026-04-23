@@ -51,6 +51,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  getUserAvatarRingClass,
+  UserMembershipMark,
+  type UserMembership,
+} from "@/components/user-membership";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth";
 
@@ -98,6 +103,7 @@ type LeaderboardBacktest = {
     name?: string;
     username?: string;
     avatar?: string;
+    membership?: UserMembership;
   };
   isBookmarked?: boolean;
   result: {
@@ -624,7 +630,10 @@ export default function LeaderboardPage() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="space-y-1">
                       <div className="flex min-w-0 items-center gap-2">
-                        <Avatar size="sm">
+                        <Avatar
+                          size="sm"
+                          className={getUserAvatarRingClass(backtest.user?.membership)}
+                        >
                           <AvatarImage
                             src={backtest.user?.avatar}
                             alt={backtest.user?.username || "Trader"}
@@ -641,8 +650,14 @@ export default function LeaderboardPage() {
                           {backtest.symbol}
                         </CardTitle>
                       </div>
-                      <CardDescription className="truncate text-xs">
-                        @{backtest.user?.username || "unknown"}
+                      <CardDescription className="inline-flex min-w-0 items-center gap-1 truncate text-xs">
+                        <span className="truncate">
+                          @{backtest.user?.username || "unknown"}
+                        </span>
+                        <UserMembershipMark
+                          membership={backtest.user?.membership}
+                          className="size-3"
+                        />
                       </CardDescription>
                       <CardDescription className="flex min-w-0 flex-wrap items-center gap-2">
                         <span>{backtest.timeframe}</span>

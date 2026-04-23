@@ -7,6 +7,7 @@ import {
   useParams,
 } from "react-router-dom";
 import {
+  Activity,
   AlertTriangle,
   CalendarDays,
   ChevronDown,
@@ -21,7 +22,6 @@ import {
   Lock,
   MoreHorizontal,
   Pencil,
-  Radar,
   Trash2,
   TrendingDown,
   TrendingUp,
@@ -55,6 +55,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  getUserAvatarRingClass,
+  UserMembershipMark,
+  type UserMembership,
+} from "@/components/user-membership";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -97,6 +102,7 @@ type StrategyDetailItem = {
     name?: string;
     username?: string;
     avatar?: string;
+    membership?: UserMembership;
     isFollowing?: boolean;
     stats?: {
       followerCount?: number;
@@ -109,7 +115,12 @@ type StrategyDetailItem = {
     key?: string;
     source?: "open" | "high" | "low" | "close" | "volume";
     params?: Record<string, unknown>;
-    indicator?: { _id?: string; name?: string; category?: string };
+    indicator?: {
+      _id?: string;
+      name?: string;
+      category?: string;
+      description?: string;
+    };
   }>;
   entry?: { buy: LogicBlock; sell: LogicBlock };
 };
@@ -157,7 +168,10 @@ function formatOperand(value: unknown) {
   }
 }
 
-function formatStopLoss(stopLoss?: Record<string, unknown>) {
+function formatStopLoss(
+  stopLoss?: Record<string, unknown>,
+  tone?: "buy" | "sell",
+) {
   if (!stopLoss?.type) return "Not configured";
   switch (stopLoss.type) {
     case "candle": {
@@ -171,7 +185,11 @@ function formatStopLoss(stopLoss?: Record<string, unknown>) {
           previousCandles === 0
             ? "Current candle"
             : `Previous ${previousCandles} candle${previousCandles === 1 ? "" : "s"}`;
-        return `${candleLabel} (${aggregation})`;
+        const priceField =
+          tone === "buy" ? "low" : tone === "sell" ? "high" : null;
+        return priceField
+          ? `${candleLabel} (${aggregation}, ${priceField})`
+          : `${candleLabel} (${aggregation})`;
       }
       return `Candle ${String(stopLoss.reference ?? "")} ${String(stopLoss.price ?? "")}`.trim();
     }
@@ -249,12 +267,18 @@ function formatConditionNodeSummary(node: ConditionNode): string {
   return `${formatOperand(node.left)} ${node.operator} ${formatOperand(node.right)}`;
 }
 
-function LogicWord({ logic }: { logic: "and" | "or" }) {
+function LogicWord({
+  logic,
+  tone,
+}: {
+  logic: "and" | "or";
+  tone: "buy" | "sell";
+}) {
   return (
     <span
       className={cn(
-        "mx-1 inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase",
-        logic === "and" ? "bg-info/10 text-info" : "bg-warning/10 text-warning",
+        "mx-1 inline-flex text-[10px] font-semibold uppercase",
+        tone === "buy" ? "text-success" : "text-destructive",
       )}
     >
       {logic}
@@ -274,9 +298,7 @@ function RuleExpression({
       <span
         className={cn(
           "inline-flex flex-wrap items-center rounded-2xl border px-2 py-1",
-          tone === "buy"
-            ? "border-success/15 bg-success/5"
-            : "border-warning/15 bg-warning/5",
+          tone === "buy" ? "border-success/18" : "border-destructive/16",
         )}
       >
         {node.conditions.map((child, index) => (
@@ -284,7 +306,7 @@ function RuleExpression({
             key={`${formatConditionNodeSummary(child)}-${index}`}
             className="inline-flex flex-wrap items-center"
           >
-            {index > 0 ? <LogicWord logic={node.logic} /> : null}
+            {index > 0 ? <LogicWord logic={node.logic} tone={tone} /> : null}
             <RuleExpression node={child} tone={tone} />
           </span>
         ))}
@@ -297,19 +319,15 @@ function RuleExpression({
   return (
     <span
       className={cn(
-        "inline-flex flex-wrap items-center rounded-2xl border px-2 py-1 text-xs leading-5 font-medium",
-        tone === "buy"
-          ? "border-success/15 bg-success/5"
-          : "border-warning/15 bg-warning/5",
+        "inline-flex flex-wrap items-center rounded-2xl px-2 py-1 text-xs leading-5 font-medium",
+        tone === "buy" ? "bg-success/18" : "bg-destructive/16",
       )}
     >
       <span className="break-all">{formatOperand(node.left)}</span>
       <span
         className={cn(
-          "mx-1 inline-flex min-w-[1.25rem] items-center justify-center rounded-full px-1 py-0.5 text-center text-[10px] leading-none font-semibold",
-          tone === "buy"
-            ? "bg-success/12 text-success"
-            : "bg-warning/12 text-warning",
+          "mx-1 inline-flex min-w-[1.25rem] items-center justify-center px-1 py-0.5 text-center text-[10px] leading-none font-semibold",
+          tone === "buy" ? "text-success" : "text-destructive",
         )}
       >
         {node.operator}
@@ -329,18 +347,16 @@ function RiskTile({
   variant: "stopLoss" | "takeProfit";
 }) {
   return (
-    <div
-      className={cn(
-        "w-full rounded-xl border px-2.5 py-2 md:w-auto md:max-w-[14rem] md:min-w-[11rem]",
-        variant === "stopLoss"
-          ? "border-destructive/20 bg-destructive/8"
-          : "border-info/20 bg-info/8",
-      )}
-    >
-      <p className="text-[11px] font-medium tracking-[0.16em] text-muted-foreground uppercase">
+    <div className="flex items-start justify-between gap-3">
+      <p className="shrink-0 pt-0.5 text-[11px] font-medium tracking-[0.16em] text-muted-foreground uppercase">
         {label}
       </p>
-      <p className="mt-1 text-sm leading-5 font-medium break-words text-foreground [overflow-wrap:anywhere]">
+      <p
+        className={cn(
+          "text-right text-sm leading-5 font-medium break-words [overflow-wrap:anywhere]",
+          variant === "stopLoss" ? "text-destructive" : "text-success",
+        )}
+      >
         {value}
       </p>
     </div>
@@ -361,71 +377,64 @@ function RulePanel({
   const isBuy = tone === "buy";
 
   return (
-    <section
-      className={cn(
-        "relative overflow-hidden rounded-xl p-4 md:p-5",
-        isBuy ? "theme-rule-panel-buy" : "theme-rule-panel-sell",
-      )}
-    >
-      <div className="theme-hero-sheen absolute inset-x-0 top-0 h-px" />
-      <div className="relative space-y-4">
+    <Card className="min-w-0 overflow-hidden border-border/70">
+      <CardContent className="space-y-4 md:px-5">
         <div className="space-y-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            {isBuy ? (
+              <TrendingUp className="h-4 w-4 text-success" />
+            ) : (
+              <TrendingDown className="h-4 w-4 text-destructive" />
+            )}
+            {title}
+          </CardTitle>
+          <CardDescription className="text-sm leading-6">
+            {isBuy
+              ? "Conditions used to trigger long entries."
+              : "Conditions used to trigger short entries."}
+          </CardDescription>
+        </div>
+
+        <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium tracking-[0.16em] uppercase",
-                isBuy
-                  ? "border-success/20 bg-success/10 text-success"
-                  : "border-warning/20 bg-warning/10 text-warning",
-              )}
-            >
-              {isBuy ? (
-                <TrendingUp className="h-3 w-3" />
-              ) : (
-                <TrendingDown className="h-3 w-3" />
-              )}
-              {title}
-            </span>
-            <span className="rounded-full border border-border/70 bg-background/80 px-2.5 py-1 text-[11px] font-medium tracking-[0.16em] text-muted-foreground uppercase">
+            <p className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
+              Rules
+            </p>
+            <span className="text-[11px] text-muted-foreground">
               {ruleCount === 1 ? "1 rule" : `${ruleCount} rules`}
             </span>
           </div>
-          <p className="text-sm text-muted-foreground">
-            {isBuy
-              ? "Conditions used to open long positions."
-              : "Conditions used to open short positions."}
-          </p>
-        </div>
-
-        <div className="rounded-xl border border-border/60 bg-muted/15 px-3 py-3">
-          <p className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
-            Rules
-          </p>
           {rules.length ? (
-            <div className="mt-2.5 text-left leading-7">
+            <div className="text-left leading-9">
               {rules.map((node, index) => (
                 <span
                   key={`${formatConditionNodeSummary(node)}-${index}`}
                   className="inline-flex flex-wrap items-center"
                 >
                   {index > 0 ? (
-                    <LogicWord logic={block?.logic ?? "and"} />
+                    <LogicWord logic={block?.logic ?? "and"} tone={tone} />
                   ) : null}
                   <RuleExpression node={node} tone={tone} />
                 </span>
               ))}
             </div>
           ) : (
-            <div className="mt-3 text-sm text-muted-foreground">
+            <div className="text-sm text-muted-foreground">
               No rules available.
             </div>
           )}
         </div>
 
-        <div className="flex flex-wrap gap-2.5">
+        <div className="space-y-2">
+          <p className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
+            Risk Setup
+          </p>
+        </div>
+
+        <div className="space-y-2.5">
           <RiskTile
             label="Stop Loss"
-            value={formatStopLoss(block?.riskManagement?.stopLoss)}
+            value={formatStopLoss(block?.riskManagement?.stopLoss, tone)}
             variant="stopLoss"
           />
           <RiskTile
@@ -434,8 +443,8 @@ function RulePanel({
             variant="takeProfit"
           />
         </div>
-      </div>
-    </section>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -534,6 +543,27 @@ export default function StrategyDetailPage() {
   const strategyDescription = strategy?.description?.trim() || "No description";
   const canOpenCreatorProfile = Boolean(creatorUsername);
   const isBookmarked = Boolean(strategy?.isBookmarked);
+  const backtestStrategyState = strategy
+    ? {
+        strategy: {
+          _id: strategy._id,
+          name: strategy.name,
+          description: strategy.description,
+          isPublic: strategy.isPublic,
+          stats: strategy.stats,
+          user: strategy.user
+            ? {
+                _id: strategy.user._id,
+                username: strategy.user.username,
+                avatar: strategy.user.avatar,
+                membership: strategy.user.membership,
+              }
+            : undefined,
+        },
+        strategyId: strategy._id,
+        strategyName: strategy.name,
+      }
+    : undefined;
   const onToggleBookmark = async () => {
     if (!strategy) return;
     if (!isAuthenticated) {
@@ -728,10 +758,8 @@ export default function StrategyDetailPage() {
   return (
     <div className="mx-auto w-full max-w-7xl min-w-0 space-y-5 overflow-x-hidden">
       <div className="min-w-0 space-y-5 p-1 text-foreground">
-        <Card className="theme-hero-panel relative min-w-0 overflow-hidden border-border/70 shadow-sm">
-          <div className="theme-hero-overlay pointer-events-none absolute inset-0 opacity-90" />
-          <div className="theme-hero-sheen pointer-events-none absolute inset-x-0 top-0 h-px" />
-          <CardContent className="relative space-y-5">
+        <Card className="relative min-w-0 overflow-hidden border-border/70">
+          <CardHeader className="space-y-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <Button
                 type="button"
@@ -802,10 +830,7 @@ export default function StrategyDetailPage() {
                       <DropdownMenuItem asChild>
                         <Link
                           to="/backtest"
-                          state={{
-                            strategyId: strategy._id,
-                            strategyName: strategy.name,
-                          }}
+                          state={backtestStrategyState}
                           className="flex items-center gap-2"
                         >
                           <CandlestickChart className="h-4 w-4" />
@@ -883,83 +908,93 @@ export default function StrategyDetailPage() {
                 {loadError || "Strategy not found."}
               </div>
             ) : (
-              <div className="min-w-0 overflow-hidden space-y-4">
+              <div className="min-w-0 overflow-hidden space-y-1">
                 <div className="flex flex-wrap gap-2">
-                  <span className="theme-glass-chip inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium tracking-[0.16em] text-primary uppercase">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/8 px-2.5 py-1 text-[11px] font-medium tracking-[0.16em] text-primary uppercase">
                     Strategy Detail
                   </span>
                 </div>
 
-                <div className="min-w-0 w-full max-w-full overflow-hidden space-y-3">
-                  <h1
-                    className="line-clamp-2 block min-w-0 w-full max-w-full break-all text-xl leading-tight font-semibold tracking-tight text-foreground md:text-2xl"
-                    title={strategy.name}
-                  >
-                    {strategy.name}
-                  </h1>
-                  <p
-                    className="block min-w-0 w-full max-w-full break-all text-sm leading-6 text-muted-foreground md:text-base"
-                    title={strategyDescription}
-                  >
-                    {strategyDescription}
-                  </p>
-                </div>
+                <CardTitle
+                  className="line-clamp-2 block min-w-0 w-full max-w-full break-all text-xl leading-tight tracking-tight"
+                  title={strategy.name}
+                >
+                  {strategy.name}
+                </CardTitle>
+                <CardDescription
+                  className="block min-w-0 w-full max-w-full break-all text-sm leading-6"
+                  title={strategyDescription}
+                >
+                  {strategyDescription}
+                </CardDescription>
 
-                <div className="flex min-w-0 flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-                  <span className="inline-flex min-w-0 max-w-full items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
-                    <UserRound className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                    <span className="truncate">
-                      @{strategy.user?.username || "unknown"}
+                <div className="pt-1">
+                  <div className="flex min-w-0 flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                    <span className="inline-flex min-w-0 max-w-full items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                      <UserRound className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      <span className="inline-flex min-w-0 items-center gap-1">
+                        <span className="truncate">
+                          @{strategy.user?.username || "unknown"}
+                        </span>
+                        <UserMembershipMark
+                          membership={strategy.user?.membership}
+                          className="size-3"
+                        />
+                      </span>
                     </span>
-                  </span>
-                  <span className="inline-flex min-w-0 items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
-                    {strategy.isPublic ? (
-                      <Globe className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                    ) : (
-                      <Lock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                    )}
-                    <span>
-                      {isMine
-                        ? "Mine"
-                        : strategy.isPublic
-                          ? "Public"
-                          : "Private"}
+                    <span className="inline-flex min-w-0 items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                      {strategy.isPublic ? (
+                        <Globe className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      ) : (
+                        <Lock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      )}
+                      <span>
+                        {isMine
+                          ? "Mine"
+                          : strategy.isPublic
+                            ? "Public"
+                            : "Private"}
+                      </span>
                     </span>
-                  </span>
-                  <span className="inline-flex min-w-0 items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
-                    <TrendingUp className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                    <span>{strategy.stats?.viewCount ?? 0}</span>
-                  </span>
-                  <span className="inline-flex min-w-0 items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
-                    <Bookmark className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                    <span>{strategy.stats?.bookmarkCount ?? 0}</span>
-                  </span>
-                  <span className="inline-flex min-w-0 max-w-full items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
-                    <CalendarDays className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                    <span className="truncate">
-                      {formatDateLabel(strategy.updatedAt)}
+                    <span className="inline-flex min-w-0 items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                      <TrendingUp className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      <span>{strategy.stats?.viewCount ?? 0}</span>
                     </span>
-                  </span>
+                    <span className="inline-flex min-w-0 items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                      <Bookmark className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      <span>{strategy.stats?.bookmarkCount ?? 0}</span>
+                    </span>
+                    <span className="inline-flex min-w-0 max-w-full items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                      <CalendarDays className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      <span className="truncate">
+                        {formatDateLabel(strategy.updatedAt)}
+                      </span>
+                    </span>
+                  </div>
                 </div>
               </div>
             )}
-          </CardContent>
+          </CardHeader>
         </Card>
       </div>
 
       {!isLoading && strategy ? (
         <div className="min-w-0 space-y-5">
-          <Card className="theme-creator-card min-w-0 overflow-hidden">
-            <CardContent className="space-y-4">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <UserRound className="h-4 w-4 text-primary" />
+          <div className="min-w-0 px-4 py-4">
+            <div className="space-y-4">
+              <div className="text-[11px] font-medium tracking-[0.18em] text-muted-foreground uppercase">
                 Creator
-              </CardTitle>
+              </div>
 
-              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-center md:gap-6">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <Avatar className="h-12 w-12">
+              <div className="space-y-3">
+                <div className="flex min-w-0 items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-2.5 md:flex-1 md:gap-6">
+                    <Avatar
+                      className={cn(
+                        "h-10 w-10 md:h-12 md:w-12",
+                        getUserAvatarRingClass(strategy.user?.membership),
+                      )}
+                    >
                       <AvatarImage
                         src={strategy.user?.avatar}
                         alt={
@@ -977,190 +1012,223 @@ export default function StrategyDetailPage() {
                       </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0 space-y-0.5">
-                      <p className="truncate text-base font-semibold tracking-tight text-foreground">
-                        {strategy.user?.name?.trim() ||
-                          strategy.user?.username ||
-                          "Unknown"}
-                      </p>
-                      <p className="truncate text-sm text-muted-foreground">
+                      <div className="flex min-w-0 items-center gap-1.5">
+                        <p className="truncate text-sm font-semibold tracking-tight text-foreground md:text-base">
+                          {strategy.user?.name?.trim() ||
+                            strategy.user?.username ||
+                            "Unknown"}
+                        </p>
+                        <UserMembershipMark
+                          membership={strategy.user?.membership}
+                        />
+                      </div>
+                      <p className="truncate text-xs text-muted-foreground md:text-sm">
                         @{strategy.user?.username || "unknown"}
                       </p>
                     </div>
+                    <div className="hidden min-w-0 grid-cols-3 gap-3 text-center md:grid md:max-w-[320px] md:flex-none">
+                      <div className="flex min-w-0 flex-col items-center">
+                        <p className="text-lg font-semibold tracking-tight text-foreground">
+                          {formatCompactNumber(
+                            strategy.user?.stats?.followerCount,
+                          )}
+                        </p>
+                        <p className="break-words text-[11px] tracking-[0.14em] text-muted-foreground uppercase">
+                          Followers
+                        </p>
+                      </div>
+                      <div className="flex min-w-0 flex-col items-center">
+                        <p className="text-lg font-semibold tracking-tight text-foreground">
+                          {formatCompactNumber(
+                            strategy.user?.stats?.strategyCount,
+                          )}
+                        </p>
+                        <p className="break-words text-[11px] tracking-[0.14em] text-muted-foreground uppercase">
+                          Strategies
+                        </p>
+                      </div>
+                      <div className="flex min-w-0 flex-col items-center">
+                        <p className="text-lg font-semibold tracking-tight text-foreground">
+                          {formatCompactNumber(
+                            strategy.user?.stats?.backtestCount,
+                          )}
+                        </p>
+                        <p className="break-words text-[11px] tracking-[0.14em] text-muted-foreground uppercase">
+                          Backtests
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="grid min-w-0 flex-1 grid-cols-3 gap-3 text-center md:max-w-[320px] md:flex-none">
-                    <div className="flex min-w-0 flex-col items-center">
-                      <p className="text-lg font-semibold tracking-tight text-foreground">
-                        {formatCompactNumber(
-                          strategy.user?.stats?.followerCount,
-                        )}
-                      </p>
-                      <p className="break-words text-[11px] tracking-[0.14em] text-muted-foreground uppercase">
-                        Followers
-                      </p>
-                    </div>
-                    <div className="flex min-w-0 flex-col items-center">
-                      <p className="text-lg font-semibold tracking-tight text-foreground">
-                        {formatCompactNumber(
-                          strategy.user?.stats?.strategyCount,
-                        )}
-                      </p>
-                      <p className="break-words text-[11px] tracking-[0.14em] text-muted-foreground uppercase">
-                        Strategies
-                      </p>
-                    </div>
-                    <div className="flex min-w-0 flex-col items-center">
-                      <p className="text-lg font-semibold tracking-tight text-foreground">
-                        {formatCompactNumber(
-                          strategy.user?.stats?.backtestCount,
-                        )}
-                      </p>
-                      <p className="break-words text-[11px] tracking-[0.14em] text-muted-foreground uppercase">
-                        Backtests
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                {!isMine ? (
-                  <ButtonGroup className="w-full md:w-auto">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={isFollowingCreator ? "outline" : "default"}
-                      className="relative min-w-0 flex-1 rounded-r-none"
-                      disabled={!isAuthenticated || isFollowUpdating}
-                      onClick={() => {
-                        if (isFollowingCreator) {
-                          setIsUnfollowDialogOpen(true);
-                          return;
-                        }
+                  {!isMine ? (
+                    <ButtonGroup className="w-auto shrink-0">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={isFollowingCreator ? "outline" : "default"}
+                        className="relative min-w-0 rounded-r-none px-2.5 md:flex-1"
+                        disabled={!isAuthenticated || isFollowUpdating}
+                        onClick={() => {
+                          if (isFollowingCreator) {
+                            setIsUnfollowDialogOpen(true);
+                            return;
+                          }
 
-                        void onToggleCreatorFollow();
-                      }}
-                    >
-                      {isFollowUpdating ? (
-                        <Loader2 className="absolute h-4 w-4 animate-spin" />
-                      ) : null}
-                      <span
-                        className={cn(
-                          "inline-flex items-center gap-1",
-                          isFollowUpdating && "opacity-0",
-                        )}
+                          void onToggleCreatorFollow();
+                        }}
                       >
-                        {isFollowingCreator ? (
-                          <>
-                            <UserCheck className="h-4 w-4" />
-                            Following
-                          </>
-                        ) : (
-                          <>
-                            <UserPlus className="h-4 w-4" />
-                            Follow
-                          </>
-                        )}
-                      </span>
-                    </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          type="button"
-                          size="icon-sm"
-                          variant={isFollowingCreator ? "outline" : "default"}
-                          className="-ml-px shrink-0 rounded-l-none"
-                          aria-label="More follow actions"
-                        >
-                          <ChevronDown className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-44">
-                        {canOpenCreatorProfile ? (
-                          <DropdownMenuItem asChild>
-                            <Link
-                              to={isMine ? "/profile" : `/${creatorUsername}`}
-                              className="flex items-center gap-2"
-                            >
-                              <UserRound className="h-4 w-4" />
-                              Profile
-                            </Link>
-                          </DropdownMenuItem>
-                        ) : (
-                          <DropdownMenuItem disabled>
-                            <UserRound className="h-4 w-4" />
-                            Profile
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem
-                          onSelect={() => {
-                            void onCopyCreatorProfileLink();
-                          }}
-                        >
-                          <Copy className="h-4 w-4" />
-                          Copy link
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          disabled={!isAuthenticated || isFollowUpdating}
-                          onSelect={() => {
-                            if (isFollowingCreator) {
-                              setIsUnfollowDialogOpen(true);
-                              return;
-                            }
-
-                            void onToggleCreatorFollow();
-                          }}
+                        {isFollowUpdating ? (
+                          <Loader2 className="absolute h-4 w-4 animate-spin" />
+                        ) : null}
+                        <span
+                          className={cn(
+                            "inline-flex items-center gap-1",
+                            isFollowUpdating && "opacity-0",
+                          )}
                         >
                           {isFollowingCreator ? (
                             <>
                               <UserCheck className="h-4 w-4" />
-                              Unfollow
+                              <span className="hidden sm:inline">
+                                Following
+                              </span>
                             </>
                           ) : (
                             <>
                               <UserPlus className="h-4 w-4" />
-                              Follow
+                              <span className="hidden sm:inline">Follow</span>
                             </>
                           )}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </ButtonGroup>
-                ) : null}
-              </div>
-            </CardContent>
-          </Card>
+                        </span>
+                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            type="button"
+                            size="icon-sm"
+                            variant={isFollowingCreator ? "outline" : "default"}
+                            className="-ml-px shrink-0 rounded-l-none"
+                            aria-label="More follow actions"
+                          >
+                            <ChevronDown className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-44">
+                          {canOpenCreatorProfile ? (
+                            <DropdownMenuItem asChild>
+                              <Link
+                                to={isMine ? "/profile" : `/${creatorUsername}`}
+                                className="flex items-center gap-2"
+                              >
+                                <UserRound className="h-4 w-4" />
+                                Profile
+                              </Link>
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem disabled>
+                              <UserRound className="h-4 w-4" />
+                              Profile
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem
+                            onSelect={() => {
+                              void onCopyCreatorProfileLink();
+                            }}
+                          >
+                            <Copy className="h-4 w-4" />
+                            Copy link
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            disabled={!isAuthenticated || isFollowUpdating}
+                            onSelect={() => {
+                              if (isFollowingCreator) {
+                                setIsUnfollowDialogOpen(true);
+                                return;
+                              }
 
-          <RulePanel
-            title="Buy Strategy"
-            block={strategy.entry?.buy}
-            tone="buy"
-          />
-          <RulePanel
-            title="Sell Strategy"
-            block={strategy.entry?.sell}
-            tone="sell"
-          />
+                              void onToggleCreatorFollow();
+                            }}
+                          >
+                            {isFollowingCreator ? (
+                              <>
+                                <UserCheck className="h-4 w-4" />
+                                Unfollow
+                              </>
+                            ) : (
+                              <>
+                                <UserPlus className="h-4 w-4" />
+                                Follow
+                              </>
+                            )}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </ButtonGroup>
+                  ) : null}
+                </div>
+                <div className="grid min-w-0 grid-cols-3 gap-2 text-center md:hidden">
+                  <div className="flex min-w-0 flex-col items-center">
+                    <p className="text-base font-semibold tracking-tight text-foreground">
+                      {formatCompactNumber(strategy.user?.stats?.followerCount)}
+                    </p>
+                    <p className="break-words text-[10px] tracking-[0.12em] text-muted-foreground uppercase">
+                      Followers
+                    </p>
+                  </div>
+                  <div className="flex min-w-0 flex-col items-center">
+                    <p className="text-base font-semibold tracking-tight text-foreground">
+                      {formatCompactNumber(strategy.user?.stats?.strategyCount)}
+                    </p>
+                    <p className="break-words text-[10px] tracking-[0.12em] text-muted-foreground uppercase">
+                      Strategies
+                    </p>
+                  </div>
+                  <div className="flex min-w-0 flex-col items-center">
+                    <p className="text-base font-semibold tracking-tight text-foreground">
+                      {formatCompactNumber(strategy.user?.stats?.backtestCount)}
+                    </p>
+                    <p className="break-words text-[10px] tracking-[0.12em] text-muted-foreground uppercase">
+                      Backtests
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid min-w-0 gap-5 md:grid-cols-2 md:items-start">
+            <RulePanel
+              title="Buy Entry"
+              block={strategy.entry?.buy}
+              tone="buy"
+            />
+            <RulePanel
+              title="Sell Entry"
+              block={strategy.entry?.sell}
+              tone="sell"
+            />
+          </div>
 
           <div className="grid min-w-0 gap-5 lg:grid-cols-3 lg:items-start">
-            <Card className="theme-primary-card min-w-0 overflow-hidden lg:col-span-3">
-              <CardHeader className="theme-primary-card-header space-y-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="theme-primary-card-badge inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium tracking-[0.16em] uppercase">
-                    <Radar className="h-3 w-3" />
-                    Indicator Stack
-                  </span>
-                  <span className="theme-primary-card-badge-muted rounded-full border px-2.5 py-1 text-[11px] font-medium tracking-[0.16em] uppercase">
-                    {strategy.indicators?.length ?? 0}{" "}
-                    {(strategy.indicators?.length ?? 0) === 1
-                      ? "indicator"
-                      : "indicators"}
-                  </span>
-                </div>
-                <CardDescription className="theme-primary-card-description max-w-2xl text-sm leading-6">
-                  Signal inputs used in this setup.
+            <Card className="min-w-0 overflow-hidden border-border/70 lg:col-span-3">
+              <CardHeader className="space-y-2">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Activity className="h-4 w-4 text-primary" />
+                  Indicators
+                </CardTitle>
+                <CardDescription className="max-w-2xl text-sm leading-6">
+                  {(strategy.indicators?.length ?? 0) === 0
+                    ? "No indicators used in this setup."
+                    : `${strategy.indicators?.length ?? 0} ${
+                        (strategy.indicators?.length ?? 0) === 1
+                          ? "indicator"
+                          : "indicators"
+                      } used in this setup.`}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {strategy.indicators?.length ? (
-                  <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-5">
+                  <div className="divide-y divide-border/60">
                     {strategy.indicators.map((indicator, index) => {
                       const params = formatIndicatorParams(
                         indicator.params,
@@ -1168,37 +1236,54 @@ export default function StrategyDetailPage() {
                       return (
                         <div
                           key={`${indicator.key ?? indicator.indicator?._id ?? index}`}
-                          className="theme-primary-card-item min-w-0 rounded-lg border p-2"
+                          className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 md:flex-row md:items-start md:justify-between md:gap-6"
                         >
-                          <div className="flex min-h-[5.25rem] flex-col">
-                            <div className="min-w-0">
+                          <div className="min-w-0 md:flex-1">
+                            <div className="flex min-w-0 items-start gap-2">
+                              <span className="shrink-0 text-sm leading-5 font-semibold text-muted-foreground">
+                                {index + 1}.
+                              </span>
                               <p className="line-clamp-2 text-sm leading-5 font-semibold text-foreground">
                                 {indicator.indicator?.name ||
                                   indicator.key ||
                                   "Indicator"}
                               </p>
-                              <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
-                                {indicator.indicator?.category ||
-                                  "Custom signal"}
-                              </p>
                             </div>
+                            <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
+                              {indicator.indicator?.description ||
+                                "Custom signal"}
+                            </p>
+                          </div>
 
-                            <div className="mt-1 text-xs text-muted-foreground">
-                              Key: {indicator.key || "Not set"}
-                            </div>
-
-                            <div className="mt-1 flex flex-wrap content-start gap-1 overflow-hidden">
-                              {params.length
-                                ? params.map(([paramKey, paramValue]) => (
-                                    <span
-                                      key={paramKey}
-                                      className="theme-primary-card-tag inline-flex items-center rounded-full border px-1.5 py-0.5 text-[11px]"
-                                    >
-                                      {paramKey}: {String(paramValue)}
+                          <div className="space-y-1 text-sm md:w-[240px] md:flex-none md:text-right">
+                            <p className="text-xs text-muted-foreground">
+                              Key:{" "}
+                              <span className="font-medium text-foreground">
+                                {indicator.key || "Not set"}
+                              </span>
+                            </p>
+                            {params.length ? (
+                              <div className="text-xs text-muted-foreground md:ml-auto md:max-w-[240px]">
+                                {params.map(
+                                  ([paramKey, paramValue], paramIndex) => (
+                                    <span key={paramKey}>
+                                      {paramIndex > 0 ? " · " : ""}
+                                      <span className="font-medium text-muted-foreground">
+                                        {paramKey}
+                                      </span>
+                                      :{" "}
+                                      <span className="font-medium text-foreground">
+                                        {String(paramValue)}
+                                      </span>
                                     </span>
-                                  ))
-                                : null}
-                            </div>
+                                  ),
+                                )}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-muted-foreground">
+                                No parameters
+                              </p>
+                            )}
                           </div>
                         </div>
                       );
@@ -1221,12 +1306,12 @@ export default function StrategyDetailPage() {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-foreground">
-                    Validate this strategy before live execution
+                    Test before trading live
                   </p>
                   <p className="mt-1 max-w-2xl">
-                    Backtest this setup first. Results can vary across symbols,
-                    timeframes, and market conditions, so double-check the rule
-                    flow and risk settings before going live.
+                    Run this strategy against historical market data before
+                    using it live. Results can change by symbol, timeframe, and
+                    date range.
                   </p>
                 </div>
               </div>
@@ -1234,17 +1319,10 @@ export default function StrategyDetailPage() {
                 <Button
                   type="button"
                   asChild
-                  className="w-full min-w-[132px] md:w-auto"
+                  className="w-full md:min-w-40 md:w-auto"
                 >
-                  <Link
-                    to="/backtest"
-                    state={{
-                      strategyId: strategy._id,
-                      strategyName: strategy.name,
-                    }}
-                    className="inline-flex items-center"
-                  >
-                    Backtest
+                  <Link to="/backtest" state={backtestStrategyState}>
+                    Run Backtest
                   </Link>
                 </Button>
               </div>

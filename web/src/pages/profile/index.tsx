@@ -9,10 +9,8 @@ import {
 import {
   Bookmark,
   BookmarkCheck,
-  BadgeCheck,
   CandlestickChart,
   Check,
-  CheckCircle2,
   ChevronDown,
   Copy,
   Gauge,
@@ -37,6 +35,7 @@ import {
   X,
   XCircle,
   type LucideIcon,
+  CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -92,6 +91,11 @@ import {
 } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { checkUserExist, editProfile } from "@/api/auth";
+import {
+  getUserAvatarRingClass,
+  UserMembershipMark,
+  type UserMembership,
+} from "@/components/user-membership";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
@@ -137,10 +141,12 @@ type PublicProfileUser = {
   };
   isFollowing?: boolean;
   membership?: {
-    plan?: "free" | "plus" | "pro" | string;
-    badgeLabel?: string | null;
-    badgeVariant?: "free" | "plus" | "pro" | string;
-    verifiedVariant?: "free" | "plus" | "pro" | string;
+    plan?: UserMembership["plan"];
+    badgeLabel?: UserMembership["badgeLabel"];
+    badgeVariant?: UserMembership["badgeVariant"];
+    verifiedVariant?: UserMembership["verifiedVariant"];
+    title?: UserMembership["title"];
+    description?: UserMembership["description"];
   };
 };
 
@@ -164,6 +170,7 @@ type ProfileFollowListItem = {
   name?: string;
   username?: string;
   avatar?: string;
+  membership?: PublicProfileUser["membership"];
   stats?: {
     followerCount?: number;
     followingCount?: number;
@@ -306,37 +313,6 @@ function getProfileBacktestSummaryMetrics(item: ProfileBacktestListItem) {
       valueClassName: "text-foreground",
     },
   ];
-}
-
-function getProfileMembershipMeta(
-  membership?: PublicProfileUser["membership"],
-) {
-  switch (membership?.verifiedVariant) {
-    case "pro":
-      return {
-        Icon: BadgeCheck,
-        iconClassName: "fill-amber-500 text-white",
-        iconWrapperClassName: "text-amber-500",
-        labelClassName: "text-amber-500",
-        badgeLabel: membership.badgeLabel ?? "Pro",
-      };
-    case "plus":
-      return {
-        Icon: BadgeCheck,
-        iconClassName: "fill-sky-500 text-white",
-        iconWrapperClassName: "text-sky-500",
-        labelClassName: "text-sky-500",
-        badgeLabel: membership.badgeLabel ?? "Plus",
-      };
-    default:
-      return {
-        Icon: null,
-        iconClassName: "",
-        iconWrapperClassName: "",
-        labelClassName: "",
-        badgeLabel: null,
-      };
-  }
 }
 
 export default function Profile() {
@@ -1683,7 +1659,7 @@ export default function Profile() {
     ? form.username || user?.username || routeUsername
     : viewedUser?.username || routeUsername;
   const profileMembership = viewedUser?.membership;
-  const profileMembershipMeta = getProfileMembershipMeta(profileMembership);
+  const profileAvatarRingClass = getUserAvatarRingClass(profileMembership);
   const joinedDateLabel = new Date(
     (canEditProfile ? user?.createdAt : viewedUser?.createdAt) || Date.now(),
   ).toLocaleDateString(undefined, {
@@ -1707,7 +1683,12 @@ export default function Profile() {
                 </div>
                 <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                   <div className="flex min-w-0 items-center gap-4 md:items-start">
-                    <Avatar className="h-24 w-24 md:h-28 md:w-28">
+                    <Avatar
+                      className={cn(
+                        "h-24 w-24 md:h-28 md:w-28",
+                        profileAvatarRingClass,
+                      )}
+                    >
                       <AvatarImage
                         src={
                           canEditProfile
@@ -1729,36 +1710,11 @@ export default function Profile() {
                           <h2 className="break-words text-xl font-bold tracking-tight text-foreground md:text-2xl">
                             {profileDisplayName}
                           </h2>
-                          {profileMembershipMeta.Icon ? (
-                            <span
-                              className={cn(
-                                "inline-flex items-center",
-                                profileMembershipMeta.iconWrapperClassName,
-                              )}
-                              title={
-                                profileMembership?.plan === "pro"
-                                  ? "Pro member"
-                                  : "Plus member"
-                              }
-                            >
-                              <profileMembershipMeta.Icon
-                                className={cn(
-                                  "size-4 md:size-5",
-                                  profileMembershipMeta.iconClassName,
-                                )}
-                              />
-                            </span>
-                          ) : null}
-                          {profileMembershipMeta.badgeLabel ? (
-                            <span
-                              className={cn(
-                                "inline-flex items-center text-sm font-semibold tracking-tight",
-                                profileMembershipMeta.labelClassName,
-                              )}
-                            >
-                              {profileMembershipMeta.badgeLabel}
-                            </span>
-                          ) : null}
+                          <UserMembershipMark
+                            membership={profileMembership}
+                            className="md:size-5"
+                            interactive
+                          />
                         </div>
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
                           <p className="break-all">@{profileDisplayUsername}</p>
@@ -2422,7 +2378,14 @@ export default function Profile() {
                                               }}
                                               className="flex min-w-0 flex-1 items-center gap-3 transition hover:text-foreground"
                                             >
-                                              <Avatar className="h-10 w-10">
+                                              <Avatar
+                                                className={cn(
+                                                  "h-10 w-10",
+                                                  getUserAvatarRingClass(
+                                                    item.membership,
+                                                  ),
+                                                )}
+                                              >
                                                 <AvatarImage
                                                   src={item.avatar}
                                                   alt={
@@ -2440,9 +2403,15 @@ export default function Profile() {
                                                 </AvatarFallback>
                                               </Avatar>
                                               <div className="min-w-0 space-y-1">
-                                                <p className="truncate font-medium">
-                                                  {item.name || "Unknown"}
-                                                </p>
+                                                <div className="flex min-w-0 items-center gap-1.5">
+                                                  <p className="truncate font-medium">
+                                                    {item.name || "Unknown"}
+                                                  </p>
+                                                  <UserMembershipMark
+                                                    membership={item.membership}
+                                                    className="size-3.5"
+                                                  />
+                                                </div>
                                                 <p className="truncate text-xs text-muted-foreground">
                                                   @{item.username || "unknown"}
                                                 </p>

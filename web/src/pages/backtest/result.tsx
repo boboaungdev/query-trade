@@ -25,6 +25,8 @@ import {
   Target,
   Trash2,
   TrendingUp,
+  UserCheck,
+  UserPlus,
   UserRound,
 } from "lucide-react";
 import {
@@ -55,6 +57,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { createFollow, deleteFollow } from "@/api/follow";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import {
@@ -90,6 +94,11 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  getUserAvatarRingClass,
+  UserMembershipMark,
+  type UserMembership,
+} from "@/components/user-membership";
 import { useBookmarkIds } from "@/hooks/use-bookmark-ids";
 import { cn } from "@/lib/utils";
 import { deleteBacktest, fetchBacktestById } from "@/api/backtest";
@@ -171,12 +180,21 @@ type BacktestDetail = {
       name?: string;
       username?: string;
       avatar?: string;
+      membership?: UserMembership;
     };
   };
   user?: {
     _id?: string;
     name?: string;
     username?: string;
+    avatar?: string;
+    membership?: UserMembership;
+    isFollowing?: boolean;
+    stats?: {
+      followerCount?: number;
+      strategyCount?: number;
+      backtestCount?: number;
+    };
   };
   result: BacktestResult;
 };
@@ -1089,6 +1107,8 @@ export default function BacktestResultPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isUnfollowDialogOpen, setIsUnfollowDialogOpen] = useState(false);
+  const [isFollowUpdating, setIsFollowUpdating] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -1166,8 +1186,13 @@ export default function BacktestResultPage() {
   const strategyIsPublic = backtest.strategy?.isPublic ?? false;
   const strategyCreatorUsername =
     backtest.strategy?.user?.username?.trim().replace(/^@/, "") || "unknown";
+  const backtesterName =
+    backtest.user?.name?.trim() || backtest.user?.username || "Unknown";
+  const backtesterUsername =
+    backtest.user?.username?.trim().replace(/^@/, "") || "unknown";
   const isBacktestOwner =
     Boolean(user?._id) && backtest.user?._id === user?._id;
+  const isFollowingBacktester = Boolean(backtest.user?.isFollowing);
   const isBacktestBookmarked = bookmarkedBacktestIds.has(backtestId);
   const isBacktestBookmarkUpdating = updatingBacktestIds.has(backtestId);
   const isStrategyOwner =
@@ -1180,6 +1205,8 @@ export default function BacktestResultPage() {
   );
   const canOpenCreatorProfile =
     !isStrategyOwner && strategyCreatorUsername !== "unknown";
+  const canOpenBacktesterProfile =
+    !isBacktestOwner && backtesterUsername !== "unknown";
   const canOpenStrategy =
     Boolean(backtest.strategy?._id) && (strategyIsPublic || isStrategyOwner);
   const tradesPerPage = 10;
@@ -1263,6 +1290,61 @@ export default function BacktestResultPage() {
     }
 
     toast.error(result.message);
+  };
+
+  const onCopyBacktesterProfileLink = async () => {
+    if (!canOpenBacktesterProfile) return;
+
+    const profileUrl = `${window.location.origin}/${backtesterUsername}`;
+
+    try {
+      await navigator.clipboard.writeText(profileUrl);
+      toast.success("Link copied");
+    } catch {
+      toast.error("Failed to copy link");
+    }
+  };
+
+  const onToggleBacktesterFollow = async () => {
+    const backtesterId = backtest.user?._id;
+
+    if (!backtesterId || !isAuthenticated || isBacktestOwner) {
+      return;
+    }
+
+    setIsFollowUpdating(true);
+
+    try {
+      if (isFollowingBacktester) {
+        await deleteFollow(backtesterId);
+      } else {
+        await createFollow(backtesterId);
+      }
+
+      setBacktest((current) =>
+        current?.user
+          ? {
+              ...current,
+              user: {
+                ...current.user,
+                isFollowing: !isFollowingBacktester,
+                stats: {
+                  ...current.user.stats,
+                  followerCount: Math.max(
+                    0,
+                    (current.user.stats?.followerCount ?? 0) +
+                      (isFollowingBacktester ? -1 : 1),
+                  ),
+                },
+              },
+            }
+          : current,
+      );
+    } catch {
+      toast.error("Failed to update follow status.");
+    } finally {
+      setIsFollowUpdating(false);
+    }
   };
 
   return (
@@ -1401,7 +1483,13 @@ export default function BacktestResultPage() {
                   </span>
                   <span className="inline-flex items-center gap-1 rounded-full border bg-muted/30 px-2 py-0.5">
                     <UserRound className="h-3.5 w-3.5 text-primary" />@
-                    <span>{backtest.user?.username || "unknown"}</span>
+                    <span className="inline-flex items-center gap-1">
+                      <span>{backtest.user?.username || "unknown"}</span>
+                      <UserMembershipMark
+                        membership={backtest.user?.membership}
+                        className="size-3"
+                      />
+                    </span>
                   </span>
                   <span className="inline-flex max-w-full items-center gap-1 rounded-full border bg-muted/30 px-2 py-0.5">
                     <Target className="h-3.5 w-3.5 text-primary" />
@@ -1520,6 +1608,240 @@ export default function BacktestResultPage() {
         </div>
 
         <TabsContent value="overview" className="space-y-4 md:space-y-6">
+          <Card className="min-w-0 overflow-hidden border-border/70 bg-transparent">
+            <CardContent className="space-y-4">
+              <div className="text-[11px] font-medium tracking-[0.18em] text-muted-foreground uppercase">
+                Backtested By
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex min-w-0 items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-2.5 md:flex-1 md:gap-6">
+                    <Avatar
+                      className={cn(
+                        "h-10 w-10 md:h-12 md:w-12",
+                        getUserAvatarRingClass(backtest.user?.membership),
+                      )}
+                    >
+                      <AvatarImage
+                        src={backtest.user?.avatar}
+                        alt={backtesterName}
+                      />
+                      <AvatarFallback>
+                        {(backtesterName.trim()?.[0] || "U").toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 space-y-0.5">
+                      <div className="flex min-w-0 items-center gap-1.5">
+                        <p className="truncate text-sm font-semibold tracking-tight text-foreground md:text-base">
+                          {backtesterName}
+                        </p>
+                        <UserMembershipMark
+                          membership={backtest.user?.membership}
+                        />
+                      </div>
+                      <p className="truncate text-xs text-muted-foreground md:text-sm">
+                        @{backtesterUsername}
+                      </p>
+                    </div>
+                    <div className="hidden min-w-0 grid-cols-3 gap-3 text-center md:grid md:max-w-[320px] md:flex-none">
+                      <div className="flex min-w-0 flex-col items-center">
+                        <p className="text-lg font-semibold tracking-tight text-foreground">
+                          {backtest.user?.stats?.followerCount ?? 0}
+                        </p>
+                        <p className="break-words text-[11px] tracking-[0.14em] text-muted-foreground uppercase">
+                          Followers
+                        </p>
+                      </div>
+                      <div className="flex min-w-0 flex-col items-center">
+                        <p className="text-lg font-semibold tracking-tight text-foreground">
+                          {backtest.user?.stats?.strategyCount ?? 0}
+                        </p>
+                        <p className="break-words text-[11px] tracking-[0.14em] text-muted-foreground uppercase">
+                          Strategies
+                        </p>
+                      </div>
+                      <div className="flex min-w-0 flex-col items-center">
+                        <p className="text-lg font-semibold tracking-tight text-foreground">
+                          {backtest.user?.stats?.backtestCount ?? 0}
+                        </p>
+                        <p className="break-words text-[11px] tracking-[0.14em] text-muted-foreground uppercase">
+                          Backtests
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  {!isBacktestOwner && canOpenBacktesterProfile ? (
+                    <ButtonGroup className="w-auto shrink-0">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={isFollowingBacktester ? "outline" : "default"}
+                        className="relative min-w-0 rounded-r-none px-2.5 md:flex-1"
+                        disabled={!isAuthenticated || isFollowUpdating}
+                        onClick={() => {
+                          if (isFollowingBacktester) {
+                            setIsUnfollowDialogOpen(true);
+                            return;
+                          }
+
+                          void onToggleBacktesterFollow();
+                        }}
+                      >
+                        {isFollowUpdating ? (
+                          <Loader2 className="absolute h-4 w-4 animate-spin" />
+                        ) : null}
+                        <span
+                          className={cn(
+                            "inline-flex items-center gap-1",
+                            isFollowUpdating && "opacity-0",
+                          )}
+                        >
+                          {isFollowingBacktester ? (
+                            <>
+                              <UserCheck className="h-4 w-4" />
+                              <span className="hidden sm:inline">
+                                Following
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <UserPlus className="h-4 w-4" />
+                              <span className="hidden sm:inline">Follow</span>
+                            </>
+                          )}
+                        </span>
+                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            type="button"
+                            size="icon-sm"
+                            variant={
+                              isFollowingBacktester ? "outline" : "default"
+                            }
+                            className="-ml-px shrink-0 rounded-l-none"
+                            aria-label="More backtester actions"
+                          >
+                            <ChevronDown className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                          align="end"
+                          className="w-44 min-w-44"
+                        >
+                          <DropdownMenuItem asChild>
+                            <Link
+                              to={`/${backtesterUsername}`}
+                              className="flex items-center gap-2"
+                            >
+                              <UserRound className="h-4 w-4" />
+                              Profile
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onSelect={() => {
+                              void onCopyBacktesterProfileLink();
+                            }}
+                          >
+                            <Copy className="h-4 w-4" />
+                            Copy link
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onSelect={() => {
+                              if (isFollowingBacktester) {
+                                setIsUnfollowDialogOpen(true);
+                                return;
+                              }
+
+                              void onToggleBacktesterFollow();
+                            }}
+                            disabled={!isAuthenticated || isFollowUpdating}
+                          >
+                            {isFollowUpdating ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : isFollowingBacktester ? (
+                              <UserCheck className="h-4 w-4" />
+                            ) : (
+                              <UserPlus className="h-4 w-4" />
+                            )}
+                            {isFollowingBacktester ? "Unfollow" : "Follow"}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </ButtonGroup>
+                  ) : null}
+                </div>
+                <div
+                  className="grid min-w-0 grid-cols-3 gap-2 text-center md:hidden"
+                >
+                  <div className="flex min-w-0 flex-col items-center">
+                    <p className="text-base font-semibold tracking-tight text-foreground md:text-lg">
+                      {backtest.user?.stats?.followerCount ?? 0}
+                    </p>
+                    <p className="break-words text-[10px] tracking-[0.12em] text-muted-foreground uppercase md:text-[11px] md:tracking-[0.14em]">
+                      Followers
+                    </p>
+                  </div>
+                  <div className="flex min-w-0 flex-col items-center">
+                    <p className="text-base font-semibold tracking-tight text-foreground md:text-lg">
+                      {backtest.user?.stats?.strategyCount ?? 0}
+                    </p>
+                    <p className="break-words text-[10px] tracking-[0.12em] text-muted-foreground uppercase md:text-[11px] md:tracking-[0.14em]">
+                      Strategies
+                    </p>
+                  </div>
+                  <div className="flex min-w-0 flex-col items-center">
+                    <p className="text-base font-semibold tracking-tight text-foreground md:text-lg">
+                      {backtest.user?.stats?.backtestCount ?? 0}
+                    </p>
+                    <p className="break-words text-[10px] tracking-[0.12em] text-muted-foreground uppercase md:text-[11px] md:tracking-[0.14em]">
+                      Backtests
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <AlertDialog
+            open={isUnfollowDialogOpen}
+            onOpenChange={setIsUnfollowDialogOpen}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Unfollow this user?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  You can follow this user again anytime from their profile.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={isFollowUpdating}>
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  variant="destructive"
+                  disabled={isFollowUpdating}
+                  className="relative !bg-destructive !text-white hover:!bg-destructive/90"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    void onToggleBacktesterFollow().finally(() => {
+                      setIsUnfollowDialogOpen(false);
+                    });
+                  }}
+                >
+                  {isFollowUpdating ? (
+                    <Loader2 className="absolute h-4 w-4 animate-spin text-white" />
+                  ) : null}
+                  <span className={isFollowUpdating ? "opacity-0" : undefined}>
+                    Unfollow
+                  </span>
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
           <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
             <Card className="border-border/70 bg-card">
               <CardHeader className="pb-2">
@@ -1610,8 +1932,8 @@ export default function BacktestResultPage() {
 
           <Card className="border-border/70 bg-card">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-xl">
-                <CandlestickChart className="h-5 w-5 text-primary" />
+              <CardTitle className="flex items-center gap-2 text-base">
+                <CandlestickChart className="h-4 w-4 text-primary" />
                 Trade Distribution
               </CardTitle>
               <CardDescription>
@@ -1681,8 +2003,8 @@ export default function BacktestResultPage() {
 
           <Card className="border-border/70 bg-card">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-xl">
-                <AreaChart className="h-5 w-5 text-primary" />
+              <CardTitle className="flex items-center gap-2 text-base">
+                <AreaChart className="h-4 w-4 text-primary" />
                 Performance Insights
               </CardTitle>
               <CardDescription>
@@ -1871,8 +2193,8 @@ export default function BacktestResultPage() {
             <CardHeader>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <CardTitle className="flex items-center gap-2 text-xl">
-                    <Target className="h-5 w-5 text-primary" />
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Target className="h-4 w-4 text-primary" />
                     Edge Radar
                   </CardTitle>
                   <CardDescription>
@@ -1933,8 +2255,8 @@ export default function BacktestResultPage() {
         <TabsContent value="setup" className="space-y-4 md:space-y-6">
           <Card className="border-border/70 bg-card">
             <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-xl">
-                <Target className="h-5 w-5 text-primary" />
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Target className="h-4 w-4 text-primary" />
                 Strategy
               </CardTitle>
               <CardDescription>
@@ -1950,7 +2272,13 @@ export default function BacktestResultPage() {
                   <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
                     <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
                       <UserRound className="h-3.5 w-3.5 text-muted-foreground" />
-                      @<span>{strategyCreatorUsername}</span>
+                      <span className="inline-flex items-center gap-1">
+                        @<span>{strategyCreatorUsername}</span>
+                        <UserMembershipMark
+                          membership={backtest.strategy?.user?.membership}
+                          className="size-3"
+                        />
+                      </span>
                     </span>
                     <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
                       {strategyIsPublic ? (
@@ -1985,6 +2313,7 @@ export default function BacktestResultPage() {
                   <ButtonGroup className="w-full min-w-0 md:w-auto">
                     <Button
                       type="button"
+                      size="sm"
                       className="min-w-0 flex-1 rounded-r-none"
                       asChild
                     >
@@ -2000,6 +2329,7 @@ export default function BacktestResultPage() {
                       <DropdownMenuTrigger asChild>
                         <Button
                           type="button"
+                          size="icon-sm"
                           className="-ml-px shrink-0 rounded-l-none"
                           aria-label="More strategy actions"
                           title="More strategy actions"
@@ -2057,6 +2387,7 @@ export default function BacktestResultPage() {
                   <Button
                     type="button"
                     variant="outline"
+                    size="sm"
                     className="w-full md:w-auto md:flex-none"
                     asChild
                   >
@@ -2150,8 +2481,8 @@ export default function BacktestResultPage() {
         <TabsContent value="equity" className="space-y-4 md:space-y-6">
           <Card className="max-w-full min-w-0 border-border/70 bg-card">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-xl">
-                <AreaChart className="h-5 w-5 text-primary" />
+              <CardTitle className="flex items-center gap-2 text-base">
+                <AreaChart className="h-4 w-4 text-primary" />
                 Equity Curve
               </CardTitle>
               <CardDescription>
@@ -2173,8 +2504,8 @@ export default function BacktestResultPage() {
         <TabsContent value="trades" className="space-y-4 md:space-y-6">
           <Card className="border-border/70 bg-card">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-xl">
-                <CalendarClock className="h-5 w-5 text-primary" />
+              <CardTitle className="flex items-center gap-2 text-base">
+                <CalendarClock className="h-4 w-4 text-primary" />
                 Trade Activity
               </CardTitle>
               <CardDescription>
@@ -2189,8 +2520,8 @@ export default function BacktestResultPage() {
 
           <Card className="border-border/70 bg-card">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-xl">
-                <CandlestickChart className="h-5 w-5 text-primary" />
+              <CardTitle className="flex items-center gap-2 text-base">
+                <CandlestickChart className="h-4 w-4 text-primary" />
                 Trade History
               </CardTitle>
               <CardDescription>

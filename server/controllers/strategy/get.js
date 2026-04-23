@@ -2,6 +2,8 @@ import { UserDB } from "../../models/user.js";
 import { StrategyDB } from "../../models/strategy.js";
 import { BookmarkDB } from "../../models/bookmark.js";
 import { FollowDB } from "../../models/follow.js";
+import { SubscriptionDB } from "../../models/subscription.js";
+import { serializePublicUser } from "../../services/user/serializePublicUser.js";
 import { resError, resJson } from "../../utils/response.js";
 
 export const getStrategyById = async (req, res, next) => {
@@ -51,6 +53,21 @@ export const getStrategyById = async (req, res, next) => {
       if (strategy.user) {
         strategy.user.isFollowing = Boolean(follow);
       }
+    }
+
+    if (strategy.user?._id) {
+      const subscription = await SubscriptionDB.findOne({
+        user: strategy.user._id,
+      })
+        .select("user plan currentPeriodEnd")
+        .lean();
+
+      strategy.user = serializePublicUser(strategy.user, {
+        subscription,
+        extra: {
+          isFollowing: Boolean(strategy.user.isFollowing),
+        },
+      });
     }
 
     return resJson(res, 200, "Success single strategy fetched by ID.", {
@@ -157,6 +174,28 @@ export const getStrategies = async (req, res, next) => {
       StrategyDB.countDocuments(filter),
     ]);
 
+    let subscriptionMap = new Map();
+    if (strategies.length > 0) {
+      const userIds = strategies
+        .map((strategy) => strategy.user?._id)
+        .filter(Boolean);
+
+      if (userIds.length > 0) {
+        const subscriptions = await SubscriptionDB.find({
+          user: { $in: userIds },
+        })
+          .select("user plan currentPeriodEnd")
+          .lean();
+
+        subscriptionMap = new Map(
+          subscriptions.map((subscription) => [
+            String(subscription.user),
+            subscription,
+          ]),
+        );
+      }
+    }
+
     let bookmarkedStrategyIds = [];
     if (user?._id && strategies.length > 0) {
       const bookmarks = await BookmarkDB.find({
@@ -174,6 +213,11 @@ export const getStrategies = async (req, res, next) => {
 
     const strategiesWithBookmarkState = strategies.map((strategy) => ({
       ...strategy,
+      user: strategy.user
+        ? serializePublicUser(strategy.user, {
+            subscription: subscriptionMap.get(String(strategy.user._id)),
+          })
+        : strategy.user,
       isBookmarked: bookmarkedStrategyIds.includes(String(strategy._id)),
     }));
 

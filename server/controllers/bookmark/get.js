@@ -1,6 +1,8 @@
 import { resJson } from "../../utils/response.js";
 import { BacktestDB } from "../../models/backtest.js";
 import { BookmarkDB } from "../../models/bookmark.js";
+import { SubscriptionDB } from "../../models/subscription.js";
+import { serializePublicUser } from "../../services/user/serializePublicUser.js";
 
 const bookmarkTargetMatchesSearch = (bookmark, searchValue) => {
   const target = bookmark?.target;
@@ -60,6 +62,44 @@ const populateBookmarkTargets = async (bookmarks) => {
   return bookmarks;
 };
 
+const attachBookmarkUserMembership = async (bookmarks) => {
+  const targetUsers = bookmarks
+    .map((bookmark) =>
+      typeof bookmark.target?.user === "object" && bookmark.target?.user !== null
+        ? bookmark.target.user
+        : null,
+    )
+    .filter((user) => user?._id);
+
+  if (targetUsers.length === 0) {
+    return bookmarks;
+  }
+
+  const subscriptions = await SubscriptionDB.find({
+    user: { $in: targetUsers.map((user) => user._id) },
+  })
+    .select("user plan currentPeriodEnd")
+    .lean();
+
+  const subscriptionMap = new Map(
+    subscriptions.map((subscription) => [String(subscription.user), subscription]),
+  );
+
+  for (const bookmark of bookmarks) {
+    if (
+      typeof bookmark.target?.user === "object" &&
+      bookmark.target?.user !== null &&
+      bookmark.target.user._id
+    ) {
+      bookmark.target.user = serializePublicUser(bookmark.target.user, {
+        subscription: subscriptionMap.get(String(bookmark.target.user._id)),
+      });
+    }
+  }
+
+  return bookmarks;
+};
+
 export const getBookmarks = async (req, res, next) => {
   try {
     const user = req.user;
@@ -103,6 +143,7 @@ export const getBookmarks = async (req, res, next) => {
         .lean();
 
       await populateBookmarkTargets(allBookmarks);
+      await attachBookmarkUserMembership(allBookmarks);
 
       const matchedBookmarks = allBookmarks.filter((bookmark) =>
         bookmarkTargetMatchesSearch(bookmark, searchValue),
@@ -121,6 +162,7 @@ export const getBookmarks = async (req, res, next) => {
       ]);
 
       await populateBookmarkTargets(bookmarks);
+      await attachBookmarkUserMembership(bookmarks);
     }
 
     const totalPage = Math.ceil(total / limit);

@@ -113,6 +113,11 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {
+  getUserAvatarRingClass,
+  UserMembershipMark,
+  type UserMembership,
+} from "@/components/user-membership";
 import { useAuthStore } from "@/store/auth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
@@ -132,7 +137,9 @@ type StrategyItem = {
   user?: {
     _id?: string;
     avatar?: string;
+    name?: string;
     username?: string;
+    membership?: UserMembership;
   };
   createdAt?: string;
   updatedAt?: string;
@@ -808,7 +815,10 @@ export default function StrategyPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1 space-y-1">
                         <div className="flex min-w-0 items-center gap-2">
-                          <Avatar size="sm">
+                          <Avatar
+                            size="sm"
+                            className={getUserAvatarRingClass(item.user?.membership)}
+                          >
                             <AvatarImage
                               src={item.user?.avatar}
                               alt={item.user?.username || "Creator"}
@@ -827,8 +837,14 @@ export default function StrategyPage() {
                         <div className="mt-4 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
                           <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
                             <UserRound className="h-3.5 w-3.5 text-muted-foreground" />
-                            <span className="truncate">
-                              @{item.user?.username || "unknown"}
+                            <span className="inline-flex min-w-0 items-center gap-1">
+                              <span className="truncate">
+                                @{item.user?.username || "unknown"}
+                              </span>
+                              <UserMembershipMark
+                                membership={item.user?.membership}
+                                className="size-3"
+                              />
                             </span>
                           </span>
                           <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">

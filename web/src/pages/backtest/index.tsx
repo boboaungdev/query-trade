@@ -97,6 +97,10 @@ import {
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {
+  UserMembershipMark,
+  type UserMembership,
+} from "@/components/user-membership";
 import { useAuthStore } from "@/store/auth";
 import { cn } from "@/lib/utils";
 
@@ -199,7 +203,14 @@ type StrategyItem = {
     _id?: string;
     username?: string;
     avatar?: string;
+    membership?: UserMembership;
   };
+};
+
+type PreselectedStrategyState = {
+  strategy?: StrategyItem;
+  strategyId?: unknown;
+  strategyName?: unknown;
 };
 
 type StrategyListResult = {
@@ -625,20 +636,27 @@ export default function BacktestPage() {
   const [updatingStrategyIds, setUpdatingStrategyIds] = useState<Set<string>>(
     new Set(),
   );
+  const locationState =
+    typeof location.state === "object" && location.state !== null
+      ? (location.state as PreselectedStrategyState)
+      : null;
+  const preselectedStrategy =
+    locationState?.strategy &&
+    typeof locationState.strategy._id === "string" &&
+    typeof locationState.strategy.name === "string"
+      ? locationState.strategy
+      : null;
   const preselectedStrategyId =
-    typeof location.state === "object" &&
-    location.state !== null &&
-    "strategyId" in location.state &&
-    typeof (location.state as { strategyId?: unknown }).strategyId === "string"
-      ? (location.state as { strategyId: string }).strategyId
-      : "";
+    typeof locationState?.strategyId === "string"
+      ? locationState.strategyId
+      : preselectedStrategy?._id
+        ? preselectedStrategy._id
+        : "";
   const preselectedStrategyName =
-    typeof location.state === "object" &&
-    location.state !== null &&
-    "strategyName" in location.state &&
-    typeof (location.state as { strategyName?: unknown }).strategyName ===
-      "string"
-      ? (location.state as { strategyName: string }).strategyName
+    typeof locationState?.strategyName === "string"
+      ? locationState.strategyName
+      : preselectedStrategy?.name
+        ? preselectedStrategy.name
       : "";
 
   useEffect(() => {
@@ -651,7 +669,20 @@ export default function BacktestPage() {
 
     setStrategyId(preselectedStrategyId);
     setSelectedStrategyName(preselectedStrategyName);
-  }, [isEditing, preselectedStrategyId, preselectedStrategyName]);
+
+    if (preselectedStrategy) {
+      setStrategies((prev) =>
+        prev.some((item) => item._id === preselectedStrategy._id)
+          ? prev
+          : [preselectedStrategy, ...prev],
+      );
+    }
+  }, [
+    isEditing,
+    preselectedStrategy,
+    preselectedStrategyId,
+    preselectedStrategyName,
+  ]);
 
   useEffect(() => {
     if (!isEditing) {
@@ -839,8 +870,16 @@ export default function BacktestPage() {
         const pageItems = result?.strategies ?? result?.indicators ?? [];
         setStrategies((prev) => {
           if (strategyPage === 1) {
+            if (
+              preselectedStrategy &&
+              !pageItems.some((item) => item._id === preselectedStrategy._id)
+            ) {
+              return [preselectedStrategy, ...pageItems];
+            }
+
             return pageItems;
           }
+
           const merged = [...prev, ...pageItems];
           return Array.from(
             new Map(merged.map((item) => [item._id, item])).values(),
@@ -876,6 +915,7 @@ export default function BacktestPage() {
     void loadStrategiesPage();
   }, [
     debouncedStrategySearch,
+    preselectedStrategy,
     strategyOrder,
     strategyPage,
     strategyPublicOnly,
@@ -1784,10 +1824,18 @@ export default function BacktestPage() {
                                                 <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
                                                   <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
                                                     <UserRound className="h-3.5 w-3.5" />
-                                                    <span className="truncate">
-                                                      @
-                                                      {item.user?.username ||
-                                                        "unknown"}
+                                                    <span className="inline-flex min-w-0 items-center gap-1">
+                                                      <span className="truncate">
+                                                        @
+                                                        {item.user?.username ||
+                                                          "unknown"}
+                                                      </span>
+                                                      <UserMembershipMark
+                                                        membership={
+                                                          item.user?.membership
+                                                        }
+                                                        className="size-3"
+                                                      />
                                                     </span>
                                                   </span>
                                                   <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">

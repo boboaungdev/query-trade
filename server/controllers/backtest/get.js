@@ -2,6 +2,9 @@ import { UserDB } from "../../models/user.js";
 import { BacktestDB } from "../../models/backtest.js";
 import { StrategyDB } from "../../models/strategy.js";
 import { BookmarkDB } from "../../models/bookmark.js";
+import { FollowDB } from "../../models/follow.js";
+import { SubscriptionDB } from "../../models/subscription.js";
+import { serializePublicUser } from "../../services/user/serializePublicUser.js";
 import { resError, resJson } from "../../utils/response.js";
 
 export const getBacktestById = async (req, res, next) => {
@@ -18,7 +21,10 @@ export const getBacktestById = async (req, res, next) => {
           select: "username",
         },
       })
-      .populate("user", "username")
+      .populate(
+        "user",
+        "name username avatar stats.followerCount stats.strategyCount stats.backtestCount",
+      )
       .lean();
 
     if (!backtest) {
@@ -26,15 +32,55 @@ export const getBacktestById = async (req, res, next) => {
     }
 
     if (user?._id) {
-      const bookmark = await BookmarkDB.findOne({
-        user: user._id,
-        targetType: "backtest",
-        target: backtest._id,
-      })
-        .select("_id")
-        .lean();
+      const [bookmark, follow] = await Promise.all([
+        BookmarkDB.findOne({
+          user: user._id,
+          targetType: "backtest",
+          target: backtest._id,
+        })
+          .select("_id")
+          .lean(),
+        backtest.user?._id && String(backtest.user._id) !== String(user._id)
+          ? FollowDB.findOne({
+              follower: user._id,
+              following: backtest.user._id,
+            })
+              .select("_id")
+              .lean()
+          : null,
+      ]);
 
       backtest.isBookmarked = Boolean(bookmark);
+      if (backtest.user) {
+        backtest.user.isFollowing = Boolean(follow);
+      }
+    }
+
+    if (backtest.user?._id) {
+      const subscription = await SubscriptionDB.findOne({
+        user: backtest.user._id,
+      })
+        .select("user plan currentPeriodEnd")
+        .lean();
+
+      backtest.user = serializePublicUser(backtest.user, {
+        subscription,
+        extra: {
+          isFollowing: Boolean(backtest.user.isFollowing),
+        },
+      });
+    }
+
+    if (backtest.strategy?.user?._id) {
+      const strategyUserSubscription = await SubscriptionDB.findOne({
+        user: backtest.strategy.user._id,
+      })
+        .select("user plan currentPeriodEnd")
+        .lean();
+
+      backtest.strategy.user = serializePublicUser(backtest.strategy.user, {
+        subscription: strategyUserSubscription,
+      });
     }
 
     return resJson(res, 200, "Backtest fetched successfully.", {
@@ -224,6 +270,22 @@ export const getBacktests = async (req, res, next) => {
     const totalPage = Math.ceil(total / limit);
     const backtests = leaderboardResult?.backtests ?? [];
 
+    let subscriptionMap = new Map();
+    if (backtests.length > 0) {
+      const subscriptions = await SubscriptionDB.find({
+        user: { $in: backtests.map((backtest) => backtest.user?._id).filter(Boolean) },
+      })
+        .select("user plan currentPeriodEnd")
+        .lean();
+
+      subscriptionMap = new Map(
+        subscriptions.map((subscription) => [
+          String(subscription.user),
+          subscription,
+        ]),
+      );
+    }
+
     let bookmarkedBacktestIds = [];
     if (user?._id && backtests.length > 0) {
       const bookmarks = await BookmarkDB.find({
@@ -241,6 +303,11 @@ export const getBacktests = async (req, res, next) => {
 
     const backtestsWithBookmarkState = backtests.map((backtest) => ({
       ...backtest,
+      user: backtest.user
+        ? serializePublicUser(backtest.user, {
+            subscription: subscriptionMap.get(String(backtest.user._id)),
+          })
+        : backtest.user,
       isBookmarked: bookmarkedBacktestIds.includes(String(backtest._id)),
     }));
 
