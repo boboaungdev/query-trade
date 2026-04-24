@@ -1,14 +1,14 @@
-import { SUBSCRIPTION_PAYMENT_MODE } from "./index.js";
+import { DEPOSIT_PAYMENT_MODE } from "./index.js";
 
-export const SUBSCRIPTION_PROVIDER = "manual";
-
+export const SUBSCRIPTION_PROVIDER = "token";
+export const DEPOSIT_PROVIDER = "manual";
 export const PAYMENT_MODES = {
   mock: "mock",
   manual: "manual",
 };
 
 export const getPaymentMode = () => {
-  const mode = SUBSCRIPTION_PAYMENT_MODE;
+  const mode = DEPOSIT_PAYMENT_MODE;
 
   if (Object.values(PAYMENT_MODES).includes(mode)) {
     return mode;
@@ -40,4 +40,15 @@ export const PAYMENT_STATUSES = {
   cancelled: "cancelled",
   failed: "failed",
   expired: "expired",
+};
+
+export const PAYMENT_PURPOSES = {
+  tokenTopup: "token_topup",
+};
+
+export const TOKEN_TRANSACTION_TYPES = {
+  deposit: "deposit",
+  spend: "spend",
+  refund: "refund",
+  adjustment: "adjustment",
 };

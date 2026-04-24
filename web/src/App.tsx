@@ -18,8 +18,8 @@ import Bookmark from "./pages/bookmark";
 import Profile from "./pages/profile";
 import NotFound from "./pages/not-found";
 import Pricing from "./pages/pricing";
-import Billing from "./pages/billing";
 import PaymentPage from "./pages/payment";
+import WalletPage from "./pages/wallet";
 import AdminDashboard from "./pages/admin";
 
 import { useAuthStore } from "@/store/auth";
@@ -87,7 +87,7 @@ export default function App() {
                 element={<BacktestResult />}
               />
               <Route path="/settings" element={<Settings />} />
-              <Route path="/billing" element={<Billing />} />
+              <Route path="/wallet" element={<WalletPage />} />
               <Route path="/payment/:paymentId" element={<PaymentPage />} />
               <Route path="/admin/dashboard" element={<AdminRoute />} />
             </Route>

@@ -1,8 +1,12 @@
-import { PAYMENT_STATUSES } from "../../constants/subscription.js";
+import {
+  PAYMENT_PURPOSES,
+  PAYMENT_STATUSES,
+  TOKEN_TRANSACTION_TYPES,
+} from "../../constants/subscription.js";
 import { PaymentDB } from "../../models/payment.js";
 import { verifyUsdtBscPayment } from "../../services/bscPayment.js";
 import { resError, resJson } from "../../utils/response.js";
-import { activateSubscription } from "./helpers.js";
+import { recordTokenTransaction } from "./helpers.js";
 
 export const verifyTransaction = async (req, res, next) => {
   try {
@@ -13,6 +17,7 @@ export const verifyTransaction = async (req, res, next) => {
     const payment = await PaymentDB.findOne({
       _id: paymentId,
       user: user._id,
+      purpose: PAYMENT_PURPOSES.tokenTopup,
     });
 
     if (!payment) {
@@ -26,7 +31,7 @@ export const verifyTransaction = async (req, res, next) => {
     }
 
     if (payment.status === PAYMENT_STATUSES.expired) {
-      throw resError(410, "Payment request expired. Create a new one.");
+      throw resError(410, "Deposit request expired. Create a new one.");
     }
 
     if (payment.status !== PAYMENT_STATUSES.pending) {
@@ -44,10 +49,7 @@ export const verifyTransaction = async (req, res, next) => {
 
     const verification = await verifyUsdtBscPayment({
       txHash,
-      expectedAmount:
-        payment.payAmount ||
-        payment.planSnapshot?.finalAmountUsd ||
-        payment.amountUsd,
+      expectedAmount: payment.payAmountUsdt || payment.amountUsdt,
       paymentCreatedAt: payment.createdAt,
     });
 
@@ -64,11 +66,23 @@ export const verifyTransaction = async (req, res, next) => {
     };
     await payment.save();
 
-    const subscription = await activateSubscription(payment);
+    const { tokenTransaction, tokenBalance } = await recordTokenTransaction({
+      userId: user._id,
+      type: TOKEN_TRANSACTION_TYPES.deposit,
+      amount: payment.tokenAmount,
+      paymentId: payment._id,
+      description: "Token deposit confirmed",
+      metadata: {
+        txHash,
+        amountUsdt: payment.amountUsdt,
+        rateSnapshot: payment.rateSnapshot,
+      },
+    });
 
-    return resJson(res, 200, "Transaction verified.", {
+    return resJson(res, 200, "Deposit verified and token credited.", {
       payment,
-      subscription,
+      tokenTransaction,
+      tokenBalance,
     });
   } catch (error) {
     if (error?.code === 11000) {

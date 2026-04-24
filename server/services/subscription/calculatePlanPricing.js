@@ -1,3 +1,5 @@
+import { TOKEN_PER_USDT } from "../../constants/index.js";
+
 const isDiscountInWindow = (discount) => {
   if (!discount?.isActive || !discount.value) {
     return false;
@@ -17,26 +19,33 @@ const isDiscountInWindow = (discount) => {
 };
 
 export const calculatePlanPricing = (plan) => {
-  const originalAmountUsd = Number(plan.amountUsd);
+  const originalAmountToken = Number(
+    plan.amountToken ??
+      Number(Number(plan.amountUsd || 0) * TOKEN_PER_USDT).toFixed(8),
+  );
   const discount = plan.discount || {};
-  let discountAmountUsd = 0;
+  let discountAmountToken = 0;
 
   if (isDiscountInWindow(discount)) {
     if (discount.type === "percentage") {
-      discountAmountUsd = originalAmountUsd * (Number(discount.value) / 100);
+      discountAmountToken =
+        originalAmountToken * (Number(discount.value) / 100);
     } else {
-      discountAmountUsd = Number(discount.value);
+      discountAmountToken = Number(discount.value);
     }
   }
 
-  discountAmountUsd = Math.min(originalAmountUsd, discountAmountUsd);
-  const finalAmountUsd = Math.max(0, originalAmountUsd - discountAmountUsd);
+  discountAmountToken = Math.min(originalAmountToken, discountAmountToken);
+  const finalAmountToken = Math.max(
+    0,
+    originalAmountToken - discountAmountToken,
+  );
 
   return {
-    originalAmountUsd,
-    discountAmountUsd: Number(discountAmountUsd.toFixed(8)),
-    finalAmountUsd: Number(finalAmountUsd.toFixed(8)),
-    hasDiscount: discountAmountUsd > 0,
+    originalAmountToken,
+    discountAmountToken: Number(discountAmountToken.toFixed(8)),
+    finalAmountToken: Number(finalAmountToken.toFixed(8)),
+    hasDiscount: discountAmountToken > 0,
   };
 };
 
@@ -48,9 +57,9 @@ export const serializePlan = (plan) => {
     id: plan.key,
     key: plan.key,
     name: plan.name,
-    amountUsd: pricing.finalAmountUsd,
-    originalAmountUsd: pricing.originalAmountUsd,
-    discountAmountUsd: pricing.discountAmountUsd,
+    amountToken: pricing.finalAmountToken,
+    originalAmountToken: pricing.originalAmountToken,
+    discountAmountToken: pricing.discountAmountToken,
     hasDiscount: pricing.hasDiscount,
     discount: plan.discount || {},
     durationDays: plan.durationDays,

@@ -1,21 +1,17 @@
-import crypto from "crypto";
-
-import {
-  isMockPaymentMode,
-  PAYMENT_STATUSES,
-} from "../../constants/subscription.js";
-import { PaymentDB } from "../../models/payment.js";
+import { TOKEN_TRANSACTION_TYPES } from "../../constants/subscription.js";
 import { SubscriptionPlanDB } from "../../models/subscriptionPlan.js";
-import { getReceiveAddress } from "../../services/bscPayment.js";
 import { calculatePlanPricing } from "../../services/subscription/calculatePlanPricing.js";
-import { resError } from "../../utils/response.js";
-import { resJson } from "../../utils/response.js";
-import { activateSubscription, validatePlanChange } from "./helpers.js";
+import { resError, resJson } from "../../utils/response.js";
+import {
+  activateSubscription,
+  recordTokenTransaction,
+  validatePlanChange,
+} from "./helpers.js";
 
 export const createCheckout = async (req, res, next) => {
   try {
     const user = req.user;
-    const { plan: planId, payCurrency } = req.body;
+    const { plan: planId } = req.body;
     const plan = await SubscriptionPlanDB.findOne({
       key: planId,
       isActive: true,
@@ -27,71 +23,47 @@ export const createCheckout = async (req, res, next) => {
 
     const pricing = calculatePlanPricing(plan);
     await validatePlanChange(user._id, planId);
-    await PaymentDB.updateMany(
-      {
-        user: user._id,
-        status: PAYMENT_STATUSES.pending,
-      },
-      {
-        $set: {
-          status: PAYMENT_STATUSES.expired,
-          providerStatus: "manual_replaced",
-        },
-      },
-    );
 
-    const orderId = `qt_${user._id}_${Date.now()}_${crypto
-      .randomBytes(4)
-      .toString("hex")}`;
+    if (Number(user.tokenBalance || 0) < pricing.finalAmountToken) {
+      throw resError(
+        400,
+        `You need ${pricing.finalAmountToken} token to subscribe to ${plan.name}.`,
+      );
+    }
 
-    const payment = await PaymentDB.create({
-      user: user._id,
-      plan: planId,
-      amountUsd: pricing.finalAmountUsd,
+    const { tokenTransaction, tokenBalance } = await recordTokenTransaction({
+      userId: user._id,
+      type: TOKEN_TRANSACTION_TYPES.spend,
+      amount: pricing.finalAmountToken,
+      plan: plan.key,
+      description: `Subscribed to ${plan.name}`,
+      metadata: {
+        durationDays: plan.durationDays,
+        originalAmountToken: pricing.originalAmountToken,
+        discountAmountToken: pricing.discountAmountToken,
+      },
+    });
+
+    const subscription = await activateSubscription({
+      userId: user._id,
+      plan: plan.key,
       planSnapshot: {
         key: plan.key,
         name: plan.name,
-        originalAmountUsd: pricing.originalAmountUsd,
-        discountAmountUsd: pricing.discountAmountUsd,
-        finalAmountUsd: pricing.finalAmountUsd,
+        originalAmountToken: pricing.originalAmountToken,
+        discountAmountToken: pricing.discountAmountToken,
+        finalAmountToken: pricing.finalAmountToken,
         durationDays: plan.durationDays,
         discount: plan.discount || {},
       },
-      status: PAYMENT_STATUSES.pending,
-      orderId,
-      payCurrency,
+      tokenTransactionId: tokenTransaction._id,
+      tokenAmount: pricing.finalAmountToken,
     });
 
-    if (isMockPaymentMode()) {
-      payment.status = PAYMENT_STATUSES.confirmed;
-      payment.providerStatus = "mock_confirmed";
-      payment.confirmedAt = new Date();
-      payment.rawPayload = {
-        provider: "dev_mock",
-        message: "Payment was confirmed by DEV_MOCK_PAYMENTS.",
-      };
-      await payment.save();
-
-      const subscription = await activateSubscription(payment);
-
-      return resJson(res, 201, "Mock checkout confirmed.", {
-        payment,
-        subscription,
-        mock: true,
-      });
-    }
-
-    payment.payAddress = getReceiveAddress();
-    payment.payAmount = pricing.finalAmountUsd;
-    payment.rawPayload = {
-      provider: "manual",
-      message: "Waiting for user-submitted USDT BEP20 transaction hash.",
-    };
-    await payment.save();
-
-    return resJson(res, 201, "Manual payment created.", {
-      payment,
-      manualPayment: true,
+    return resJson(res, 201, "Subscription activated with token.", {
+      subscription,
+      tokenTransaction,
+      tokenBalance,
     });
   } catch (error) {
     next(error);

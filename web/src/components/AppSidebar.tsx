@@ -30,10 +30,12 @@ import {
   PanelLeftClose,
   PanelLeft,
   Settings,
-  WalletCards,
+  Wallet,
+  TicketPercent,
+  Eye,
+  EyeOff,
   ShieldCheck,
   UserRound,
-  CircleHelp,
   LogOut,
 } from "lucide-react";
 
@@ -42,6 +44,21 @@ import { useState } from "react";
 import { getApiErrorMessage } from "@/api/axios";
 import { signout } from "@/api/auth";
 import { toast } from "sonner";
+
+function formatCompactTokenAmount(amount: number) {
+  if (amount < 1000) {
+    return amount.toLocaleString(undefined, { maximumFractionDigits: 0 });
+  }
+
+  if (amount < 1_000_000) {
+    const value = amount / 1000;
+    return `${Number.isInteger(value) ? value.toFixed(0) : value.toFixed(1).replace(/\.0$/, "")}k`;
+  }
+
+  const value = amount / 1_000_000;
+  return `${Number.isInteger(value) ? value.toFixed(0) : value.toFixed(1).replace(/\.0$/, "")}M`;
+}
+
 export function AppSidebar() {
   const { isMobile, openMobile, setOpen, setOpenMobile, toggleSidebar, state } =
     useSidebar();
@@ -51,6 +68,12 @@ export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const hideWalletBalancePreference =
+    user?.preferences?.hideWalletBalance ??
+    (typeof user?.preferences?.showWalletBalance === "boolean"
+      ? !user.preferences.showWalletBalance
+      : false);
+  const [isWalletBalanceInverted, setIsWalletBalanceInverted] = useState(false);
   const profileHref = user?.username ? `/${user.username}` : "/profile";
 
   const handleSignout = async () => {
@@ -69,6 +92,12 @@ export function AppSidebar() {
       .map((n) => n[0])
       .join("")
       .toUpperCase() || "U";
+  const tokenBalance = formatCompactTokenAmount(
+    Number(user?.tokenBalance || 0),
+  );
+  const showWalletBalance = isWalletBalanceInverted
+    ? hideWalletBalancePreference
+    : !hideWalletBalancePreference;
 
   const handleMenuNavigation = () => {
     if (isMobile) {
@@ -161,15 +190,6 @@ export function AppSidebar() {
           </SidebarMenuItem>
 
           <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={isRouteActive("/pricing")}>
-              <Link to="/pricing" onClick={handleMenuNavigation}>
-                <WalletCards />
-                <span>Pricing</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-
-          <SidebarMenuItem>
             <SidebarMenuButton asChild isActive={isRouteActive("/settings")}>
               <Link to="/settings" onClick={handleMenuNavigation}>
                 <Settings />
@@ -240,28 +260,55 @@ export function AppSidebar() {
 
                 <DropdownMenuSeparator />
 
-                <DropdownMenuItem asChild>
+                <DropdownMenuItem className="gap-2">
                   <Link
-                    to="/help"
-                    className="flex items-center gap-2"
-                    onClick={handleMenuNavigation}
+                    to="/wallet"
+                    className="flex min-w-0 flex-1 items-center gap-2"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      handleMenuNavigation();
+                    }}
                   >
-                    <CircleHelp className="h-4 w-4" />
-                    <span>Help</span>
+                    <Wallet className="h-4 w-4 shrink-0" />
+                    <span className="flex min-w-0 flex-1 flex-col items-start">
+                      <span className="w-full truncate">Wallet</span>
+                      <span className="w-full truncate text-xs text-muted-foreground">
+                        {showWalletBalance ? tokenBalance : "••••••"} token
+                      </span>
+                    </span>
                   </Link>
+                  <button
+                    type="button"
+                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setIsWalletBalanceInverted((current) => !current);
+                    }}
+                    aria-label={
+                      showWalletBalance
+                        ? "Hide wallet balance"
+                        : "Show wallet balance"
+                    }
+                  >
+                    {showWalletBalance ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
                 </DropdownMenuItem>
 
                 <DropdownMenuItem asChild>
                   <Link
-                    to="/billing"
+                    to="/pricing"
                     className="flex items-center gap-2"
                     onClick={handleMenuNavigation}
                   >
-                    <WalletCards className="h-4 w-4" />
-                    <span>Billing</span>
+                    <TicketPercent className="h-4 w-4" />
+                    <span>Pricing</span>
                   </Link>
                 </DropdownMenuItem>
-
                 <DropdownMenuItem asChild>
                   <Link
                     to="/settings"

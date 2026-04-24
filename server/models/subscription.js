@@ -1,7 +1,5 @@
 import mongoose from "mongoose";
-import {
-  PAYMENT_CURRENCIES,
-} from "../constants/subscription.js";
+import { TOKEN_TRANSACTION_TYPES } from "../constants/subscription.js";
 
 const { Schema } = mongoose;
 
@@ -29,17 +27,21 @@ const subscriptionSchema = new Schema(
     currentPeriodEnd: Date,
     provider: {
       type: String,
-      enum: ["manual"],
+      enum: ["token"],
     },
     providerPaymentId: String,
+    lastTransaction: {
+      type: Schema.Types.ObjectId,
+      ref: "tokenTransaction",
+    },
     lastPayment: {
       type: Schema.Types.ObjectId,
       ref: "payment",
     },
-    lastPaymentAmountUsd: Number,
-    lastPaymentCurrency: {
+    lastTokenAmount: Number,
+    lastTokenTransactionType: {
       type: String,
-      enum: Object.keys(PAYMENT_CURRENCIES),
+      enum: Object.values(TOKEN_TRANSACTION_TYPES),
     },
   },
   {

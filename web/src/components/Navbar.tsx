@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import ThemeToggle from "./ThemeToggle";
@@ -22,11 +23,40 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { getApiErrorMessage } from "@/api/axios";
 import { signout } from "@/api/auth";
 import { toast } from "sonner";
-import { CircleHelp, Settings, LogOut, WalletCards } from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
+  Settings,
+  LogOut,
+  Wallet,
+  Eye,
+  EyeOff,
+  TicketPercent,
+} from "lucide-react";
+
+function formatCompactTokenAmount(amount: number) {
+  if (amount < 1000) {
+    return amount.toLocaleString(undefined, { maximumFractionDigits: 0 });
+  }
+
+  if (amount < 1_000_000) {
+    const value = amount / 1000;
+    return `${Number.isInteger(value) ? value.toFixed(0) : value.toFixed(1).replace(/\.0$/, "")}k`;
+  }
+
+  const value = amount / 1_000_000;
+  return `${Number.isInteger(value) ? value.toFixed(0) : value.toFixed(1).replace(/\.0$/, "")}M`;
+}
 
 export default function Navbar() {
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
+  const hideWalletBalancePreference =
+    user?.preferences?.hideWalletBalance ??
+    (typeof user?.preferences?.showWalletBalance === "boolean"
+      ? !user.preferences.showWalletBalance
+      : false);
+  const [isWalletBalanceInverted, setIsWalletBalanceInverted] = useState(false);
+  const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState(false);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -50,9 +80,15 @@ export default function Navbar() {
       .map((n) => n[0])
       .join("")
       .toUpperCase() || "U";
+  const tokenBalance = formatCompactTokenAmount(
+    Number(user?.tokenBalance || 0),
+  );
+  const showWalletBalance = isWalletBalanceInverted
+    ? hideWalletBalancePreference
+    : !hideWalletBalancePreference;
 
   return (
-    <nav className="flex items-center justify-between border-b px-6 py-4">
+    <nav className="relative flex items-center justify-between border-b px-6 py-4">
       {/* LEFT */}
       <div className="flex items-center gap-3">
         {/* Sidebar toggle only when logged in */}
@@ -71,6 +107,38 @@ export default function Navbar() {
         </Link>
       </div>
 
+      {!user ? (
+        <div className="absolute left-1/2 hidden -translate-x-1/2 md:flex">
+          <div className="inline-flex w-fit items-center justify-center gap-1 rounded-none bg-transparent p-[3px] text-muted-foreground">
+            <NavLink
+              to="/"
+              end
+              className={({ isActive }) =>
+                cn(
+                  "relative inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-1.5 py-0.5 text-sm font-medium whitespace-nowrap text-foreground/60 transition-all hover:text-foreground focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:outline-1 focus-visible:outline-primary dark:text-muted-foreground dark:hover:text-foreground after:absolute after:inset-x-0 after:bottom-[-5px] after:h-0.5 after:bg-foreground after:opacity-0 after:transition-opacity",
+                  isActive &&
+                    "text-primary after:bg-primary after:opacity-100 dark:text-primary dark:after:bg-primary",
+                )
+              }
+            >
+              Home
+            </NavLink>
+            <NavLink
+              to="/pricing"
+              className={({ isActive }) =>
+                cn(
+                  "relative inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-1.5 py-0.5 text-sm font-medium whitespace-nowrap text-foreground/60 transition-all hover:text-foreground focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:outline-1 focus-visible:outline-primary dark:text-muted-foreground dark:hover:text-foreground after:absolute after:inset-x-0 after:bottom-[-5px] after:h-0.5 after:bg-foreground after:opacity-0 after:transition-opacity",
+                  isActive &&
+                    "text-primary after:bg-primary after:opacity-100 dark:text-primary dark:after:bg-primary",
+                )
+              }
+            >
+              Pricing
+            </NavLink>
+          </div>
+        </div>
+      ) : null}
+
       {/* RIGHT */}
 
       <div className="flex items-center gap-4">
@@ -83,7 +151,10 @@ export default function Navbar() {
             </Link>
           ) : null
         ) : (
-          <DropdownMenu>
+          <DropdownMenu
+            open={isAvatarMenuOpen}
+            onOpenChange={setIsAvatarMenuOpen}
+          >
             <DropdownMenuTrigger asChild>
               <Avatar className="cursor-pointer">
                 <AvatarImage src={user.avatar} />
@@ -117,20 +188,50 @@ export default function Navbar() {
 
               <DropdownMenuSeparator />
 
-              <DropdownMenuItem asChild>
-                <Link to="/help" className="flex items-center gap-2">
-                  <CircleHelp className="h-4 w-4" />
-                  <span>Help</span>
+              <DropdownMenuItem className="gap-2">
+                <Link
+                  to="/wallet"
+                  className="flex min-w-0 flex-1 items-center gap-2"
+                  onClick={() => {
+                    setIsAvatarMenuOpen(false);
+                  }}
+                >
+                  <Wallet className="h-4 w-4 shrink-0" />
+                  <span className="flex min-w-0 flex-1 flex-col items-start">
+                    <span className="w-full truncate">Wallet</span>
+                    <span className="w-full truncate text-xs text-muted-foreground">
+                      {showWalletBalance ? tokenBalance : "••••••"} token
+                    </span>
+                  </span>
                 </Link>
+                <button
+                  type="button"
+                  className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setIsWalletBalanceInverted((current) => !current);
+                  }}
+                  aria-label={
+                    showWalletBalance
+                      ? "Hide wallet balance"
+                      : "Show wallet balance"
+                  }
+                >
+                  {showWalletBalance ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
               </DropdownMenuItem>
 
               <DropdownMenuItem asChild>
-                <Link to="/billing" className="flex items-center gap-2">
-                  <WalletCards className="h-4 w-4" />
-                  <span>Billing</span>
+                <Link to="/pricing" className="flex items-center gap-2">
+                  <TicketPercent className="h-4 w-4" />
+                  <span>Pricing</span>
                 </Link>
               </DropdownMenuItem>
-
               <DropdownMenuItem asChild>
                 <Link to="/settings" className="flex items-center gap-2">
                   <Settings className="h-4 w-4" />

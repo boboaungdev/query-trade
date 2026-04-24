@@ -15,6 +15,10 @@ const planKeySchema = Joi.string()
 export const SubscriptionSchema = {
   checkout: Joi.object({
     plan: planKeySchema.invalid("free").required(),
+  }),
+
+  deposit: Joi.object({
+    amountUsdt: Joi.number().min(0.000001).precision(8).required(),
     payCurrency: Joi.string()
       .valid(...Object.keys(PAYMENT_CURRENCIES))
       .required(),
@@ -40,7 +44,7 @@ export const SubscriptionSchema = {
   plan: {
     create: Joi.object({
       name: Joi.string().trim().min(2).max(20).required(),
-      amountUsd: Joi.number().min(0).precision(8).required(),
+      amountToken: Joi.number().min(0).precision(8).required(),
       durationDays: Joi.number().integer().min(0).required(),
       features: Joi.array().items(Joi.string().trim().max(100)).default([]),
       discount: Joi.object({
@@ -57,7 +61,7 @@ export const SubscriptionSchema = {
 
     update: Joi.object({
       name: Joi.string().trim().min(2).max(20),
-      amountUsd: Joi.number().min(0).precision(8),
+      amountToken: Joi.number().min(0).precision(8),
       durationDays: Joi.number().integer().min(0),
       features: Joi.array().items(Joi.string().trim().max(100)),
       discount: Joi.object({
@@ -77,7 +81,7 @@ export const SubscriptionSchema = {
       limit: Joi.number().integer().min(1).max(60).default(12),
       search: Joi.string().trim().allow("").default(""),
       sortBy: Joi.string()
-        .valid("sortOrder", "name", "amountUsd", "durationDays", "createdAt")
+        .valid("sortOrder", "name", "amountToken", "durationDays", "createdAt")
         .default("sortOrder"),
       order: Joi.string().valid("asc", "desc").default("asc"),
     }),

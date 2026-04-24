@@ -1,6 +1,11 @@
-import { SUBSCRIPTION_PROVIDER } from "../../constants/subscription.js";
+import {
+  SUBSCRIPTION_PROVIDER,
+  TOKEN_TRANSACTION_TYPES,
+} from "../../constants/subscription.js";
 import { SubscriptionDB } from "../../models/subscription.js";
 import { SubscriptionPlanDB } from "../../models/subscriptionPlan.js";
+import { TokenTransactionDB } from "../../models/tokenTransaction.js";
+import { UserDB } from "../../models/user.js";
 import { resError } from "../../utils/response.js";
 
 export const getEffectiveSubscription = async (userId) => {
@@ -70,11 +75,80 @@ export const validatePlanChange = async (userId, nextPlanId) => {
   return subscription;
 };
 
-export const activateSubscription = async (payment) => {
-  const durationDays = payment.planSnapshot?.durationDays ?? 30;
+export const recordTokenTransaction = async ({
+  userId,
+  type,
+  amount,
+  paymentId = null,
+  plan = null,
+  description = "",
+  metadata = {},
+}) => {
+  const user = await UserDB.findById(userId).select("tokenBalance").lean();
+
+  if (!user) {
+    throw resError(404, "User not found.");
+  }
+
+  const balanceBefore = Number(user.tokenBalance || 0);
+  const delta = type === TOKEN_TRANSACTION_TYPES.spend ? -amount : amount;
+
+  if (balanceBefore + delta < 0) {
+    throw resError(400, "Insufficient token balance.");
+  }
+
+  const updatedUser = await UserDB.findOneAndUpdate(
+    {
+      _id: userId,
+      ...(type === TOKEN_TRANSACTION_TYPES.spend
+        ? { tokenBalance: { $gte: amount } }
+        : {}),
+    },
+    {
+      $inc: {
+        tokenBalance: delta,
+      },
+    },
+    {
+      returnDocument: "after",
+    },
+  )
+    .select("tokenBalance")
+    .lean();
+
+  if (!updatedUser) {
+    throw resError(400, "Insufficient token balance.");
+  }
+
+  const tokenTransaction = await TokenTransactionDB.create({
+    user: userId,
+    type,
+    amount,
+    balanceBefore,
+    balanceAfter: Number(updatedUser.tokenBalance || 0),
+    payment: paymentId,
+    plan,
+    description,
+    metadata,
+  });
+
+  return {
+    tokenTransaction,
+    tokenBalance: Number(updatedUser.tokenBalance || 0),
+  };
+};
+
+export const activateSubscription = async ({
+  userId,
+  plan,
+  planSnapshot,
+  tokenTransactionId,
+  tokenAmount,
+}) => {
+  const durationDays = planSnapshot?.durationDays ?? 30;
   const now = new Date();
-  const existing = await SubscriptionDB.findOne({ user: payment.user });
-  const isSamePlanRenewal = existing?.plan === payment.plan;
+  const existing = await SubscriptionDB.findOne({ user: userId });
+  const isSamePlanRenewal = existing?.plan === plan;
   const baseDate =
     isSamePlanRenewal &&
     existing?.currentPeriodEnd &&
@@ -87,18 +161,18 @@ export const activateSubscription = async (payment) => {
   const currentPeriodStart = baseDate;
 
   return SubscriptionDB.findOneAndUpdate(
-    { user: payment.user },
+    { user: userId },
     {
       $set: {
-        plan: payment.plan,
+        plan,
         status: "active",
         currentPeriodStart,
         currentPeriodEnd,
         provider: SUBSCRIPTION_PROVIDER,
-        providerPaymentId: payment.txHash,
-        lastPayment: payment._id,
-        lastPaymentAmountUsd: payment.amountUsd,
-        lastPaymentCurrency: payment.payCurrency,
+        providerPaymentId: String(tokenTransactionId),
+        lastTransaction: tokenTransactionId,
+        lastTokenAmount: tokenAmount,
+        lastTokenTransactionType: TOKEN_TRANSACTION_TYPES.spend,
       },
     },
     { returnDocument: "after", upsert: true },

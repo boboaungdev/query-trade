@@ -40,8 +40,8 @@ export const getAdminPlans = async (req, res, next) => {
     const sortOrder = order === "desc" ? -1 : 1;
     const sort =
       sortBy === "sortOrder"
-        ? { sortOrder: sortOrder, amountUsd: 1, createdAt: 1 }
-        : { [sortBy]: sortOrder, sortOrder: 1, amountUsd: 1 };
+        ? { sortOrder: sortOrder, amountToken: 1, createdAt: 1 }
+        : { [sortBy]: sortOrder, sortOrder: 1, amountToken: 1 };
 
     const [plans, total] = await Promise.all([
       SubscriptionPlanDB.find(filter).sort(sort).skip(skip).limit(limit).lean(),
@@ -110,7 +110,9 @@ export const createPlan = async (req, res, next) => {
 
 export const updatePlan = async (req, res, next) => {
   try {
-    const existingPlan = await SubscriptionPlanDB.findById(req.params.planId).lean();
+    const existingPlan = await SubscriptionPlanDB.findById(
+      req.params.planId,
+    ).lean();
 
     if (!existingPlan) {
       throw resError(404, "Subscription plan not found.");

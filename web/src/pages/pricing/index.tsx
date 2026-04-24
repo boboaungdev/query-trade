@@ -1,18 +1,35 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Check, Crown, Loader2, WalletCards } from "lucide-react";
+import {
+  ArrowDownLeft,
+  Check,
+  Crown,
+  Eye,
+  EyeOff,
+  Loader2,
+  Wallet,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import {
   createSubscriptionCheckout,
   getMySubscription,
   getSubscriptionPlans,
-  type PayCurrency,
   type Subscription,
   type SubscriptionPlan,
 } from "@/api/subscription";
 import { getApiErrorMessage } from "@/api/axios";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Card,
   CardAction,
@@ -24,15 +41,16 @@ import {
 import { useAuthStore } from "@/store/auth";
 import { cn } from "@/lib/utils";
 
-const defaultCurrency: PayCurrency = "usdtbsc";
-let pricingPlansRequest: Promise<Awaited<ReturnType<typeof getSubscriptionPlans>>> | null =
-  null;
-let pricingSubscriptionRequest: Promise<Awaited<ReturnType<typeof getMySubscription>>> | null =
-  null;
+let pricingPlansRequest: Promise<
+  Awaited<ReturnType<typeof getSubscriptionPlans>>
+> | null = null;
+let pricingSubscriptionRequest: Promise<
+  Awaited<ReturnType<typeof getMySubscription>>
+> | null = null;
 
-function formatUsdtAmount(amount: number) {
+function formatTokenAmount(amount: number) {
   return amount.toLocaleString(undefined, {
-    maximumFractionDigits: 8,
+    maximumFractionDigits: 0,
   });
 }
 
@@ -72,11 +90,29 @@ function formatExpiry(subscription?: Subscription | null) {
 
 export default function Pricing() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const hideWalletBalancePreference = useAuthStore((state) => {
+    const preferences = state.user?.preferences;
+
+    if (typeof preferences?.hideWalletBalance === "boolean") {
+      return preferences.hideWalletBalance;
+    }
+
+    if (typeof preferences?.showWalletBalance === "boolean") {
+      return !preferences.showWalletBalance;
+    }
+
+    return false;
+  });
+  const updateUser = useAuthStore((state) => state.updateUser);
   const navigate = useNavigate();
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [tokenBalance, setTokenBalance] = useState(0);
+  const [tokenPerUsdt, setTokenPerUsdt] = useState(1000);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const [confirmPlan, setConfirmPlan] = useState<SubscriptionPlan | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showBalance, setShowBalance] = useState(!hideWalletBalancePreference);
 
   useEffect(() => {
     let ignore = false;
@@ -93,7 +129,9 @@ export default function Pricing() {
         if (ignore) return;
 
         setPlans(planData.plans);
+        setTokenPerUsdt(planData.tokenPerUsdt);
         setSubscription(subscriptionData?.subscription ?? null);
+        setTokenBalance(subscriptionData?.tokenBalance ?? 0);
       } catch (error) {
         if (!ignore) {
           toast.error(getApiErrorMessage(error, "Failed to load pricing."));
@@ -105,18 +143,23 @@ export default function Pricing() {
       }
     }
 
-    loadPricing();
+    void loadPricing();
 
     return () => {
       ignore = true;
     };
   }, [isAuthenticated]);
 
+  useEffect(() => {
+    setShowBalance(!hideWalletBalancePreference);
+  }, [hideWalletBalancePreference]);
+
   const sortedPlans = useMemo(
     () =>
       [...plans].sort(
         (left, right) =>
-          left.sortOrder - right.sortOrder || left.amountUsd - right.amountUsd,
+          left.sortOrder - right.sortOrder ||
+          left.amountToken - right.amountToken,
       ),
     [plans],
   );
@@ -146,23 +189,15 @@ export default function Pricing() {
     try {
       const checkout = await createSubscriptionCheckout({
         plan: plan.id,
-        payCurrency: defaultCurrency,
       });
 
-      if (checkout.mock) {
-        toast.success("Mock payment confirmed.");
-        navigate("/billing");
-        return;
-      }
-
-      if (checkout.manualPayment || checkout.payment?._id) {
-        navigate(`/payment/${checkout.payment._id}`);
-        return;
-      }
-
-      throw new Error("Payment details were not returned.");
+      setSubscription(checkout.subscription);
+      setTokenBalance(checkout.tokenBalance);
+      updateUser({ tokenBalance: checkout.tokenBalance });
+      setConfirmPlan(null);
+      toast.success(`${plan.name} activated.`);
     } catch (error) {
-      toast.error(getApiErrorMessage(error, "Failed to create checkout."));
+      toast.error(getApiErrorMessage(error, "Failed to subscribe with token."));
     } finally {
       setLoadingPlan(null);
     }
@@ -176,8 +211,17 @@ export default function Pricing() {
   const getPlanAction = (plan: SubscriptionPlan) => {
     if (plan.id === "free") {
       return {
-        disabled: true,
-        label: "Included",
+        disabled: isAuthenticated,
+        label: isAuthenticated ? "Included" : "Choose plan",
+        variant: isAuthenticated ? ("outline" as const) : ("default" as const),
+        note: null,
+      };
+    }
+
+    if (!isAuthenticated) {
+      return {
+        disabled: false,
+        label: plan.name,
         variant: "outline" as const,
         note: null,
       };
@@ -201,7 +245,7 @@ export default function Pricing() {
         disabled: false,
         label: "Extend access",
         variant: "outline" as const,
-        note: `Adds ${plan.durationDays} days to your current plan.`,
+        note: `Spends ${formatTokenAmount(plan.amountToken)} token for another ${plan.durationDays} days.`,
       };
     }
 
@@ -213,141 +257,309 @@ export default function Pricing() {
         disabled: false,
         label: `Upgrade to ${plan.name}`,
         variant: "default" as const,
-        note: `Starts a fresh ${plan.durationDays}-day ${plan.name} period from today.`,
+        note: `Spends ${formatTokenAmount(plan.amountToken)} token and starts a fresh ${plan.durationDays}-day period.`,
       };
     }
 
     return {
       disabled: false,
-      label: "Choose plan",
+      label: "Subscribe with token",
       variant: "default" as const,
       note: null,
     };
   };
 
+  const getConfirmTitle = (plan: SubscriptionPlan) => {
+    if (plan.id === activePlan) {
+      return `Extend ${plan.name}?`;
+    }
+
+    if (
+      hasActivePaidPlan &&
+      (planRanks[plan.id] ?? 0) > (planRanks[activePlan] ?? 0)
+    ) {
+      return `Upgrade to ${plan.name}?`;
+    }
+
+    return `Subscribe to ${plan.name}?`;
+  };
+
+  const getConfirmDescription = (plan: SubscriptionPlan) => {
+    if (plan.id === activePlan) {
+      return `Spend ${formatTokenAmount(plan.amountToken)} token to extend ${plan.name} for ${plan.durationDays} days.`;
+    }
+
+    if (
+      hasActivePaidPlan &&
+      (planRanks[plan.id] ?? 0) > (planRanks[activePlan] ?? 0)
+    ) {
+      return `Spend ${formatTokenAmount(plan.amountToken)} token to start a fresh ${plan.durationDays}-day ${plan.name} plan.`;
+    }
+
+    return `Spend ${formatTokenAmount(plan.amountToken)} token to activate ${plan.name} for ${plan.durationDays} days.`;
+  };
+
+  const headerDescription = isAuthenticated
+    ? "Deposit USD to get token, then subscribe with token only."
+    : "Sign in to deposit USD, get token, and subscribe to a plan.";
+
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-      <Card className="min-w-0 border-border/70">
-        <CardHeader>
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="space-y-1">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/8 px-2.5 py-1 text-[11px] font-medium tracking-[0.16em] text-primary uppercase">
-                Access Plans
-              </span>
-              <CardTitle className="text-xl tracking-tight">Pricing</CardTitle>
-              <CardDescription className="max-w-2xl text-sm leading-6">
-                Pick a plan and complete payment with USDT on BNB Smart Chain.
-              </CardDescription>
-            </div>
-
-            {isAuthenticated ? (
-              <Button asChild variant="outline">
-                <Link to="/billing">
-                  <WalletCards className="size-4" />
-                  Billing
-                </Link>
-              </Button>
-            ) : null}
-          </div>
-
-        </CardHeader>
-      </Card>
-
-      {isLoading ? (
-        <div className="flex min-h-24 items-center justify-center">
-          <Loader2 className="size-4 animate-spin text-muted-foreground" />
-        </div>
-      ) : (
-        <div className="grid gap-4 lg:grid-cols-3">
-          {sortedPlans.map((plan) => {
-            const isPaid = plan.id !== "free";
-            const isActive = activePlan === plan.id;
-            const action = getPlanAction(plan);
-
-            return (
-              <Card
-                key={plan.id}
-                className={cn("rounded-lg", isActive && "border border-primary")}
-              >
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    {plan.id === "pro" ? <Crown className="size-4" /> : null}
-                    {plan.name}
-                  </CardTitle>
-                  <CardDescription>
-                    {plan.amountUsd === 0
-                      ? "Starter access"
-                      : "30 days of access"}
-                  </CardDescription>
-                  <CardAction>
-                    {isActive ? (
-                      <span className="rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
-                        Active
-                      </span>
-                    ) : null}
-                  </CardAction>
-                </CardHeader>
-
-                <CardContent className="flex flex-1 flex-col gap-5">
-                  <div>
-                    {plan.hasDiscount ? (
-                      <p className="text-sm text-muted-foreground line-through">
-                        {formatUsdtAmount(plan.originalAmountUsd)} USDT
-                      </p>
-                    ) : null}
-                    <div className="text-3xl font-bold">
-                      {formatUsdtAmount(plan.amountUsd)} USDT
+    <>
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+        <Card className="min-w-0 border-border/70">
+          <CardHeader>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="space-y-1">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/8 px-2.5 py-1 text-[11px] font-medium tracking-[0.16em] text-primary uppercase">
+                  Access Plans
+                </span>
+                <CardTitle className="text-xl tracking-tight">
+                  Pricing
+                </CardTitle>
+                <CardDescription className="max-w-2xl text-sm leading-6">
+                  {headerDescription}
+                </CardDescription>
+                <p className="text-sm text-muted-foreground">
+                  Rate: 1 USD = {formatTokenAmount(tokenPerUsdt)} token
+                </p>
+                {isAuthenticated ? (
+                  <div className="mt-3 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs text-muted-foreground">Balance</p>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-6"
+                        onClick={() => setShowBalance((current) => !current)}
+                        aria-label={
+                          showBalance ? "Hide balance" : "Show balance"
+                        }
+                      >
+                        {showBalance ? (
+                          <EyeOff className="size-3.5" />
+                        ) : (
+                          <Eye className="size-3.5" />
+                        )}
+                      </Button>
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      {isPaid ? `${plan.durationDays} days` : "Forever"}
-                    </p>
-                    {plan.hasDiscount ? (
-                      <p className="mt-1 text-sm font-medium text-primary">
-                        {plan.discount?.label ||
-                          `${formatUsdtAmount(plan.discountAmountUsd)} USDT off`}
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <Wallet className="size-5 text-muted-foreground" />
+                        <p className="text-2xl font-semibold tracking-tight">
+                          {showBalance
+                            ? `${formatTokenAmount(tokenBalance)} token`
+                            : "•••••• token"}
+                        </p>
+                      </div>
+                      <Button asChild>
+                        <Link to="/wallet">
+                          <ArrowDownLeft className="size-4" />
+                          Deposit
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
+
+        {isLoading ? (
+          <div className="flex min-h-24 items-center justify-center">
+            <Loader2 className="size-4 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <div className="grid gap-4 lg:grid-cols-3">
+            {sortedPlans.map((plan) => {
+              const isPaid = plan.id !== "free";
+              const isActive = activePlan === plan.id;
+              const action = getPlanAction(plan);
+              const hasEnoughToken = tokenBalance >= plan.amountToken;
+
+              return (
+                <Card
+                  key={plan.id}
+                  className={cn(
+                    "rounded-lg",
+                    isActive && "border border-primary",
+                  )}
+                >
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      {plan.id === "pro" ? <Crown className="size-4" /> : null}
+                      {plan.name}
+                    </CardTitle>
+                    <CardDescription>
+                      {plan.amountToken === 0
+                        ? "Starter access"
+                        : `${plan.durationDays} days of access`}
+                    </CardDescription>
+                    <CardAction>
+                      {isActive ? (
+                        <span className="rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
+                          Active
+                        </span>
+                      ) : null}
+                    </CardAction>
+                  </CardHeader>
+
+                  <CardContent className="flex flex-1 flex-col gap-5">
+                    <div>
+                      {plan.hasDiscount ? (
+                        <p className="text-sm text-muted-foreground line-through">
+                          {formatTokenAmount(plan.originalAmountToken)} token
+                        </p>
+                      ) : null}
+                      <div className="text-3xl font-bold">
+                        {formatTokenAmount(plan.amountToken)} token
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {isPaid ? `${plan.durationDays} days` : "Forever"}
+                      </p>
+                      {plan.hasDiscount ? (
+                        <p className="mt-1 text-sm font-medium text-primary">
+                          {plan.discount?.label ||
+                            `${formatTokenAmount(plan.discountAmountToken)} token off`}
+                        </p>
+                      ) : null}
+                    </div>
+
+                    <div className="space-y-3">
+                      {plan.features.map((feature) => (
+                        <div key={feature} className="flex items-start gap-2">
+                          <Check className="mt-0.5 size-4 shrink-0 text-primary" />
+                          <span className="text-sm">{feature}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {isActive && expiryDate && isPaid ? (
+                      <p className="text-sm text-muted-foreground">
+                        Active until {expiryDate}
                       </p>
                     ) : null}
-                  </div>
 
-                  <div className="space-y-3">
-                    {plan.features.map((feature) => (
-                      <div key={feature} className="flex items-start gap-2">
-                        <Check className="mt-0.5 size-4 shrink-0 text-primary" />
-                        <span className="text-sm">{feature}</span>
-                      </div>
-                    ))}
-                  </div>
+                    {!hasEnoughToken && isPaid ? (
+                      <p className="text-sm text-muted-foreground">
+                        Need{" "}
+                        {formatTokenAmount(plan.amountToken - tokenBalance)}{" "}
+                        more token.
+                      </p>
+                    ) : null}
 
-                  {isActive && expiryDate && isPaid ? (
-                    <p className="text-sm text-muted-foreground">
-                      Active until {expiryDate}
-                    </p>
-                  ) : null}
+                    {action.note ? (
+                      <p className="text-sm text-muted-foreground">
+                        {action.note}
+                      </p>
+                    ) : null}
 
-                  {action.note ? (
-                    <p className="text-sm text-muted-foreground">
-                      {action.note}
-                    </p>
-                  ) : null}
+                    <Button
+                      className="mt-auto w-full"
+                      variant={action.variant}
+                      onClick={() => {
+                        if (!isAuthenticated && !isPaid) {
+                          navigate("/auth");
+                          return;
+                        }
 
-                  <Button
-                    className="mt-auto w-full"
-                    variant={action.variant}
-                    onClick={() => void handleCheckout(plan)}
-                    disabled={loadingPlan === plan.id || action.disabled}
-                  >
-                    {loadingPlan === plan.id ? (
-                      <Loader2 className="size-4 animate-spin" />
-                    ) : (
-                      action.label
-                    )}
-                  </Button>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
-    </div>
+                        setConfirmPlan(plan);
+                      }}
+                      disabled={
+                        loadingPlan === plan.id ||
+                        action.disabled ||
+                        (!isAuthenticated && isPaid) ||
+                        (isAuthenticated && isPaid && !hasEnoughToken)
+                      }
+                    >
+                      {loadingPlan === plan.id ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : !isAuthenticated && isPaid ? (
+                        "Sign up first"
+                      ) : !hasEnoughToken && isPaid ? (
+                        "Deposit token first"
+                      ) : (
+                        action.label
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <AlertDialog
+        open={Boolean(confirmPlan)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setConfirmPlan(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmPlan
+                ? getConfirmTitle(confirmPlan)
+                : "Confirm subscription?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmPlan ? getConfirmDescription(confirmPlan) : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          {confirmPlan ? (
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <p>
+                Cost:{" "}
+                <span className="font-medium text-foreground">
+                  {formatTokenAmount(confirmPlan.amountToken)} token
+                </span>
+              </p>
+              <p>
+                Balance:{" "}
+                <span className="font-medium text-foreground">
+                  {formatTokenAmount(tokenBalance)} token
+                </span>
+              </p>
+              <p>
+                After balance:{" "}
+                <span className="font-medium text-foreground">
+                  {formatTokenAmount(
+                    Math.max(0, tokenBalance - confirmPlan.amountToken),
+                  )}{" "}
+                  token
+                </span>
+              </p>
+            </div>
+          ) : null}
+
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              disabled={Boolean(confirmPlan && loadingPlan === confirmPlan.id)}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (confirmPlan) {
+                  void handleCheckout(confirmPlan);
+                }
+              }}
+              disabled={Boolean(confirmPlan && loadingPlan === confirmPlan.id)}
+            >
+              {confirmPlan && loadingPlan === confirmPlan.id ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                "Use token"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

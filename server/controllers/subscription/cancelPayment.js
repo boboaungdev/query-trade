@@ -1,4 +1,7 @@
-import { PAYMENT_STATUSES } from "../../constants/subscription.js";
+import {
+  PAYMENT_PURPOSES,
+  PAYMENT_STATUSES,
+} from "../../constants/subscription.js";
 import { PaymentDB } from "../../models/payment.js";
 import { resError, resJson } from "../../utils/response.js";
 
@@ -10,6 +13,7 @@ export const cancelPayment = async (req, res, next) => {
     const payment = await PaymentDB.findOne({
       _id: paymentId,
       user: user._id,
+      purpose: PAYMENT_PURPOSES.tokenTopup,
     });
 
     if (!payment) {
@@ -32,6 +36,7 @@ export const cancelPayment = async (req, res, next) => {
       ...(payment.rawPayload || {}),
       cancelledAt: new Date().toISOString(),
       cancelledBy: "user",
+      message: "Token deposit request cancelled by user.",
     };
     await payment.save();
 

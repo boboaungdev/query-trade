@@ -2,7 +2,7 @@ export const defaultSubscriptionPlans = [
   {
     key: "free",
     name: "Free",
-    amountUsd: 0,
+    amountToken: 0,
     durationDays: 0,
     features: [
       "Basic dashboard access",
@@ -15,7 +15,7 @@ export const defaultSubscriptionPlans = [
   {
     key: "plus",
     name: "Plus",
-    amountUsd: 10,
+    amountToken: 10000,
     durationDays: 30,
     features: [
       "More strategy and backtest usage",
@@ -28,7 +28,7 @@ export const defaultSubscriptionPlans = [
   {
     key: "pro",
     name: "Pro",
-    amountUsd: 50,
+    amountToken: 50000,
     durationDays: 30,
     features: [
       "Highest usage limits",

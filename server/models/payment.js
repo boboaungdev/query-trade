@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import {
+  PAYMENT_PURPOSES,
   PAYMENT_CURRENCIES,
   PAYMENT_STATUSES,
 } from "../constants/subscription.js";
@@ -14,23 +15,35 @@ const paymentSchema = new Schema(
       required: true,
       index: true,
     },
-    plan: {
+    purpose: {
       type: String,
+      enum: Object.values(PAYMENT_PURPOSES),
+      default: PAYMENT_PURPOSES.tokenTopup,
       required: true,
     },
     planSnapshot: {
       key: String,
       name: String,
-      originalAmountUsd: Number,
-      discountAmountUsd: Number,
-      finalAmountUsd: Number,
+      originalAmountToken: Number,
+      discountAmountToken: Number,
+      finalAmountToken: Number,
       durationDays: Number,
       discount: Schema.Types.Mixed,
     },
-    amountUsd: {
+    amountUsdt: {
       type: Number,
       required: true,
       min: 0,
+    },
+    tokenAmount: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+    rateSnapshot: {
+      type: Number,
+      required: true,
+      min: 1,
     },
     status: {
       type: String,
@@ -47,7 +60,7 @@ const paymentSchema = new Schema(
     },
     providerStatus: String,
     payAddress: String,
-    payAmount: Number,
+    payAmountUsdt: Number,
     txHash: {
       type: String,
       lowercase: true,

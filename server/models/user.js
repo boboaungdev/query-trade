@@ -47,6 +47,11 @@ const userSchema = new Schema(
     pushToken: {
       type: String,
     },
+    tokenBalance: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     authProviders: [
       {
         _id: false,

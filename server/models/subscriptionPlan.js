@@ -48,7 +48,7 @@ const subscriptionPlanSchema = new Schema(
       unique: true,
       index: true,
     },
-    amountUsd: {
+    amountToken: {
       type: Number,
       required: true,
       min: 0,

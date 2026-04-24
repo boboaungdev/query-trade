@@ -9,7 +9,9 @@ import {
   validateToken,
 } from "../utils/validator.js";
 import { createCheckout } from "../controllers/subscription/checkout.js";
+import { createDeposit } from "../controllers/subscription/createDeposit.js";
 import {
+  getWalletActivity,
   getPaymentHistory,
   getPayment,
   getMySubscription,
@@ -32,6 +34,11 @@ router.use(validateToken());
 
 router.get("/me", getMySubscription);
 router.get(
+  "/activity",
+  validateQuery(SubscriptionSchema.paymentsQuery),
+  getWalletActivity,
+);
+router.get(
   "/payments",
   validateQuery(SubscriptionSchema.paymentsQuery),
   getPaymentHistory,
@@ -45,6 +52,11 @@ router.post(
   "/checkout",
   validateBody(SubscriptionSchema.checkout),
   createCheckout,
+);
+router.post(
+  "/deposits",
+  validateBody(SubscriptionSchema.deposit),
+  createDeposit,
 );
 router.post(
   "/payments/:paymentId/verify",

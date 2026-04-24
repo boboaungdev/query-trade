@@ -87,7 +87,7 @@ type IndicatorSortBy = "name" | "createdAt";
 type PlanDraft = {
   key: string;
   name: string;
-  amountUsd: string;
+  amountToken: string;
   durationDays: string;
   sortOrder: string;
   features: string;
@@ -183,7 +183,7 @@ const planSortOptions: DropdownOption<AdminPlanSortBy>[] = [
   { value: "sortOrder", label: "Sort order" },
   { value: "createdAt", label: "Created" },
   { value: "name", label: "Name" },
-  { value: "amountUsd", label: "Amount" },
+  { value: "amountToken", label: "Amount" },
   { value: "durationDays", label: "Duration" },
 ];
 
@@ -200,7 +200,7 @@ const orderOptions: DropdownOption<SortOrder>[] = [
 const emptyPlanDraft: PlanDraft = {
   key: "",
   name: "",
-  amountUsd: "10",
+  amountToken: "10000",
   durationDays: "30",
   sortOrder: "1",
   features: "",
@@ -294,7 +294,7 @@ function toDraft(plan: SubscriptionPlan): PlanDraft {
   return {
     key: buildPlanKeyPreview(plan.name, plan.key),
     name: plan.name,
-    amountUsd: String(plan.originalAmountUsd ?? plan.amountUsd),
+    amountToken: String(plan.originalAmountToken ?? plan.amountToken),
     durationDays: String(plan.durationDays),
     sortOrder: String(plan.sortOrder),
     features: plan.features.join("\n"),
@@ -383,7 +383,7 @@ function isPlanDraftValid(draft: PlanDraft) {
   return (
     draft.name.trim().length >= 2 &&
     draft.name.trim().length <= 20 &&
-    isNonNegativeNumber(draft.amountUsd) &&
+    isNonNegativeNumber(draft.amountToken) &&
     isNonNegativeInteger(draft.durationDays) &&
     isNonNegativeInteger(draft.sortOrder) &&
     hasValidDiscountValue &&
@@ -447,7 +447,7 @@ function buildPlanPayload(draft: PlanDraft): SubscriptionPlanPayload {
 
   return {
     name: draft.name.trim(),
-    amountUsd: Number(draft.amountUsd),
+    amountToken: Number(draft.amountToken),
     durationDays: Number(draft.durationDays),
     sortOrder: Number(draft.sortOrder),
     features: draft.features
@@ -1588,10 +1588,10 @@ export default function AdminDashboard() {
                           </span>
                         </div>
                         <CardDescription>
-                          {formatAmount(plan.amountUsd)} USDT /{" "}
+                          {formatAmount(plan.amountToken)} token /{" "}
                           {plan.durationDays} days
                           {plan.hasDiscount
-                            ? ` - ${formatAmount(plan.discountAmountUsd)} off`
+                            ? ` - ${formatAmount(plan.discountAmountToken)} off`
                             : ""}
                         </CardDescription>
                         <p className="line-clamp-2 text-sm text-muted-foreground">
@@ -1815,16 +1815,16 @@ export default function AdminDashboard() {
                   ) : null}
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-muted-foreground">Amount USDT</Label>
+                  <Label className="text-muted-foreground">Amount Token</Label>
                   <Input
                     type="text"
                     inputMode="decimal"
-                    value={newPlanDraft.amountUsd}
+                    value={newPlanDraft.amountToken}
                     placeholder="29.99"
                     onChange={(event) =>
                       setNewPlanDraft({
                         ...newPlanDraft,
-                        amountUsd: sanitizeDecimalInput(event.target.value),
+                        amountToken: sanitizeDecimalInput(event.target.value),
                       })
                     }
                   />
@@ -2129,16 +2129,18 @@ export default function AdminDashboard() {
                     ) : null}
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-muted-foreground">Amount USDT</Label>
+                    <Label className="text-muted-foreground">
+                      Amount Token
+                    </Label>
                     <Input
                       type="text"
                       inputMode="decimal"
-                      value={planDraft.amountUsd}
+                      value={planDraft.amountToken}
                       placeholder="29.99"
                       onChange={(event) =>
                         setPlanDraft({
                           ...planDraft,
-                          amountUsd: sanitizeDecimalInput(event.target.value),
+                          amountToken: sanitizeDecimalInput(event.target.value),
                         })
                       }
                     />

@@ -13,6 +13,11 @@ export type User = {
   username: string;
   email: string;
   role: "user" | "admin";
+  tokenBalance?: number;
+  preferences?: {
+    hideWalletBalance?: boolean;
+    showWalletBalance?: boolean;
+  };
   avatar?: string;
   bio?: string;
   membership?: UserMembership;

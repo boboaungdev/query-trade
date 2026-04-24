@@ -2,11 +2,11 @@ import { useEffect, useState, type ClipboardEvent } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import {
   AlertTriangle,
+  Check,
   CheckCircle2,
   Clock,
   Copy,
   Loader2,
-  Check,
   WalletCards,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
@@ -35,14 +35,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useAuthStore } from "@/store/auth";
+import { Skeleton } from "@/components/ui/skeleton";
 
-function formatPlanName(plan: string) {
-  return plan.charAt(0).toUpperCase() + plan.slice(1);
-}
-
-function formatAmount(amount?: number) {
+function formatAmount(amount?: number, maximumFractionDigits = 8) {
   return Number(amount ?? 0).toLocaleString(undefined, {
-    maximumFractionDigits: 8,
+    maximumFractionDigits,
   });
 }
 
@@ -51,8 +49,7 @@ function sanitizeTxHashInput(value: string) {
 }
 
 const txHashPattern = /^0x[a-fA-F0-9]{64}$/;
-const headerDescription =
-  "Send the required USDT amount on BNB Smart Chain (BEP20) to continue your payment.";
+const walletAddressPattern = /^0x[a-fA-F0-9]{40}$/;
 const paymentRequestCache = new Map<
   string,
   Promise<Awaited<ReturnType<typeof getPayment>>>
@@ -68,6 +65,7 @@ const usdtLogoDataUri = `data:image/svg+xml;utf8,${encodeURIComponent(`
 
 export default function PaymentPage() {
   const { paymentId } = useParams();
+  const updateUser = useAuthStore((state) => state.updateUser);
   const [payment, setPayment] = useState<Payment | null>(null);
   const [txHash, setTxHash] = useState("");
   const [txHashError, setTxHashError] = useState<string | null>(null);
@@ -100,7 +98,7 @@ export default function PaymentPage() {
         }
       } catch (error) {
         if (!ignore) {
-          toast.error(getApiErrorMessage(error, "Failed to load payment."));
+          toast.error(getApiErrorMessage(error, "Failed to load deposit."));
         }
       } finally {
         if (!ignore) {
@@ -154,9 +152,12 @@ export default function PaymentPage() {
       });
 
       setPayment(data.payment);
+      if (typeof data.tokenBalance === "number") {
+        updateUser({ tokenBalance: data.tokenBalance });
+      }
       resetTxHashDialog();
       setShowTxHashInput(false);
-      toast.success("Transaction verified.");
+      toast.success("Deposit verified.");
     } catch (error) {
       const message = getApiErrorMessage(
         error,
@@ -206,61 +207,71 @@ export default function PaymentPage() {
       return;
     }
 
-    if (!txHashPattern.test(nextTxHash)) {
-      setTxHashError("Enter a valid txHash, not a wallet address.");
+    if (walletAddressPattern.test(nextTxHash)) {
+      setTxHashError("Dont add wallet address.");
       return;
     }
 
-    setIsVerifying(true);
-    setTxHashError(null);
-
-    try {
-      const data = await verifySubscriptionPayment({
-        paymentId,
-        txHash: nextTxHash,
-      });
-
-      setPayment(data.payment);
-      setTxHash("");
-      setShowTxHashInput(false);
-      toast.success("Transaction verified.");
-    } catch (error) {
-      const message = getApiErrorMessage(
-        error,
-        "Transaction verification failed.",
-      );
-      setTxHashError(message);
-      toast.error(message);
-    } finally {
-      setIsVerifying(false);
+    if (!txHashPattern.test(nextTxHash)) {
+      setTxHashError("Enter a valid txHash.");
+      return;
     }
+
+    await verifyTxHashValue(nextTxHash);
   };
 
   if (!paymentId) {
-    return <Navigate to="/pricing" replace />;
+    return <Navigate to="/wallet" replace />;
   }
 
   if (isLoading) {
     return (
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
         <PaymentHeader />
-        <div className="flex min-h-24 items-center justify-center">
-          <Loader2 className="size-4 animate-spin text-muted-foreground" />
-        </div>
+        <Card className="rounded-lg border-0 shadow-none">
+          <CardHeader>
+            <Skeleton className="h-7 w-52" />
+            <Skeleton className="h-4 w-full max-w-xl" />
+          </CardHeader>
+          <CardContent className="space-y-4 pt-1">
+            <div className="grid gap-4 md:grid-cols-[minmax(0,320px)_minmax(0,1fr)] md:items-center md:gap-6">
+              <div className="flex flex-col items-center gap-3">
+                <Skeleton className="size-[258px] rounded-[1.5rem]" />
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-8 w-52 rounded-full" />
+                  <Skeleton className="size-9 rounded-full" />
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Skeleton className="h-9 w-40" />
+                  <Skeleton className="h-4 w-44" />
+                  <Skeleton className="h-4 w-52" />
+                  <Skeleton className="h-4 w-28" />
+                </div>
+                <Skeleton className="h-16 w-full max-w-2xl" />
+                <Skeleton className="h-10 w-40" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   if (!payment) {
-    return <Navigate to="/pricing" replace />;
+    return <Navigate to="/wallet" replace />;
   }
 
-  const amount = payment.payAmount ?? payment.amountUsd;
   const isConfirmed = payment.status === "confirmed";
   const isExpired = payment.status === "expired";
   const trimmedTxHash = txHash.trim();
   const showTxHashError =
     trimmedTxHash.length > 0 && !txHashPattern.test(trimmedTxHash);
+  const clientTxHashErrorMessage = walletAddressPattern.test(trimmedTxHash)
+    ? "Dont add wallet address."
+    : "Enter a valid txHash.";
   const canVerifyTxHash = txHashPattern.test(trimmedTxHash);
   const isVerifyDisabled =
     isVerifying || !canVerifyTxHash || Boolean(txHashError);
@@ -273,8 +284,6 @@ export default function PaymentPage() {
   const shortAddress = payAddress
     ? `${payAddress.slice(0, 6)}...${payAddress.slice(-6)}`
     : "Unavailable";
-  const planName = payment.planSnapshot?.name ?? formatPlanName(payment.plan);
-  const planDurationDays = payment.planSnapshot?.durationDays;
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
@@ -282,10 +291,10 @@ export default function PaymentPage() {
 
       <Card className="rounded-lg border-0 shadow-none">
         <CardHeader>
-          <CardTitle>Complete Your Payment</CardTitle>
+          <CardTitle>Complete Your Deposit</CardTitle>
           <CardDescription>
-            Scan the QR code with your wallet. We only accept USDT on BNB Smart
-            Chain (BEP20) for this payment.
+            Send the exact USDT amount on BNB Smart Chain, then verify with your
+            transaction hash to receive token.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 pt-1">
@@ -313,8 +322,9 @@ export default function PaymentPage() {
 
               <div className="flex flex-wrap items-center justify-center gap-1">
                 <div className="inline-flex max-w-full items-center rounded-full px-2 py-1.5 text-sm text-muted-foreground">
+                  <span className="shrink-0 pr-2">Deposit address:</span>
                   <span className="max-w-[180px] truncate font-mono sm:max-w-[240px]">
-                   {shortAddress}
+                    {shortAddress}
                   </span>
                 </div>
                 <Button
@@ -335,16 +345,18 @@ export default function PaymentPage() {
               </div>
             </div>
 
-            <div className="space-y-3 text-left md:text-left">
+            <div className="space-y-3 text-left">
               <div className="space-y-2">
                 <p className="text-3xl font-semibold tracking-tight">
-                  {formatAmount(amount)} USDT
+                  {formatAmount(payment.payAmountUsdt ?? payment.amountUsdt)}{" "}
+                  USDT
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Subscription plan: {planName}
-                  {typeof planDurationDays === "number"
-                    ? ` - ${planDurationDays} days`
-                    : ""}
+                  You will receive {formatAmount(payment.tokenAmount, 0)} token
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Rate snapshot: 1 USDT ={" "}
+                  {formatAmount(payment.rateSnapshot, 0)} token
                 </p>
                 <div
                   className={`flex items-center justify-start gap-2 text-sm ${statusTone}`}
@@ -364,8 +376,8 @@ export default function PaymentPage() {
                 <div className="flex items-start justify-start gap-2 text-left">
                   <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600" />
                   <p className="leading-6 text-amber-800">
-                    Send only USDT via BNB Smart Chain (BEP20). Payments sent
-                    on the wrong network may be lost and could be unrecoverable.
+                    Send only USDT via BNB Smart Chain (BEP20). Wrong-network
+                    transfers may be lost.
                   </p>
                 </div>
               </div>
@@ -376,7 +388,7 @@ export default function PaymentPage() {
                     onClick={() => setShowTxHashInput(true)}
                     className="w-full sm:w-auto"
                   >
-                    Already paid
+                    I already deposited
                   </Button>
                 </div>
               ) : null}
@@ -392,15 +404,9 @@ export default function PaymentPage() {
             </div>
           ) : isExpired ? (
             <div className="rounded-2xl p-2 text-sm text-destructive">
-              This payment was replaced. Create a new payment from Pricing.
+              This deposit request was replaced. Create a new one from Wallet.
             </div>
           ) : null}
-
-          <p className="text-sm text-muted-foreground">
-            After sending your payment, click Already paid and paste your
-            transaction hash to verify the payment and activate your
-            subscription.
-          </p>
         </CardContent>
       </Card>
 
@@ -416,9 +422,10 @@ export default function PaymentPage() {
         <DialogContent
           className="gap-0 overflow-hidden p-0 sm:max-w-md"
           showCloseButton={false}
+          onOpenAutoFocus={(event) => event.preventDefault()}
         >
           <DialogHeader className="border-b px-4 pt-4 pb-3">
-            <DialogTitle>Verify Payment</DialogTitle>
+            <DialogTitle>Verify Deposit</DialogTitle>
             <DialogDescription>Paste your transaction hash.</DialogDescription>
           </DialogHeader>
 
@@ -470,7 +477,7 @@ export default function PaymentPage() {
               <p className="text-xs text-destructive">{txHashError}</p>
             ) : showTxHashError ? (
               <p className="text-xs text-destructive">
-                Enter a valid txHash, not a wallet address.
+                {clientTxHashErrorMessage}
               </p>
             ) : null}
           </div>
@@ -514,20 +521,21 @@ function PaymentHeader() {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/8 px-2.5 py-1 text-[11px] font-medium tracking-[0.16em] text-primary uppercase">
-              Payment Details
+              Deposit Details
             </span>
             <CardTitle className="text-xl tracking-tight">
-              Pay With USDT
+              Deposit USDT
             </CardTitle>
             <CardDescription className="max-w-2xl text-sm leading-6">
-              {headerDescription}
+              Send USDT and verify the transaction to receive token in your app
+              wallet.
             </CardDescription>
           </div>
 
           <Button asChild variant="outline">
-            <Link to="/billing">
+            <Link to="/wallet">
               <WalletCards className="size-4" />
-              Billing
+              Wallet
             </Link>
           </Button>
         </div>
