@@ -4,6 +4,7 @@ import {
   BookmarkCheck,
   CandlestickChart,
   Copy,
+  Eye,
   Globe,
   Loader2,
   Lock,
@@ -11,8 +12,8 @@ import {
   MoreHorizontal,
   Search,
   SquareArrowOutUpRight,
+  Target,
   Trash2,
-  TrendingUp,
   UserRound,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -352,7 +353,7 @@ function renderBookmarkStrategyCard({
             {isMine ? "Mine" : target?.isPublic ? "Public" : "Private"}
           </span>
           <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
-            <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
+            <Eye className="h-3.5 w-3.5 text-muted-foreground" />
             {target?.stats?.viewCount ?? 0}
           </span>
           <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
@@ -924,7 +925,7 @@ export default function BookmarkPage() {
                   title="Strategies"
                   className="group gap-2 data-[state=active]:text-primary data-[state=active]:after:bg-primary dark:data-[state=active]:text-primary dark:data-[state=active]:after:bg-primary"
                 >
-                  <TrendingUp className="h-4 w-4 shrink-0" />
+                  <Target className="h-4 w-4 shrink-0" />
                   <span className="hidden group-data-[state=active]:inline md:inline">
                     Strategies
                   </span>

@@ -1,6 +1,5 @@
 import { SubscriptionPlanDB } from "../../models/subscriptionPlan.js";
 import { SubscriptionDB } from "../../models/subscription.js";
-import { PaymentDB } from "../../models/payment.js";
 import { serializePlan } from "../../services/subscription/calculatePlanPricing.js";
 import { resError, resJson } from "../../utils/response.js";
 
@@ -156,28 +155,9 @@ export const updatePlan = async (req, res, next) => {
     }
 
     if (nextKey !== existingPlan.key) {
-      await Promise.all([
-        SubscriptionDB.updateMany(
-          { plan: existingPlan.key },
-          { $set: { plan: nextKey } },
-        ),
-        PaymentDB.updateMany(
-          { plan: existingPlan.key },
-          {
-            $set: {
-              plan: nextKey,
-              "planSnapshot.key": nextKey,
-              ...(typeof req.body.name === "string"
-                ? { "planSnapshot.name": req.body.name.trim() }
-                : {}),
-            },
-          },
-        ),
-      ]);
-    } else if (typeof req.body.name === "string") {
-      await PaymentDB.updateMany(
-        { "planSnapshot.key": existingPlan.key },
-        { $set: { "planSnapshot.name": req.body.name.trim() } },
+      await SubscriptionDB.updateMany(
+        { plan: existingPlan.key },
+        { $set: { plan: nextKey } },
       );
     }
 

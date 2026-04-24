@@ -2,6 +2,9 @@ import { DEPOSIT_PAYMENT_MODE } from "./index.js";
 
 export const SUBSCRIPTION_PROVIDER = "token";
 export const DEPOSIT_PROVIDER = "manual";
+export const PAYMENT_PROVIDERS = {
+  manual: "manual",
+};
 export const PAYMENT_MODES = {
   mock: "mock",
   manual: "manual",
@@ -46,7 +49,7 @@ export const PAYMENT_PURPOSES = {
   tokenTopup: "token_topup",
 };
 
-export const TOKEN_TRANSACTION_TYPES = {
+export const WALLET_TRANSACTION_TYPES = {
   deposit: "deposit",
   spend: "spend",
   refund: "refund",

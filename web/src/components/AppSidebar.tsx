@@ -44,20 +44,7 @@ import { useState } from "react";
 import { getApiErrorMessage } from "@/api/axios";
 import { signout } from "@/api/auth";
 import { toast } from "sonner";
-
-function formatCompactTokenAmount(amount: number) {
-  if (amount < 1000) {
-    return amount.toLocaleString(undefined, { maximumFractionDigits: 0 });
-  }
-
-  if (amount < 1_000_000) {
-    const value = amount / 1000;
-    return `${Number.isInteger(value) ? value.toFixed(0) : value.toFixed(1).replace(/\.0$/, "")}k`;
-  }
-
-  const value = amount / 1_000_000;
-  return `${Number.isInteger(value) ? value.toFixed(0) : value.toFixed(1).replace(/\.0$/, "")}M`;
-}
+import { formatCompactTokenAmount } from "@/lib/formatTokenAmount";
 
 export function AppSidebar() {
   const { isMobile, openMobile, setOpen, setOpenMobile, toggleSidebar, state } =

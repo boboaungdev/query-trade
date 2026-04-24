@@ -17,6 +17,7 @@ import {
   CandlestickChart,
   Copy,
   CopyPlus,
+  Eye,
   Globe,
   Loader2,
   Lock,
@@ -957,7 +958,7 @@ export default function StrategyDetailPage() {
                       </span>
                     </span>
                     <span className="inline-flex min-w-0 items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
-                      <TrendingUp className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      <Eye className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                       <span>{strategy.stats?.viewCount ?? 0}</span>
                     </span>
                     <span className="inline-flex min-w-0 items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">

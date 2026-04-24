@@ -1863,7 +1863,7 @@ export default function BacktestPage() {
                                                       : "Private"}
                                                   </span>
                                                   <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
-                                                    <TrendingUp className="h-3.5 w-3.5" />
+                                                    <Eye className="h-3.5 w-3.5" />
                                                     {item.stats?.viewCount ?? 0}
                                                   </span>
                                                   <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">

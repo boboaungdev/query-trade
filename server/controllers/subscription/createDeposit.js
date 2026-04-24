@@ -5,13 +5,13 @@ import {
   PAYMENT_PURPOSES,
   PAYMENT_STATUSES,
   isMockPaymentMode,
-  TOKEN_TRANSACTION_TYPES,
+  WALLET_TRANSACTION_TYPES,
 } from "../../constants/subscription.js";
 import { TOKEN_PER_USDT } from "../../constants/index.js";
 import { PaymentDB } from "../../models/payment.js";
-import { getReceiveAddress } from "../../services/bscPayment.js";
+import { getReceiveAddress } from "../../services/payment/bscUsdt.js";
 import { resJson } from "../../utils/response.js";
-import { recordTokenTransaction } from "./helpers.js";
+import { recordWalletTransaction } from "./helpers.js";
 
 export const createDeposit = async (req, res, next) => {
   try {
@@ -35,7 +35,7 @@ export const createDeposit = async (req, res, next) => {
     const payment = await PaymentDB.create({
       user: user._id,
       purpose: PAYMENT_PURPOSES.tokenTopup,
-      amountUsdt,
+      requestedAmountUsdt: amountUsdt,
       tokenAmount: amountUsdt * TOKEN_PER_USDT,
       rateSnapshot: TOKEN_PER_USDT,
       status: PAYMENT_STATUSES.pending,
@@ -45,7 +45,7 @@ export const createDeposit = async (req, res, next) => {
         .toString("hex")}`,
       payCurrency,
       payAddress: getReceiveAddress(),
-      payAmountUsdt: amountUsdt,
+      payCurrencyAmount: amountUsdt,
       rawPayload: {
         provider: DEPOSIT_PROVIDER,
         message: "Waiting for user-submitted USDT BEP20 transaction hash.",
@@ -55,10 +55,10 @@ export const createDeposit = async (req, res, next) => {
     if (isMockPaymentMode()) {
       payment.status = PAYMENT_STATUSES.confirmed;
       payment.providerStatus = "mock_confirmed";
-      payment.txHash = `mock_${payment._id}`;
+      payment.providerReference = `mock_${payment._id}`;
       payment.txFrom = "mock_wallet";
       payment.confirmedAt = new Date();
-      payment.actuallyPaid = amountUsdt;
+      payment.confirmedAmountUsdt = amountUsdt;
       payment.rawPayload = {
         ...(payment.rawPayload || {}),
         provider: "dev_mock",
@@ -66,22 +66,22 @@ export const createDeposit = async (req, res, next) => {
       };
       await payment.save();
 
-      const { tokenTransaction, tokenBalance } = await recordTokenTransaction({
+      const { walletTransaction, tokenBalance } = await recordWalletTransaction({
         userId: user._id,
-        type: TOKEN_TRANSACTION_TYPES.deposit,
+        type: WALLET_TRANSACTION_TYPES.deposit,
         amount: payment.tokenAmount,
         paymentId: payment._id,
         description: "Mock token deposit confirmed",
         metadata: {
-          amountUsdt: payment.amountUsdt,
+          amountUsdt: payment.requestedAmountUsdt,
           rateSnapshot: payment.rateSnapshot,
-          txHash: payment.txHash,
+          providerReference: payment.providerReference,
         },
       });
 
       return resJson(res, 201, "Mock token deposit confirmed.", {
         payment,
-        tokenTransaction,
+        walletTransaction,
         tokenBalance,
         mock: true,
       });

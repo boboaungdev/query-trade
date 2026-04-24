@@ -12,6 +12,7 @@ import {
   CircleDollarSign,
   Clock3,
   Copy,
+  Eye,
   Globe,
   Lock,
   Loader2,
@@ -2295,7 +2296,7 @@ export default function BacktestResultPage() {
                       </span>
                     </span>
                     <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
-                      <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
+                      <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                       <span>{backtest.strategy?.stats?.viewCount ?? "-"}</span>
                     </span>
                     <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">

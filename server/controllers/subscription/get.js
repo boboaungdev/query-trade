@@ -2,10 +2,10 @@ import { TOKEN_PER_USDT } from "../../constants/index.js";
 import {
   PAYMENT_CURRENCIES,
   PAYMENT_PURPOSES,
-  TOKEN_TRANSACTION_TYPES,
+  WALLET_TRANSACTION_TYPES,
 } from "../../constants/subscription.js";
 import { PaymentDB } from "../../models/payment.js";
-import { TokenTransactionDB } from "../../models/tokenTransaction.js";
+import { WalletTransactionDB } from "../../models/walletTransaction.js";
 import { SubscriptionPlanDB } from "../../models/subscriptionPlan.js";
 import { serializePlan } from "../../services/subscription/calculatePlanPricing.js";
 import { resError, resJson } from "../../utils/response.js";
@@ -90,7 +90,7 @@ function serializeWalletPaymentActivity(payment) {
     sourceType: "payment",
     activityType: "deposit",
     status: payment.status,
-    amountUsd: Number(payment.amountUsdt || 0),
+    amountUsd: Number(payment.requestedAmountUsdt || 0),
     tokenAmount: Number(payment.tokenAmount || 0),
     rateSnapshot: Number(payment.rateSnapshot || TOKEN_PER_USDT),
     payCurrency: payment.payCurrency,
@@ -115,23 +115,23 @@ function serializeWalletTokenActivity(transaction) {
   let description = transaction.description || "Wallet activity";
 
   if (
-    transaction.type === TOKEN_TRANSACTION_TYPES.spend &&
-    typeof transaction.plan === "string" &&
-    transaction.plan
+    transaction.type === WALLET_TRANSACTION_TYPES.spend &&
+    typeof transaction.planKey === "string" &&
+    transaction.planKey
   ) {
     activityType = "subscription";
-    description = `Subscribed to ${transaction.plan}`;
+    description = `Subscribed to ${transaction.planKey}`;
   }
 
   return {
     _id: transaction._id,
-    sourceType: "token_transaction",
+    sourceType: "wallet_transaction",
     activityType,
     status: "completed",
     tokenAmount: Number(transaction.amount || 0),
     balanceBefore: Number(transaction.balanceBefore || 0),
     balanceAfter: Number(transaction.balanceAfter || 0),
-    plan: transaction.plan || null,
+    plan: transaction.planKey || null,
     description,
     createdAt: transaction.createdAt,
   };
@@ -151,27 +151,27 @@ export const getWalletActivity = async (req, res, next) => {
     };
     const tokenQuery = {
       user: user._id,
-      type: { $ne: TOKEN_TRANSACTION_TYPES.deposit },
+      type: { $ne: WALLET_TRANSACTION_TYPES.deposit },
     };
 
-    const [payments, paymentsTotal, tokenTransactions, tokenTransactionsTotal] =
+    const [payments, paymentsTotal, walletTransactions, walletTransactionsTotal] =
       await Promise.all([
         PaymentDB.find(paymentQuery)
           .sort({ createdAt: -1 })
           .limit(combinedLimit)
           .lean(),
         PaymentDB.countDocuments(paymentQuery),
-        TokenTransactionDB.find(tokenQuery)
+        WalletTransactionDB.find(tokenQuery)
           .sort({ createdAt: -1 })
           .limit(combinedLimit)
           .lean(),
-        TokenTransactionDB.countDocuments(tokenQuery),
+        WalletTransactionDB.countDocuments(tokenQuery),
       ]);
 
-    const total = paymentsTotal + tokenTransactionsTotal;
+    const total = paymentsTotal + walletTransactionsTotal;
     const activities = [
       ...payments.map(serializeWalletPaymentActivity),
-      ...tokenTransactions.map(serializeWalletTokenActivity),
+      ...walletTransactions.map(serializeWalletTokenActivity),
     ]
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
       .slice(skip, skip + limit);

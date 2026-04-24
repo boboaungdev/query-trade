@@ -1,10 +1,10 @@
 import mongoose from "mongoose";
 
-import { TOKEN_TRANSACTION_TYPES } from "../constants/subscription.js";
+import { WALLET_TRANSACTION_TYPES } from "../constants/subscription.js";
 
 const { Schema } = mongoose;
 
-const tokenTransactionSchema = new Schema(
+const walletTransactionSchema = new Schema(
   {
     user: {
       type: Schema.Types.ObjectId,
@@ -14,7 +14,7 @@ const tokenTransactionSchema = new Schema(
     },
     type: {
       type: String,
-      enum: Object.values(TOKEN_TRANSACTION_TYPES),
+      enum: Object.values(WALLET_TRANSACTION_TYPES),
       required: true,
       index: true,
     },
@@ -33,13 +33,15 @@ const tokenTransactionSchema = new Schema(
       required: true,
       min: 0,
     },
-    plan: {
+    planKey: {
       type: String,
       trim: true,
     },
     payment: {
       type: Schema.Types.ObjectId,
       ref: "payment",
+      unique: true,
+      sparse: true,
     },
     description: {
       type: String,
@@ -55,7 +57,7 @@ const tokenTransactionSchema = new Schema(
   },
 );
 
-export const TokenTransactionDB = mongoose.model(
-  "tokenTransaction",
-  tokenTransactionSchema,
+export const WalletTransactionDB = mongoose.model(
+  "walletTransaction",
+  walletTransactionSchema,
 );

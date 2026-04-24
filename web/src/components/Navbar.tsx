@@ -24,6 +24,7 @@ import { getApiErrorMessage } from "@/api/axios";
 import { signout } from "@/api/auth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { formatCompactTokenAmount } from "@/lib/formatTokenAmount";
 import {
   Settings,
   LogOut,
@@ -32,20 +33,6 @@ import {
   EyeOff,
   TicketPercent,
 } from "lucide-react";
-
-function formatCompactTokenAmount(amount: number) {
-  if (amount < 1000) {
-    return amount.toLocaleString(undefined, { maximumFractionDigits: 0 });
-  }
-
-  if (amount < 1_000_000) {
-    const value = amount / 1000;
-    return `${Number.isInteger(value) ? value.toFixed(0) : value.toFixed(1).replace(/\.0$/, "")}k`;
-  }
-
-  const value = amount / 1_000_000;
-  return `${Number.isInteger(value) ? value.toFixed(0) : value.toFixed(1).replace(/\.0$/, "")}M`;
-}
 
 export default function Navbar() {
   const user = useAuthStore((state) => state.user);

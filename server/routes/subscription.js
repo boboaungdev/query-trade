@@ -35,12 +35,12 @@ router.use(validateToken());
 router.get("/me", getMySubscription);
 router.get(
   "/activity",
-  validateQuery(SubscriptionSchema.paymentsQuery),
+  validateQuery(SubscriptionSchema.paginationQuery),
   getWalletActivity,
 );
 router.get(
   "/payments",
-  validateQuery(SubscriptionSchema.paymentsQuery),
+  validateQuery(SubscriptionSchema.paginationQuery),
   getPaymentHistory,
 );
 router.get(

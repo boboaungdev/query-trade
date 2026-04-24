@@ -1,12 +1,12 @@
 import {
   PAYMENT_PURPOSES,
   PAYMENT_STATUSES,
-  TOKEN_TRANSACTION_TYPES,
+  WALLET_TRANSACTION_TYPES,
 } from "../../constants/subscription.js";
 import { PaymentDB } from "../../models/payment.js";
-import { verifyUsdtBscPayment } from "../../services/bscPayment.js";
+import { verifyUsdtBscPayment } from "../../services/payment/bscUsdt.js";
 import { resError, resJson } from "../../utils/response.js";
-import { recordTokenTransaction } from "./helpers.js";
+import { recordWalletTransaction } from "./helpers.js";
 
 export const verifyTransaction = async (req, res, next) => {
   try {
@@ -49,7 +49,7 @@ export const verifyTransaction = async (req, res, next) => {
 
     const verification = await verifyUsdtBscPayment({
       txHash,
-      expectedAmount: payment.payAmountUsdt || payment.amountUsdt,
+      expectedAmount: payment.payCurrencyAmount || payment.requestedAmountUsdt,
       paymentCreatedAt: payment.createdAt,
     });
 
@@ -58,7 +58,7 @@ export const verifyTransaction = async (req, res, next) => {
     payment.txHash = txHash;
     payment.txFrom = verification.from;
     payment.txBlockNumber = verification.blockNumber;
-    payment.actuallyPaid = verification.amount;
+    payment.confirmedAmountUsdt = verification.amount;
     payment.confirmedAt = new Date();
     payment.rawPayload = {
       ...(payment.rawPayload || {}),
@@ -66,22 +66,22 @@ export const verifyTransaction = async (req, res, next) => {
     };
     await payment.save();
 
-    const { tokenTransaction, tokenBalance } = await recordTokenTransaction({
+    const { walletTransaction, tokenBalance } = await recordWalletTransaction({
       userId: user._id,
-      type: TOKEN_TRANSACTION_TYPES.deposit,
+      type: WALLET_TRANSACTION_TYPES.deposit,
       amount: payment.tokenAmount,
       paymentId: payment._id,
       description: "Token deposit confirmed",
       metadata: {
         txHash,
-        amountUsdt: payment.amountUsdt,
+        amountUsdt: payment.requestedAmountUsdt,
         rateSnapshot: payment.rateSnapshot,
       },
     });
 
     return resJson(res, 200, "Deposit verified and token credited.", {
       payment,
-      tokenTransaction,
+      walletTransaction,
       tokenBalance,
     });
   } catch (error) {

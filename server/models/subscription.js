@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import { TOKEN_TRANSACTION_TYPES } from "../constants/subscription.js";
 
 const { Schema } = mongoose;
 
@@ -29,19 +28,9 @@ const subscriptionSchema = new Schema(
       type: String,
       enum: ["token"],
     },
-    providerPaymentId: String,
-    lastTransaction: {
+    lastWalletTransaction: {
       type: Schema.Types.ObjectId,
-      ref: "tokenTransaction",
-    },
-    lastPayment: {
-      type: Schema.Types.ObjectId,
-      ref: "payment",
-    },
-    lastTokenAmount: Number,
-    lastTokenTransactionType: {
-      type: String,
-      enum: Object.values(TOKEN_TRANSACTION_TYPES),
+      ref: "walletTransaction",
     },
   },
   {

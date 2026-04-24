@@ -5,8 +5,8 @@ import {
   BSC_RPC_URL,
   USDT_BSC_CONTRACT,
   USDT_RECEIVE_ADDRESS,
-} from "../constants/index.js";
-import { resError } from "../utils/response.js";
+} from "../../constants/index.js";
+import { resError } from "../../utils/response.js";
 
 const TRANSFER_ABI = [
   "event Transfer(address indexed from, address indexed to, uint256 value)",

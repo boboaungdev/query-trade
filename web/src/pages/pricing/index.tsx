@@ -1,17 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   ArrowDownLeft,
   Check,
   Crown,
+  CreditCard,
+  DollarSign,
   Eye,
   EyeOff,
   Loader2,
+  Smartphone,
   Wallet,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import {
+  createTokenDeposit,
   createSubscriptionCheckout,
   getMySubscription,
   getSubscriptionPlans,
@@ -38,7 +42,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/store/auth";
+import { formatCompactTokenAmount } from "@/lib/formatTokenAmount";
 import { cn } from "@/lib/utils";
 
 let pricingPlansRequest: Promise<
@@ -49,9 +62,34 @@ let pricingSubscriptionRequest: Promise<
 > | null = null;
 
 function formatTokenAmount(amount: number) {
+  return formatCompactTokenAmount(amount);
+}
+
+function formatFullTokenAmount(amount: number) {
   return amount.toLocaleString(undefined, {
     maximumFractionDigits: 0,
   });
+}
+
+function sanitizeDepositAmountInput(value: string) {
+  const sanitized = value.replace(/[^\d.]/g, "");
+  const [integerPart = "", ...decimalParts] = sanitized.split(".");
+  const nextDecimalPart = decimalParts.join("").slice(0, 2);
+  const nextValue = decimalParts.length
+    ? `${integerPart}.${nextDecimalPart}`
+    : integerPart;
+
+  if (!nextValue) {
+    return "";
+  }
+
+  const parsedValue = Number(nextValue);
+
+  if (Number.isFinite(parsedValue) && parsedValue > 1000000) {
+    return "1000000";
+  }
+
+  return nextValue;
 }
 
 async function loadPricingPlansOnce() {
@@ -90,6 +128,9 @@ function formatExpiry(subscription?: Subscription | null) {
 
 export default function Pricing() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const userTokenBalance = useAuthStore(
+    (state) => state.user?.tokenBalance ?? 0,
+  );
   const hideWalletBalancePreference = useAuthStore((state) => {
     const preferences = state.user?.preferences;
 
@@ -107,12 +148,15 @@ export default function Pricing() {
   const navigate = useNavigate();
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
-  const [tokenBalance, setTokenBalance] = useState(0);
+  const [tokenBalance, setTokenBalance] = useState(userTokenBalance);
   const [tokenPerUsdt, setTokenPerUsdt] = useState(1000);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [confirmPlan, setConfirmPlan] = useState<SubscriptionPlan | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showBalance, setShowBalance] = useState(!hideWalletBalancePreference);
+  const [depositAmount, setDepositAmount] = useState("");
+  const [isDepositDialogOpen, setIsDepositDialogOpen] = useState(false);
+  const [isCreatingDeposit, setIsCreatingDeposit] = useState(false);
 
   useEffect(() => {
     let ignore = false;
@@ -153,6 +197,22 @@ export default function Pricing() {
   useEffect(() => {
     setShowBalance(!hideWalletBalancePreference);
   }, [hideWalletBalancePreference]);
+
+  useEffect(() => {
+    setTokenBalance(userTokenBalance);
+  }, [userTokenBalance]);
+
+  const depositAmountNumber = Number(depositAmount);
+  const showDepositAmountError =
+    depositAmount.length > 0 &&
+    (!Number.isFinite(depositAmountNumber) ||
+      depositAmountNumber < 1 ||
+      depositAmountNumber > 1000000);
+  const isDepositAmountValid =
+    depositAmount.length > 0 &&
+    Number.isFinite(depositAmountNumber) &&
+    depositAmountNumber >= 1 &&
+    depositAmountNumber <= 1000000;
 
   const sortedPlans = useMemo(
     () =>
@@ -303,6 +363,54 @@ export default function Pricing() {
     ? "Deposit USD to get token, then subscribe with token only."
     : "Sign in to deposit USD, get token, and subscribe to a plan.";
 
+  const handleDepositDialogOpenChange = (open: boolean) => {
+    setIsDepositDialogOpen(open);
+
+    if (!open) {
+      setDepositAmount("");
+    }
+  };
+
+  const handleCreateDeposit = async () => {
+    const amountUsdt = depositAmountNumber;
+
+    if (
+      !Number.isFinite(amountUsdt) ||
+      amountUsdt < 1 ||
+      amountUsdt > 1000000
+    ) {
+      toast.error("Invalid input. Use 1.00 to 1000000 for deposit.");
+      return;
+    }
+
+    setIsCreatingDeposit(true);
+
+    try {
+      const data = await createTokenDeposit({
+        amountUsdt,
+        payCurrency: "usdtbsc",
+      });
+
+      if (data.payment.status === "confirmed") {
+        const nextBalance = tokenBalance + data.payment.tokenAmount;
+        setTokenBalance(nextBalance);
+        updateUser({ tokenBalance: nextBalance });
+        setDepositAmount("");
+        setIsDepositDialogOpen(false);
+        toast.success("Deposit confirmed.");
+      } else {
+        setDepositAmount("");
+        setIsDepositDialogOpen(false);
+        toast.success("Deposit request created.");
+        navigate(`/payment/${data.payment._id}`);
+      }
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Failed to create deposit."));
+    } finally {
+      setIsCreatingDeposit(false);
+    }
+  };
+
   return (
     <>
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
@@ -343,22 +451,28 @@ export default function Pricing() {
                         )}
                       </Button>
                     </div>
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div className="flex items-center gap-2">
+                    <div className="flex flex-nowrap items-center justify-between gap-3">
+                      <div className="flex min-w-0 flex-1 items-center gap-2">
                         <Wallet className="size-5 text-muted-foreground" />
-                        <p className="text-2xl font-semibold tracking-tight">
+                        <p className="truncate text-2xl font-semibold tracking-tight">
                           {showBalance
                             ? `${formatTokenAmount(tokenBalance)} token`
                             : "•••••• token"}
                         </p>
                       </div>
-                      <Button asChild>
-                        <Link to="/wallet">
-                          <ArrowDownLeft className="size-4" />
-                          Deposit
-                        </Link>
+                      <Button
+                        className="shrink-0"
+                        onClick={() => setIsDepositDialogOpen(true)}
+                      >
+                        <ArrowDownLeft className="size-4" />
+                        Deposit
                       </Button>
                     </div>
+                    {showBalance ? (
+                      <p className="text-sm text-muted-foreground">
+                        {formatFullTokenAmount(tokenBalance)} token
+                      </p>
+                    ) : null}
                   </div>
                 ) : null}
               </div>
@@ -560,6 +674,88 @@ export default function Pricing() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog
+        open={isDepositDialogOpen}
+        onOpenChange={handleDepositDialogOpenChange}
+      >
+        <DialogContent onOpenAutoFocus={(event) => event.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle>Deposit</DialogTitle>
+            <DialogDescription>
+              Enter the USD amount and choose a payment method.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <div className="relative">
+                <DollarSign className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="text"
+                  inputMode="decimal"
+                  value={depositAmount}
+                  onChange={(event) =>
+                    setDepositAmount(
+                      sanitizeDepositAmountInput(event.target.value),
+                    )
+                  }
+                  placeholder="1.00"
+                  className="pr-14 pl-9"
+                  disabled={isCreatingDeposit}
+                  aria-invalid={showDepositAmountError}
+                />
+                <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm text-muted-foreground">
+                  USD
+                </span>
+              </div>
+              {showDepositAmountError ? (
+                <p className="text-sm text-destructive">
+                  Invalid input. Use 1.00 to 1000000 for deposit.
+                </p>
+              ) : null}
+              {!showDepositAmountError && depositAmountNumber >= 1 ? (
+                <p className="text-sm text-muted-foreground">
+                  {`You will get ${formatTokenAmount(depositAmountNumber * tokenPerUsdt)} token for ${depositAmount} USD.`}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="grid gap-2 justify-items-center">
+              <Button
+                onClick={() => void handleCreateDeposit()}
+                disabled={isCreatingDeposit || !isDepositAmountValid}
+                className="w-full justify-center"
+              >
+                {isCreatingDeposit ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <>
+                    <Wallet className="size-4" />
+                    Pay with USDT
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                disabled
+                className="w-full justify-center"
+              >
+                <Smartphone className="size-4" />
+                Pay with Google Pay
+              </Button>
+              <Button
+                variant="outline"
+                disabled
+                className="w-full justify-center"
+              >
+                <CreditCard className="size-4" />
+                Pay with Apple Pay
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

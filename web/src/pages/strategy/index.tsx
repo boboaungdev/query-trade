@@ -18,6 +18,7 @@ import {
   Copy,
   CopyPlus,
   Compass,
+  Eye,
   Globe,
   Pencil,
   SquareArrowOutUpRight,
@@ -880,7 +881,7 @@ export default function StrategyPage() {
                                 : "Private"}
                           </span>
                           <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
-                            <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
+                            <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                             {item.stats?.viewCount ?? 0}
                           </span>
                           <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">

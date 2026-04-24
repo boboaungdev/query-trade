@@ -64,6 +64,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatCompactTokenAmount } from "@/lib/formatTokenAmount";
 import { useAuthStore } from "@/store/auth";
 
 function formatUsdAmount(amount: number) {
@@ -73,6 +74,10 @@ function formatUsdAmount(amount: number) {
 }
 
 function formatTokenAmount(amount: number) {
+  return formatCompactTokenAmount(amount);
+}
+
+function formatFullTokenAmount(amount: number) {
   return amount.toLocaleString(undefined, {
     maximumFractionDigits: 0,
   });
@@ -346,10 +351,12 @@ export default function WalletPage() {
         const nextBalance = tokenBalance + data.payment.tokenAmount;
         setTokenBalance(nextBalance);
         updateUser({ tokenBalance: nextBalance });
+        setDepositAmount("");
         setIsDepositDialogOpen(false);
         refreshActivity();
         toast.success("Deposit confirmed.");
       } else {
+        setDepositAmount("");
         setIsDepositDialogOpen(false);
         refreshActivity();
         toast.success("Deposit request created.");
@@ -410,24 +417,32 @@ export default function WalletPage() {
               </Button>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
+          <CardContent className="space-y-3">
+            <div className="flex flex-nowrap items-center justify-between gap-3">
+              <div className="flex min-w-0 flex-1 items-center gap-2">
                 <Wallet className="size-5 text-muted-foreground" />
-                <p className="text-3xl font-semibold tracking-tight">
-                  {showBalance ? formatTokenAmount(tokenBalance) : "������"}{" "}
+                <p className="truncate text-3xl font-semibold tracking-tight">
+                  {showBalance ? formatTokenAmount(tokenBalance) : "****"}{" "}
                   token
                 </p>
               </div>
-              <Button onClick={() => setIsDepositDialogOpen(true)}>
+              <Button
+                className="shrink-0"
+                onClick={() => setIsDepositDialogOpen(true)}
+              >
                 <ArrowDownLeft className="size-4" />
                 Deposit
               </Button>
             </div>
-            <p className="text-sm text-muted-foreground">
+            <p className="hidden text-sm text-muted-foreground">
               {showBalance
                 ? `~ ${formatUsdAmount(tokenBalance / tokenPerUsdt)} USD`
                 : "~ •••••• USD"}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {showBalance
+                ? `${formatFullTokenAmount(tokenBalance)} token`
+                : "**** token"}
             </p>
             <div className="grid grid-cols-2 gap-3">
               <Button className="justify-center" variant="outline" disabled>
@@ -478,7 +493,11 @@ export default function WalletPage() {
               <>
                 <div>
                   <p className="text-2xl font-semibold tracking-tight">
-                    {formatUsdAmount(latestPayment.amountUsdt)} USD
+                    {formatUsdAmount(
+                      latestPayment.payCurrencyAmount ??
+                        latestPayment.requestedAmountUsdt,
+                    )}{" "}
+                    USD
                   </p>
                   <p className="text-sm text-muted-foreground">
                     {formatTokenAmount(latestPayment.tokenAmount)} token
@@ -713,6 +732,7 @@ export default function WalletPage() {
                   }
                   placeholder="1.00"
                   className="pr-14 pl-9"
+                  disabled={isCreatingDeposit}
                   aria-invalid={showDepositAmountError}
                 />
                 <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm text-muted-foreground">
@@ -731,24 +751,34 @@ export default function WalletPage() {
               ) : null}
             </div>
 
-            <div className="grid gap-2">
+            <div className="grid gap-2 justify-items-center">
               <Button
                 onClick={() => void handleCreateDeposit()}
                 disabled={isCreatingDeposit || !isDepositAmountValid}
-                className="justify-start"
+                className="w-full justify-center"
               >
                 {isCreatingDeposit ? (
                   <Loader2 className="size-4 animate-spin" />
                 ) : (
-                  <Wallet className="size-4" />
+                  <>
+                    <Wallet className="size-4" />
+                    Pay with USDT
+                  </>
                 )}
-                Pay with USDT
               </Button>
-              <Button variant="outline" disabled className="justify-start">
+              <Button
+                variant="outline"
+                disabled
+                className="w-full justify-center"
+              >
                 <Smartphone className="size-4" />
                 Pay with Google Pay
               </Button>
-              <Button variant="outline" disabled className="justify-start">
+              <Button
+                variant="outline"
+                disabled
+                className="w-full justify-center"
+              >
                 <CreditCard className="size-4" />
                 Pay with Apple Pay
               </Button>

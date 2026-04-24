@@ -57,34 +57,36 @@ export type Subscription = {
 export type Payment = {
   _id: string;
   purpose: "token_topup";
-  amountUsdt: number;
+  requestedAmountUsdt: number;
   tokenAmount: number;
   rateSnapshot: number;
   status: PaymentStatus;
   providerStatus?: string;
   payAddress?: string;
-  payAmountUsdt?: number;
+  payCurrencyAmount?: number;
   payCurrency: PayCurrency;
   txHash?: string;
+  providerReference?: string;
   txFrom?: string;
   txBlockNumber?: number;
+  confirmedAmountUsdt?: number;
   createdAt: string;
   confirmedAt?: string;
 };
 
-export type TokenTransaction = {
+export type WalletTransaction = {
   _id: string;
   type: "deposit" | "spend" | "refund" | "adjustment";
   amount: number;
   balanceBefore: number;
   balanceAfter: number;
-  plan?: string;
+  planKey?: string;
   createdAt: string;
 };
 
 export type WalletActivity = {
   _id: string;
-  sourceType: "payment" | "token_transaction";
+  sourceType: "payment" | "wallet_transaction";
   activityType:
     | "deposit"
     | "subscription"
@@ -204,7 +206,7 @@ export async function createSubscriptionCheckout({
   const { data } = await api.post<{
     result: {
       subscription: Subscription;
-      tokenTransaction: TokenTransaction;
+      walletTransaction: WalletTransaction;
       tokenBalance: number;
     };
   }>("/subscription/checkout", {
@@ -243,7 +245,7 @@ export async function verifySubscriptionPayment({
   const { data } = await api.post<{
     result: {
       payment: Payment;
-      tokenTransaction?: TokenTransaction;
+      walletTransaction?: WalletTransaction;
       tokenBalance?: number;
     };
   }>(`/subscription/payments/${paymentId}/verify`, {
