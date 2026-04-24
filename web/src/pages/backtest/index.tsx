@@ -314,7 +314,7 @@ function CapitalPlanInput({
   onChange,
 }: CapitalPlanInputProps) {
   return (
-    <div className="space-y-2">
+    <div className="space-y-1">
       <label htmlFor={id} className={capitalPlanLabelClass}>
         {label}
       </label>
@@ -358,6 +358,7 @@ type RunSummaryCardProps = {
   isLoadingBacktest: boolean;
   isEditing: boolean;
   hasChanges: boolean;
+  submitFormId?: string;
   bare?: boolean;
   hideHeader?: boolean;
 };
@@ -379,6 +380,7 @@ function RunSummaryCard({
   isLoadingBacktest,
   isEditing,
   hasChanges,
+  submitFormId,
   bare = false,
   hideHeader = false,
 }: RunSummaryCardProps) {
@@ -538,6 +540,7 @@ function RunSummaryCard({
 
       <Button
         type="submit"
+        form={submitFormId}
         className="w-full gap-2 rounded-lg"
         disabled={
           isRunning ||
@@ -575,6 +578,7 @@ export default function BacktestPage() {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const isEditing = Boolean(backtestId);
+  const backtestFormId = "backtest-run-form";
 
   const [exchange, setExchange] = useState("binance");
   const [symbol, setSymbol] = useState("");
@@ -1266,7 +1270,7 @@ export default function BacktestPage() {
           </CardHeader>
         </Card>
 
-        <form onSubmit={onSubmit} className="mt-4 md:mt-6">
+        <form id={backtestFormId} onSubmit={onSubmit} className="mt-4 md:mt-6">
           <fieldset
             disabled={isRunning || isLoadingBacktest}
             className="min-w-0 space-y-4 border-0 p-0"
@@ -1287,7 +1291,8 @@ export default function BacktestPage() {
                     </div>
 
                     <div className="space-y-4">
-                      <div className="space-y-2">
+                      <div className="space-y-1">
+                        <label className={capitalPlanLabelClass}>Symbol</label>
                         <Dialog
                           open={isSymbolMenuOpen}
                           onOpenChange={(open) => {
@@ -1412,7 +1417,10 @@ export default function BacktestPage() {
                         </Dialog>
                       </div>
 
-                      <div className="space-y-2">
+                      <div className="space-y-1">
+                        <label className={capitalPlanLabelClass}>
+                          Timeframe
+                        </label>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button
@@ -1465,8 +1473,11 @@ export default function BacktestPage() {
                         </DropdownMenu>
                       </div>
 
-                      <div className="min-w-0 space-y-2">
-                        <div className="space-y-2">
+                      <div className="min-w-0 space-y-1">
+                        <div className="space-y-1">
+                          <label className={capitalPlanLabelClass}>
+                            Date range
+                          </label>
                           <Popover
                             open={isDateRangeOpen}
                             onOpenChange={setIsDateRangeOpen}
@@ -1527,7 +1538,10 @@ export default function BacktestPage() {
                           </Popover>
                         </div>
                       </div>
-                      <div className="min-w-0 space-y-2">
+                      <div className="min-w-0 space-y-1">
+                        <label className={capitalPlanLabelClass}>
+                          Strategy
+                        </label>
                         <div className="relative">
                           <Dialog
                             open={isStrategyMenuOpen}
@@ -2087,46 +2101,48 @@ export default function BacktestPage() {
                       </div>
 
                       <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0">
-                        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/60 pt-3">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium text-foreground">
-                              Position mode
-                            </p>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <button
-                                  type="button"
-                                  aria-label="Learn about position mode"
-                                  className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-border/70 text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
+                        <div className="flex flex-wrap items-end justify-between gap-3 border-t border-border/60 pt-3">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <label className={capitalPlanLabelClass}>
+                                Position mode
+                              </label>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <button
+                                    type="button"
+                                    aria-label="Learn about position mode"
+                                    className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-border/70 text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
+                                  >
+                                    <CircleHelp className="h-3 w-3" />
+                                  </button>
+                                </PopoverTrigger>
+                                <PopoverContent
+                                  side="top"
+                                  align="start"
+                                  sideOffset={8}
+                                  className={helperPopoverClassName}
                                 >
-                                  <CircleHelp className="h-3 w-3" />
-                                </button>
-                              </PopoverTrigger>
-                              <PopoverContent
-                                side="top"
-                                align="start"
-                                sideOffset={8}
-                                className={helperPopoverClassName}
-                              >
-                                <div className="space-y-1">
-                                  <p>
-                                    <span className="font-semibold text-foreground">
-                                      One-way
-                                    </span>
-                                    {" - "}
-                                    keeps a single net position per market.
-                                  </p>
-                                  <p>
-                                    <span className="font-semibold text-foreground">
-                                      Hedge
-                                    </span>
-                                    {" - "}
-                                    lets long and short positions exist at the
-                                    same time.
-                                  </p>
-                                </div>
-                              </PopoverContent>
-                            </Popover>
+                                  <div className="space-y-1">
+                                    <p>
+                                      <span className="font-semibold text-foreground">
+                                        One-way
+                                      </span>
+                                      {" - "}
+                                      keeps a single net position per market.
+                                    </p>
+                                    <p>
+                                      <span className="font-semibold text-foreground">
+                                        Hedge
+                                      </span>
+                                      {" - "}
+                                      lets long and short positions exist at
+                                      the same time.
+                                    </p>
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            </div>
                           </div>
                           <ToggleGroup
                             type="single"
@@ -2218,6 +2234,7 @@ export default function BacktestPage() {
                         isLoadingBacktest={isLoadingBacktest}
                         isEditing={isEditing}
                         hasChanges={hasChanges}
+                        submitFormId={backtestFormId}
                         bare
                         hideHeader
                       />
@@ -2244,6 +2261,7 @@ export default function BacktestPage() {
                   isLoadingBacktest={isLoadingBacktest}
                   isEditing={isEditing}
                   hasChanges={hasChanges}
+                  submitFormId={backtestFormId}
                 />
               </div>
             </div>

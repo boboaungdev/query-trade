@@ -585,6 +585,8 @@ export default function Profile() {
             user.username !== (nextUser.username ?? user.username) ||
             (user.avatar || "") !== (nextUser.avatar || "") ||
             (user.bio || "") !== (nextUser.bio || "") ||
+            JSON.stringify(user.membership ?? {}) !==
+              JSON.stringify(nextUser.membership ?? {}) ||
             JSON.stringify(user.stats ?? {}) !==
               JSON.stringify(nextUser.stats ?? {}))
         ) {
@@ -593,6 +595,7 @@ export default function Profile() {
             username: nextUser.username ?? user.username,
             avatar: nextUser.avatar || undefined,
             bio: nextUser.bio ?? user.bio,
+            membership: nextUser.membership ?? user.membership,
             stats: nextUser.stats ?? user.stats,
           });
         }
@@ -1658,7 +1661,9 @@ export default function Profile() {
   const profileDisplayUsername = canEditProfile
     ? form.username || user?.username || routeUsername
     : viewedUser?.username || routeUsername;
-  const profileMembership = viewedUser?.membership;
+  const profileMembership = canEditProfile
+    ? (user?.membership ?? viewedUser?.membership)
+    : viewedUser?.membership;
   const profileAvatarRingClass = getUserAvatarRingClass(profileMembership);
   const joinedDateLabel = new Date(
     (canEditProfile ? user?.createdAt : viewedUser?.createdAt) || Date.now(),

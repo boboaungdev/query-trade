@@ -1,40 +1,43 @@
-import { create } from "zustand"
+import { create } from "zustand";
+
+import type { UserMembership } from "@/components/user-membership";
 
 export type AuthProvider = {
-  provider: "google" | "server"
-  providerId: string
-}
+  provider: "google" | "server";
+  providerId: string;
+};
 
 export type User = {
-  _id: string
-  name: string
-  username: string
-  email: string
-  role: "user" | "admin"
-  avatar?: string
-  bio?: string
-  passwordChangedAt?: string
-  authProviders: AuthProvider[]
+  _id: string;
+  name: string;
+  username: string;
+  email: string;
+  role: "user" | "admin";
+  avatar?: string;
+  bio?: string;
+  membership?: UserMembership;
+  passwordChangedAt?: string;
+  authProviders: AuthProvider[];
   stats?: {
-    followerCount?: number
-    followingCount?: number
-    strategyCount?: number
-    backtestCount?: number
-  }
-  createdAt: string
-  updatedAt: string
-}
+    followerCount?: number;
+    followingCount?: number;
+    strategyCount?: number;
+    backtestCount?: number;
+  };
+  createdAt: string;
+  updatedAt: string;
+};
 
 type AuthState = {
-  user: User | null
-  accessToken: string | null
-  isAuthenticated: boolean
+  user: User | null;
+  accessToken: string | null;
+  isAuthenticated: boolean;
 
-  setAuth: (user: User, accessToken: string) => void
-  setAccessToken: (accessToken: string) => void
-  updateUser: (data: Partial<User>) => void
-  logout: () => void
-}
+  setAuth: (user: User, accessToken: string) => void;
+  setAccessToken: (accessToken: string) => void;
+  updateUser: (data: Partial<User>) => void;
+  logout: () => void;
+};
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: JSON.parse(localStorage.getItem("user") || "null"),
@@ -42,47 +45,47 @@ export const useAuthStore = create<AuthState>((set) => ({
   isAuthenticated: !!localStorage.getItem("accessToken"),
 
   setAuth: (user, accessToken) => {
-    localStorage.setItem("user", JSON.stringify(user))
-    localStorage.setItem("accessToken", accessToken)
+    localStorage.setItem("user", JSON.stringify(user));
+    localStorage.setItem("accessToken", accessToken);
 
     set({
       user,
       accessToken,
       isAuthenticated: true,
-    })
+    });
   },
 
   setAccessToken: (accessToken) => {
-    localStorage.setItem("accessToken", accessToken)
+    localStorage.setItem("accessToken", accessToken);
 
     set((state) => ({
       user: state.user,
       accessToken,
       isAuthenticated: true,
-    }))
+    }));
   },
 
   updateUser: (data) =>
     set((state) => {
-      if (!state.user) return state
+      if (!state.user) return state;
 
-      const updatedUser = { ...state.user, ...data }
+      const updatedUser = { ...state.user, ...data };
 
-      localStorage.setItem("user", JSON.stringify(updatedUser))
+      localStorage.setItem("user", JSON.stringify(updatedUser));
 
       return {
         user: updatedUser,
-      }
+      };
     }),
 
   logout: () => {
-    localStorage.removeItem("user")
-    localStorage.removeItem("accessToken")
+    localStorage.removeItem("user");
+    localStorage.removeItem("accessToken");
 
     set({
       user: null,
       accessToken: null,
       isAuthenticated: false,
-    })
+    });
   },
-}))
+}));
