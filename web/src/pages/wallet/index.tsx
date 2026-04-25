@@ -26,9 +26,7 @@ import { QRCodeCanvas, QRCodeSVG } from "qrcode.react";
 import jsQR from "jsqr";
 import { toast } from "sonner";
 
-import {
-  APP_NAME,
-} from "@/constants";
+import { APP_NAME } from "@/constants";
 import { getApiErrorMessage } from "@/api/axios";
 import { fetchUserById, fetchUserByUsername } from "@/api/user";
 import {
@@ -1119,7 +1117,8 @@ export default function WalletPage() {
         {
           label: "Amount",
           value:
-            typeof qrReceiveAmount === "number" && Number.isFinite(qrReceiveAmount)
+            typeof qrReceiveAmount === "number" &&
+            Number.isFinite(qrReceiveAmount)
               ? `${formatFullTokenAmount(qrReceiveAmount)} token`
               : "Flexible",
           y: infoCardY + 122,
@@ -1905,16 +1904,16 @@ export default function WalletPage() {
                         <ScanLine className="size-4" />
                       </Button>
                       <span className="pointer-events-none flex items-center">
-                      {sendUsernameStatus === "checking" ? (
-                        <Loader2 className="size-4 animate-spin text-muted-foreground" />
-                      ) : sendUsernameStatus === "available" ? (
-                        <CheckCircle2 className="size-4 text-emerald-600" />
-                      ) : sendUsernameStatus === "invalid" ||
-                        sendUsernameStatus === "unavailable" ||
-                        sendUsernameStatus === "error" ||
-                        sendUsernameStatus === "self" ? (
-                        <XCircle className="size-4 text-destructive" />
-                      ) : null}
+                        {sendUsernameStatus === "checking" ? (
+                          <Loader2 className="size-4 animate-spin text-muted-foreground" />
+                        ) : sendUsernameStatus === "available" ? (
+                          <CheckCircle2 className="size-4 text-emerald-600" />
+                        ) : sendUsernameStatus === "invalid" ||
+                          sendUsernameStatus === "unavailable" ||
+                          sendUsernameStatus === "error" ||
+                          sendUsernameStatus === "self" ? (
+                          <XCircle className="size-4 text-destructive" />
+                        ) : null}
                       </span>
                     </div>
                   </div>

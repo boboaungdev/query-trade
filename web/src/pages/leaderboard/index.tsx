@@ -143,26 +143,18 @@ function mergeBacktestPages(
   );
 }
 
-function formatDuration(durationMs?: number) {
-  if (!Number.isFinite(durationMs) || !durationMs || durationMs <= 0) {
+function formatDateRangeDuration(totalDays: number) {
+  if (totalDays <= 0) {
     return "-";
   }
 
-  const totalMinutes = Math.floor(durationMs / 60000);
-  const totalHours = Math.floor(durationMs / 3600000);
-  const totalDays = Math.floor(durationMs / 86400000);
+  if (totalDays === 1) return "1 day";
+  if (totalDays === 7) return "1 week";
+  if (totalDays === 30) return "1 month";
+  if (totalDays === 182 || totalDays === 183) return "6 months";
+  if (totalDays === 365 || totalDays === 366) return "1 year";
 
-  if (totalDays >= 1) {
-    return `${totalDays}d`;
-  }
-
-  if (totalHours >= 1) {
-    const hours = totalHours;
-    const minutes = totalMinutes % 60;
-    return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
-  }
-
-  return `${Math.max(1, totalMinutes)}m`;
+  return `${totalDays} days`;
 }
 
 export default function LeaderboardPage() {
@@ -415,9 +407,7 @@ export default function LeaderboardPage() {
               <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/8 px-2.5 py-1 text-[11px] font-medium tracking-[0.16em] text-primary uppercase">
                 Performance Arena
               </span>
-              <CardTitle>
-                Leaderboard Results
-              </CardTitle>
+              <CardTitle>Leaderboard Results</CardTitle>
               <CardDescription className="flex flex-wrap items-center gap-2 text-sm leading-6">
                 Search by symbol, strategy, trader, or timeframe.
                 <span className="hidden items-center gap-1 rounded-full border bg-muted/30 px-2 py-0.5 text-[11px] font-medium text-foreground md:inline-flex">
@@ -632,7 +622,9 @@ export default function LeaderboardPage() {
                       <div className="flex min-w-0 items-center gap-2">
                         <Avatar
                           size="sm"
-                          className={getUserAvatarRingClass(backtest.user?.membership)}
+                          className={getUserAvatarRingClass(
+                            backtest.user?.membership,
+                          )}
                         >
                           <AvatarImage
                             src={backtest.user?.avatar}
@@ -800,7 +792,12 @@ export default function LeaderboardPage() {
                         Duration
                       </p>
                       <p className="mt-1 text-sm font-semibold text-foreground">
-                        {formatDuration(backtest.result.duration)}
+                        {formatDateRangeDuration(
+                          Math.max(
+                            1,
+                            Math.ceil(backtest.result.duration / 86400000),
+                          ),
+                        )}
                       </p>
                     </div>
 

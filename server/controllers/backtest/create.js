@@ -11,6 +11,19 @@ import {
 } from "../../services/backtest/calculateIndicators.js";
 import { extractRequiredAtrPeriods } from "../../utils/strategyIndicators.js";
 
+const DAY_IN_MS = 86400000;
+
+function getInclusiveDateWindowDuration(startDate, endDate) {
+  const startTime = new Date(startDate).getTime();
+  const endTime = new Date(endDate).getTime();
+
+  if (Number.isNaN(startTime) || Number.isNaN(endTime) || endTime < startTime) {
+    return 0;
+  }
+
+  return Math.max(0, endTime - startTime) + DAY_IN_MS;
+}
+
 export const createBacktest = async (req, res, next) => {
   try {
     const user = req.user;
@@ -71,6 +84,7 @@ export const createBacktest = async (req, res, next) => {
       exitFeeRate,
       hedgeMode,
     });
+    result.duration = getInclusiveDateWindowDuration(startDate, endDate);
 
     const backtest = await BacktestDB.create({
       user: user._id,

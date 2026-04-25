@@ -253,7 +253,10 @@ export default function Pricing() {
 
       setSubscription(checkout.subscription);
       setTokenBalance(checkout.tokenBalance);
-      updateUser({ tokenBalance: checkout.tokenBalance });
+      updateUser({
+        tokenBalance: checkout.tokenBalance,
+        ...(checkout.membership ? { membership: checkout.membership } : {}),
+      });
       setConfirmPlan(null);
       toast.success(`${plan.name} activated.`);
     } catch (error) {
@@ -421,9 +424,7 @@ export default function Pricing() {
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/8 px-2.5 py-1 text-[11px] font-medium tracking-[0.16em] text-primary uppercase">
                   Access Plans
                 </span>
-                <CardTitle>
-                  Pricing
-                </CardTitle>
+                <CardTitle>Pricing</CardTitle>
                 <CardDescription className="max-w-2xl text-sm leading-6">
                   {headerDescription}
                 </CardDescription>
@@ -770,4 +771,3 @@ export default function Pricing() {
     </>
   );
 }
-

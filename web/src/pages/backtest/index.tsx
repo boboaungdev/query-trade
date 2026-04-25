@@ -46,7 +46,7 @@ import { fetchStrategies, type StrategySource } from "@/api/strategy";
 
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
-import { Calendar } from "@/components/ui/calendar";
+import { Calendar, CalendarDayButton } from "@/components/ui/calendar";
 import {
   Card,
   CardContent,
@@ -84,11 +84,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "@/components/ui/input-group";
 import {
   Popover,
   PopoverContent,
@@ -229,6 +224,20 @@ type StrategyListResponse = {
   result: StrategyListResult;
 };
 
+type BacktestPlanTier = "free" | "plus" | "pro";
+
+type BacktestPlanUiPolicy = {
+  tier: BacktestPlanTier;
+  label: string;
+  allowedTimeframes: string[] | null;
+  dateRangeLimitLabel: string;
+  dateRangeLimitDays: number | null;
+  dateRangeLimitMonths: number | null;
+  requiresPublicStrategiesOnly: boolean;
+  canEditCapitalPlan: boolean;
+  canUseHedgeMode: boolean;
+};
+
 const strategySourceOptions: Array<{
   label: string;
   value: StrategySource;
@@ -239,6 +248,99 @@ const strategySourceOptions: Array<{
 ];
 
 const inFlightRequestMap = new Map<string, Promise<unknown>>();
+const freePlanSupportedTimeframes = ["5m", "15m", "1h", "4h", "1d"];
+
+function addDaysToDate(date: Date, days: number) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function addMonthsToDate(date: Date, months: number) {
+  const next = new Date(date);
+  next.setMonth(next.getMonth() + months);
+  return next;
+}
+
+function subtractDaysFromDate(date: Date, days: number) {
+  const next = new Date(date);
+  next.setDate(next.getDate() - days);
+  return next;
+}
+
+function formatRangeDurationLabel(totalDays: number) {
+  if (totalDays <= 0) {
+    return "-";
+  }
+
+  if (totalDays === 1) return "1 day";
+  if (totalDays === 7) return "1 week";
+  if (totalDays === 30) return "1 month";
+  if (totalDays === 182 || totalDays === 183) return "6 months";
+  if (totalDays === 365 || totalDays === 366) return "1 year";
+
+  return `${totalDays} days`;
+}
+
+function getBacktestPlanTier(membership?: UserMembership): BacktestPlanTier {
+  const rawPlan =
+    membership?.plan ?? membership?.verifiedVariant ?? membership?.badgeVariant;
+  const normalizedPlan = String(rawPlan ?? "free")
+    .trim()
+    .toLowerCase();
+
+  if (normalizedPlan === "pro") {
+    return "pro";
+  }
+
+  if (normalizedPlan === "plus") {
+    return "plus";
+  }
+
+  return "free";
+}
+
+function getBacktestPlanUiPolicy(tier: BacktestPlanTier): BacktestPlanUiPolicy {
+  if (tier === "pro") {
+    return {
+      tier,
+      label: "Pro",
+      allowedTimeframes: null,
+      dateRangeLimitLabel: "All history",
+      dateRangeLimitDays: null,
+      dateRangeLimitMonths: null,
+      requiresPublicStrategiesOnly: false,
+      canEditCapitalPlan: true,
+      canUseHedgeMode: true,
+    };
+  }
+
+  if (tier === "plus") {
+    return {
+      tier,
+      label: "Plus",
+      allowedTimeframes: null,
+      dateRangeLimitLabel: "Up to 1 year",
+      dateRangeLimitDays: 365,
+      dateRangeLimitMonths: null,
+      requiresPublicStrategiesOnly: false,
+      canEditCapitalPlan: true,
+      canUseHedgeMode: true,
+    };
+  }
+
+  return {
+    tier,
+    label: "Free",
+    allowedTimeframes: freePlanSupportedTimeframes,
+    dateRangeLimitLabel: "Up to 3 months",
+    dateRangeLimitDays: null,
+    dateRangeLimitMonths: 3,
+    requiresPublicStrategiesOnly: true,
+    canEditCapitalPlan: false,
+    canUseHedgeMode: false,
+  };
+}
 
 function dedupeRequest<T>(key: string, requestFn: () => Promise<T>) {
   const existing = inFlightRequestMap.get(key);
@@ -285,11 +387,6 @@ const defaultEntryFeeRateValue = "0.00";
 const defaultExitFeeRateValue = "0.00";
 const helperPopoverClassName =
   "w-52 rounded-md border-border/60 bg-popover px-3 py-2 text-xs leading-relaxed text-muted-foreground shadow-sm";
-const capitalPlanFieldClass = cn(
-  "h-8 rounded-lg",
-  defaultFieldSurfaceClass,
-  disabledFieldSurfaceClass,
-);
 
 type CapitalPlanInputProps = {
   id: string;
@@ -299,6 +396,7 @@ type CapitalPlanInputProps = {
   placeholder: string;
   defaultValue: string;
   icon: LucideIcon;
+  disabled?: boolean;
   onChange: (value: string) => void;
 };
 
@@ -310,6 +408,7 @@ function CapitalPlanInput({
   placeholder,
   defaultValue,
   icon: Icon,
+  disabled = false,
   onChange,
 }: CapitalPlanInputProps) {
   return (
@@ -317,16 +416,15 @@ function CapitalPlanInput({
       <label htmlFor={id} className={capitalPlanLabelClass}>
         {label}
       </label>
-      <InputGroup className={capitalPlanFieldClass}>
-        <InputGroupAddon className="text-muted-foreground">
-          <Icon className="h-4 w-4" />
-        </InputGroupAddon>
-        <InputGroupInput
+      <div className="relative">
+        <Icon className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
           id={id}
           type="text"
           inputMode="decimal"
           aria-label={ariaLabel}
           value={value}
+          disabled={disabled}
           onChange={(event) => onChange(event.target.value)}
           onBlur={(event) => {
             if (!event.target.value.trim()) {
@@ -334,9 +432,39 @@ function CapitalPlanInput({
             }
           }}
           placeholder={placeholder}
+          className={cn("pl-9", disabled && "cursor-not-allowed")}
         />
-      </InputGroup>
+        {disabled ? (
+          <Lock className="pointer-events-none absolute top-1/2 right-3 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/80" />
+        ) : null}
+      </div>
     </div>
+  );
+}
+
+function BacktestCalendarDayButton(
+  props: Parameters<typeof CalendarDayButton>[0],
+) {
+  const isLocked =
+    "locked" in props.modifiers && Boolean(props.modifiers.locked);
+
+  return (
+    <CalendarDayButton
+      {...props}
+      className={cn(
+        props.className,
+        isLocked &&
+          "bg-muted/30 text-muted-foreground opacity-100 ring-1 ring-border/50",
+      )}
+    >
+      {props.children}
+      {isLocked ? (
+        <Lock
+          className="pointer-events-none absolute right-px bottom-px h-0.5 w-0.5 text-muted-foreground/60"
+          strokeWidth={1.25}
+        />
+      ) : null}
+    </CalendarDayButton>
   );
 }
 
@@ -661,10 +789,24 @@ export default function BacktestPage() {
       : preselectedStrategy?.name
         ? preselectedStrategy.name
         : "";
+  const currentPlanTier = getBacktestPlanTier(user?.membership);
+  const currentPlanPolicy = useMemo(
+    () => getBacktestPlanUiPolicy(currentPlanTier),
+    [currentPlanTier],
+  );
 
   useEffect(() => {
     strategyIdRef.current = strategyId;
   }, [strategyId]);
+
+  useEffect(() => {
+    if (!currentPlanPolicy.requiresPublicStrategiesOnly) {
+      return;
+    }
+
+    setStrategySource("all");
+    setStrategyPage(1);
+  }, [currentPlanPolicy.requiresPublicStrategiesOnly]);
 
   useEffect(() => {
     if (isEditing) return;
@@ -927,6 +1069,20 @@ export default function BacktestPage() {
   ]);
 
   const timeframeOptions = Object.keys(timeframes);
+  const allowedTimeframeSet = useMemo(
+    () =>
+      new Set(
+        currentPlanPolicy.allowedTimeframes ?? Object.keys(timeframes ?? {}),
+      ),
+    [currentPlanPolicy.allowedTimeframes, timeframes],
+  );
+  const visibleStrategies = useMemo(
+    () =>
+      currentPlanPolicy.requiresPublicStrategiesOnly
+        ? strategies.filter((item) => item.isPublic !== false)
+        : strategies,
+    [currentPlanPolicy.requiresPublicStrategiesOnly, strategies],
+  );
 
   const visibleSymbols = useMemo(() => {
     const search = normalizeSymbolText(symbolSearch.trim());
@@ -961,8 +1117,8 @@ export default function BacktestPage() {
         : null;
 
   const selectedStrategy = useMemo(
-    () => strategies.find((item) => item._id === strategyId),
-    [strategies, strategyId],
+    () => visibleStrategies.find((item) => item._id === strategyId),
+    [strategyId, visibleStrategies],
   );
   const selectedDateRange = useMemo<DateRange | undefined>(() => {
     if (!startDate && !endDate) {
@@ -976,15 +1132,60 @@ export default function BacktestPage() {
   }, [endDate, startDate]);
   const selectedStrategyLabel =
     selectedStrategy?.name || selectedStrategyName || "No strategy selected";
-  const firstVisibleStrategy = strategies[0];
+  const firstVisibleStrategy = visibleStrategies[0];
   const currentStartDateIso = startDate ? toUtcStartOfDayIso(startDate) : "";
   const currentEndDateIso = endDate ? toUtcStartOfDayIso(endDate) : "";
+  const dateRangeLimitEnd = useMemo(() => {
+    if (!startDate) {
+      return null;
+    }
+
+    if (currentPlanPolicy.dateRangeLimitMonths) {
+      return addMonthsToDate(startDate, currentPlanPolicy.dateRangeLimitMonths);
+    }
+
+    if (currentPlanPolicy.dateRangeLimitDays) {
+      return addDaysToDate(startDate, currentPlanPolicy.dateRangeLimitDays);
+    }
+
+    return null;
+  }, [
+    currentPlanPolicy.dateRangeLimitDays,
+    currentPlanPolicy.dateRangeLimitMonths,
+    startDate,
+  ]);
+  const clampedDateRangeEnd = useMemo(() => {
+    if (!dateRangeLimitEnd) {
+      return null;
+    }
+
+    return subtractDaysFromDate(dateRangeLimitEnd, 1);
+  }, [dateRangeLimitEnd]);
+  const isDateRangeOverLimit = Boolean(
+    startDate &&
+    endDate &&
+    clampedDateRangeEnd &&
+    endDate.getTime() > clampedDateRangeEnd.getTime(),
+  );
+  const maxSelectableEndDate = useMemo(() => {
+    const today = new Date();
+
+    if (!clampedDateRangeEnd) {
+      return today;
+    }
+
+    return clampedDateRangeEnd.getTime() < today.getTime()
+      ? clampedDateRangeEnd
+      : today;
+  }, [clampedDateRangeEnd]);
   const durationLabel =
     startDate && endDate
-      ? `${Math.max(
-          1,
-          Math.ceil((endDate.getTime() - startDate.getTime()) / 86400000),
-        )} days`
+      ? formatRangeDurationLabel(
+          Math.max(
+            1,
+            Math.ceil((endDate.getTime() - startDate.getTime()) / 86400000) + 1,
+          ),
+        )
       : "-";
   const isSetupReady =
     !isLoadingExchange &&
@@ -993,7 +1194,52 @@ export default function BacktestPage() {
     symbols.length > 0 &&
     Boolean(symbol) &&
     Boolean(timeframe) &&
-    Boolean(strategyId);
+    Boolean(strategyId) &&
+    !isDateRangeOverLimit;
+
+  useEffect(() => {
+    if (!timeframe || allowedTimeframeSet.has(timeframe)) {
+      return;
+    }
+
+    const nextAllowedTimeframe =
+      timeframeOptions.find((tf) => allowedTimeframeSet.has(tf)) ?? "";
+    setTimeframe(nextAllowedTimeframe);
+  }, [allowedTimeframeSet, timeframe, timeframeOptions]);
+
+  useEffect(() => {
+    if (currentPlanPolicy.canUseHedgeMode || !hedgeMode) {
+      return;
+    }
+
+    setHedgeMode(false);
+  }, [currentPlanPolicy.canUseHedgeMode, hedgeMode]);
+
+  useEffect(() => {
+    if (!strategyId || !currentPlanPolicy.requiresPublicStrategiesOnly) {
+      return;
+    }
+
+    const activeStrategy = strategies.find((item) => item._id === strategyId);
+    if (!activeStrategy || activeStrategy.isPublic !== false) {
+      return;
+    }
+
+    setStrategyId("");
+    setSelectedStrategyName("");
+  }, [currentPlanPolicy.requiresPublicStrategiesOnly, strategies, strategyId]);
+
+  useEffect(() => {
+    if (!endDate || !maxSelectableEndDate) {
+      return;
+    }
+
+    if (endDate.getTime() <= maxSelectableEndDate.getTime()) {
+      return;
+    }
+
+    setEndDate(maxSelectableEndDate);
+  }, [endDate, maxSelectableEndDate]);
   const hasChanges = isEditing
     ? Boolean(
         initialSnapshot &&
@@ -1133,6 +1379,13 @@ export default function BacktestPage() {
   };
 
   const selectStrategy = (item: StrategyItem) => {
+    if (
+      currentPlanPolicy.requiresPublicStrategiesOnly &&
+      item.isPublic === false
+    ) {
+      return;
+    }
+
     setStrategyId(item._id);
     setSelectedStrategyName(item.name);
     setIsStrategyMenuOpen(false);
@@ -1172,6 +1425,15 @@ export default function BacktestPage() {
       return;
     }
 
+    if (!allowedTimeframeSet.has(timeframe.trim())) {
+      toast.error(
+        `${currentPlanPolicy.label} only supports ${(
+          currentPlanPolicy.allowedTimeframes ?? []
+        ).join(", ")} timeframes.`,
+      );
+      return;
+    }
+
     if (!strategyId.trim()) {
       toast.error("Strategy ID is required");
       return;
@@ -1195,6 +1457,18 @@ export default function BacktestPage() {
 
     if (new Date(startDateIso).getTime() >= new Date(endDateIso).getTime()) {
       toast.error("Start date must be before end date");
+      return;
+    }
+
+    if (isDateRangeOverLimit) {
+      toast.error(
+        `${currentPlanPolicy.label} supports a date range of ${currentPlanPolicy.dateRangeLimitLabel.toLowerCase()}.`,
+      );
+      return;
+    }
+
+    if (!currentPlanPolicy.canUseHedgeMode && hedgeMode) {
+      toast.error("Hedge mode unlocks on Plus and Pro.");
       return;
     }
 
@@ -1247,24 +1521,51 @@ export default function BacktestPage() {
       <div className="min-w-0">
         <Card className="min-w-0 border-border/70 text-sm">
           <CardHeader>
-            <div className="space-y-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/8 px-2.5 py-1 text-[11px] font-medium tracking-[0.16em] text-primary uppercase">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Backtest Setup
-                </span>
-                <span className="inline-flex items-center gap-1 rounded-full border bg-muted/30 px-2 py-0.5 text-[11px] font-medium text-foreground uppercase">
-                  {isEditing ? "Editing" : "New Run"}
-                </span>
+            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/8 px-2.5 py-1 text-[11px] font-medium tracking-[0.16em] text-primary uppercase">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Backtest Setup
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-full border bg-muted/30 px-2 py-0.5 text-[11px] font-medium text-foreground uppercase">
+                    {isEditing ? "Editing" : "New Run"}
+                  </span>
+                </div>
+                <CardTitle>
+                  {isEditing ? "Update this backtest" : "Create a backtest run"}
+                </CardTitle>
+                <CardDescription className="max-w-3xl text-sm leading-6">
+                  {isEditing
+                    ? "Adjust the market, strategy, and capital settings, then save your changes to this backtest result."
+                    : "Choose your market, strategy, and capital settings."}
+                </CardDescription>
               </div>
-              <CardTitle>
-                {isEditing ? "Update this backtest" : "Create a backtest run"}
-              </CardTitle>
-              <CardDescription className="max-w-3xl text-sm leading-6">
-                {isEditing
-                  ? "Adjust the market, strategy, and capital settings, then save your changes to this backtest result."
-                  : "Choose your market, strategy, and capital settings."}
-              </CardDescription>
+              <div className="flex flex-col gap-2 md:items-end">
+                <div className="space-y-1 md:text-right">
+                  <p className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
+                    Current plan
+                  </p>
+                  <div className="flex items-center gap-2 md:justify-end">
+                    <p className="text-sm font-semibold text-foreground">
+                      {currentPlanPolicy.label}
+                    </p>
+                    <span className="inline-flex items-center rounded-full border border-border/70 bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                      Backtest rules
+                    </span>
+                  </div>
+                </div>
+                {currentPlanPolicy.tier === "free" ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full md:w-auto"
+                    onClick={() => navigate("/pricing")}
+                  >
+                    Unlock more with Plus
+                  </Button>
+                ) : null}
+              </div>
             </div>
           </CardHeader>
         </Card>
@@ -1458,9 +1759,18 @@ export default function BacktestPage() {
                                     <DropdownMenuRadioItem
                                       key={tf}
                                       value={tf}
+                                      disabled={!allowedTimeframeSet.has(tf)}
                                       className="min-h-8 py-0.5 pl-2.5"
                                     >
-                                      {tf}
+                                      <span className="inline-flex items-center gap-2">
+                                        <span>{tf}</span>
+                                        {!allowedTimeframeSet.has(tf) ? (
+                                          <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+                                            <Lock className="h-3 w-3" />
+                                            Plus
+                                          </span>
+                                        ) : null}
+                                      </span>
                                     </DropdownMenuRadioItem>
                                   ))}
                                 </DropdownMenuRadioGroup>
@@ -1485,7 +1795,7 @@ export default function BacktestPage() {
                                 variant="outline"
                                 data-empty={!selectedDateRange?.from}
                                 className={cn(
-                                  "relative w-full justify-start pl-9 text-left font-normal",
+                                  "relative w-full justify-between gap-3 pl-9 text-left font-normal",
                                   disabledFieldSurfaceClass,
                                   !selectedDateRange?.from &&
                                     "text-muted-foreground",
@@ -1494,17 +1804,22 @@ export default function BacktestPage() {
                                 <CalendarRange className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 shrink-0 -translate-y-1/2 text-muted-foreground" />
                                 {selectedDateRange?.from ? (
                                   selectedDateRange.to ? (
-                                    <>
-                                      {format(
-                                        selectedDateRange.from,
-                                        "LLL dd, y",
-                                      )}{" "}
-                                      -{" "}
-                                      {format(
-                                        selectedDateRange.to,
-                                        "LLL dd, y",
-                                      )}
-                                    </>
+                                    <span className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                                      <span className="truncate">
+                                        {format(
+                                          selectedDateRange.from,
+                                          "LLL dd, y",
+                                        )}{" "}
+                                        -{" "}
+                                        {format(
+                                          selectedDateRange.to,
+                                          "LLL dd, y",
+                                        )}
+                                      </span>
+                                      <span className="shrink-0 text-muted-foreground">
+                                        ({durationLabel})
+                                      </span>
+                                    </span>
                                   ) : (
                                     format(selectedDateRange.from, "LLL dd, y")
                                   )
@@ -1517,20 +1832,45 @@ export default function BacktestPage() {
                               className="w-auto p-0"
                               align="start"
                             >
-                              <Calendar
-                                mode="range"
-                                defaultMonth={selectedDateRange?.from}
-                                selected={selectedDateRange}
-                                onSelect={(range) => {
-                                  setStartDate(range?.from);
-                                  setEndDate(range?.to);
-                                  if (range?.from && range?.to) {
-                                    setIsDateRangeOpen(false);
-                                  }
-                                }}
-                                disabled={{ after: new Date() }}
-                                numberOfMonths={2}
-                              />
+                              <div className="space-y-2">
+                                <Calendar
+                                  mode="range"
+                                  defaultMonth={selectedDateRange?.from}
+                                  selected={selectedDateRange}
+                                  modifiers={{
+                                    locked:
+                                      startDate && dateRangeLimitEnd
+                                        ? {
+                                            after: dateRangeLimitEnd,
+                                          }
+                                        : undefined,
+                                  }}
+                                  components={{
+                                    DayButton: BacktestCalendarDayButton,
+                                  }}
+                                  onSelect={(range) => {
+                                    setStartDate(range?.from);
+                                    setEndDate(range?.to);
+                                    if (range?.from && range?.to) {
+                                      setIsDateRangeOpen(false);
+                                    }
+                                  }}
+                                  disabled={[
+                                    { after: new Date() },
+                                    ...(startDate && maxSelectableEndDate
+                                      ? [{ after: maxSelectableEndDate }]
+                                      : []),
+                                  ]}
+                                  numberOfMonths={2}
+                                />
+                                <div className="px-3 pb-3 text-[11px] text-muted-foreground">
+                                  {currentPlanPolicy.tier === "free"
+                                    ? "Free plan can choose up to 3 months."
+                                    : currentPlanPolicy.tier === "plus"
+                                      ? "Plus plan can choose up to 1 year."
+                                      : "Pro plan can choose all available history."}
+                                </div>
+                              </div>
                             </PopoverContent>
                           </Popover>
                         </div>
@@ -1592,6 +1932,15 @@ export default function BacktestPage() {
                                   Pick the strategy you want to run in this
                                   backtest.
                                 </DialogDescription>
+                                <div className="pt-2">
+                                  <span className="inline-flex items-center rounded-full border border-border/70 bg-muted/40 px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+                                    {currentPlanPolicy.tier === "free"
+                                      ? "Free plan: free strategies only"
+                                      : currentPlanPolicy.tier === "plus"
+                                        ? "Plus plan: free and paid strategies"
+                                        : "Pro plan: all exclusive strategies"}
+                                  </span>
+                                </div>
                               </DialogHeader>
                               <div className="space-y-3 px-4 py-4">
                                 <div className="flex flex-col gap-3 md:flex-row md:items-center">
@@ -1631,6 +1980,9 @@ export default function BacktestPage() {
                                             variant="ghost"
                                             size="icon-sm"
                                             className="h-6 w-6"
+                                            disabled={
+                                              currentPlanPolicy.requiresPublicStrategiesOnly
+                                            }
                                           >
                                             <ListFilter className="h-3.5 w-3.5" />
                                           </Button>
@@ -1713,6 +2065,9 @@ export default function BacktestPage() {
                                           type="button"
                                           variant="outline"
                                           className="h-8 w-full justify-between gap-2"
+                                          disabled={
+                                            currentPlanPolicy.requiresPublicStrategiesOnly
+                                          }
                                         >
                                           {
                                             strategySourceOptions.find(
@@ -1776,11 +2131,13 @@ export default function BacktestPage() {
                                   )}
                                 </div>
                               ) : null}
-                              {!strategyStatus && strategies.length === 0 ? (
+                              {!strategyStatus &&
+                              visibleStrategies.length === 0 ? (
                                 <p className="flex items-center justify-center px-4 pt-3 pb-4 text-sm text-muted-foreground">
                                   No strategies found.
                                 </p>
-                              ) : !strategyStatus && strategies.length > 0 ? (
+                              ) : !strategyStatus &&
+                                visibleStrategies.length > 0 ? (
                                 <Command
                                   shouldFilter={false}
                                   className="rounded-none bg-transparent p-0"
@@ -1807,7 +2164,7 @@ export default function BacktestPage() {
                                   >
                                     <CommandList className="max-h-none overflow-visible px-0 py-0">
                                       <CommandGroup className="space-y-1 p-0">
-                                        {strategies.map((item) => {
+                                        {visibleStrategies.map((item) => {
                                           const isSelected =
                                             item._id === strategyId;
 
@@ -1993,13 +2350,28 @@ export default function BacktestPage() {
                   </CardContent>
                 </Card>
 
-                <Card className="min-w-0 overflow-hidden border-border/70 text-sm">
+                <Card
+                  className={cn(
+                    "min-w-0 overflow-hidden border-border/70 text-sm",
+                    !currentPlanPolicy.canEditCapitalPlan &&
+                      "border-dashed bg-muted/15",
+                  )}
+                >
                   <CardContent className="min-w-0 space-y-4">
-                    <div>
-                      <CardTitle>Capital plan</CardTitle>
-                      <p className="text-xs text-muted-foreground">
-                        Set wallet size, order sizing, and fees before you run.
-                      </p>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <CardTitle>Capital plan</CardTitle>
+                        <p className="text-xs text-muted-foreground">
+                          Set wallet size, order sizing, and fees before you
+                          run.
+                        </p>
+                      </div>
+                      {!currentPlanPolicy.canEditCapitalPlan ? (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/80 px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+                          <Lock className="h-3.5 w-3.5" />
+                          Locked on Free
+                        </span>
+                      ) : null}
                     </div>
 
                     <div className="grid gap-4 md:grid-cols-2">
@@ -2011,6 +2383,7 @@ export default function BacktestPage() {
                         placeholder={defaultInitialBalanceValue}
                         defaultValue={defaultInitialBalanceValue}
                         icon={Wallet}
+                        disabled={!currentPlanPolicy.canEditCapitalPlan}
                         onChange={(value) =>
                           setInitialBalance(sanitizeNumericInput(value, true))
                         }
@@ -2024,6 +2397,7 @@ export default function BacktestPage() {
                         placeholder={defaultAmountPerTradeValue}
                         defaultValue={defaultAmountPerTradeValue}
                         icon={HandCoins}
+                        disabled={!currentPlanPolicy.canEditCapitalPlan}
                         onChange={(value) =>
                           setAmountPerTrade(sanitizeNumericInput(value, true))
                         }
@@ -2039,6 +2413,7 @@ export default function BacktestPage() {
                         placeholder={defaultEntryFeeRateValue}
                         defaultValue={defaultEntryFeeRateValue}
                         icon={Percent}
+                        disabled={!currentPlanPolicy.canEditCapitalPlan}
                         onChange={(value) =>
                           setEntryFeeRate(sanitizeNumericInput(value, true))
                         }
@@ -2052,11 +2427,17 @@ export default function BacktestPage() {
                         placeholder={defaultExitFeeRateValue}
                         defaultValue={defaultExitFeeRateValue}
                         icon={Percent}
+                        disabled={!currentPlanPolicy.canEditCapitalPlan}
                         onChange={(value) =>
                           setExitFeeRate(sanitizeNumericInput(value, true))
                         }
                       />
                     </div>
+                    <p className="text-xs text-muted-foreground">
+                      {currentPlanPolicy.canEditCapitalPlan
+                        ? "Custom balance, size, and fee inputs are unlocked on your plan."
+                        : "Free plan uses the default capital values. Upgrade to Plus or Pro to edit these inputs."}
+                    </p>
                   </CardContent>
                 </Card>
 
@@ -2160,12 +2541,12 @@ export default function BacktestPage() {
                               size="sm"
                               aria-label="One-way mode"
                               className={cn(
-                                "h-7 rounded-none border-0 border-r border-border/70 bg-transparent px-2 text-[11px] data-[state=on]:bg-primary data-[state=on]:text-primary-foreground",
+                                "h-6 rounded-none border-0 border-r border-border/70 bg-transparent px-1.5 text-[10px] data-[state=on]:bg-primary data-[state=on]:text-primary-foreground",
                                 disabledFieldSurfaceClass,
                               )}
                             >
                               <span className="inline-flex items-center gap-1.5">
-                                <ArrowRight className="h-3 w-3" />
+                                <ArrowRight className="h-2.5 w-2.5" />
                                 <span>One-way</span>
                               </span>
                             </ToggleGroupItem>
@@ -2175,18 +2556,28 @@ export default function BacktestPage() {
                               variant="outline"
                               size="sm"
                               aria-label="Hedge mode"
+                              disabled={!currentPlanPolicy.canUseHedgeMode}
                               className={cn(
-                                "h-7 rounded-none border-0 bg-transparent px-2 text-[11px] data-[state=on]:bg-primary data-[state=on]:text-primary-foreground",
+                                "h-6 rounded-none border-0 bg-transparent px-1.5 text-[10px] data-[state=on]:bg-primary data-[state=on]:text-primary-foreground disabled:bg-muted/40 disabled:text-muted-foreground disabled:opacity-100",
                                 disabledFieldSurfaceClass,
                               )}
                             >
                               <span className="inline-flex items-center gap-1.5">
-                                <ArrowLeftRight className="h-3 w-3" />
+                                {!currentPlanPolicy.canUseHedgeMode ? (
+                                  <Lock className="h-2.5 w-2.5" />
+                                ) : (
+                                  <ArrowLeftRight className="h-2.5 w-2.5" />
+                                )}
                                 <span>Hedge</span>
                               </span>
                             </ToggleGroupItem>
                           </ToggleGroup>
                         </div>
+                        <p className="text-xs text-muted-foreground">
+                          {currentPlanPolicy.canUseHedgeMode
+                            ? "Hedge mode is available on your plan."
+                            : "Hedge mode unlocks on Plus and Pro."}
+                        </p>
                       </CollapsibleContent>
                     </Collapsible>
                   </CardContent>

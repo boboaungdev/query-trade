@@ -88,6 +88,14 @@ export async function createSubscriptionCheckout({
   const { data } = await api.post<{
     result: {
       subscription: Subscription;
+      membership?: {
+        plan?: "free" | "plus" | "pro" | string;
+        badgeLabel?: string | null;
+        badgeVariant?: "free" | "plus" | "pro" | string;
+        verifiedVariant?: "free" | "plus" | "pro" | string;
+        title?: string | null;
+        description?: string | null;
+      };
       walletTransaction: SubscriptionWalletTransaction;
       tokenBalance: number;
     };

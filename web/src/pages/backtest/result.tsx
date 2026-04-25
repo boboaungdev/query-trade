@@ -264,6 +264,20 @@ function formatDuration(durationMs?: number) {
   return `${Math.max(1, totalMinutes)}m`;
 }
 
+function formatDateRangeDuration(totalDays: number) {
+  if (totalDays <= 0) {
+    return "-";
+  }
+
+  if (totalDays === 1) return "1 day";
+  if (totalDays === 7) return "1 week";
+  if (totalDays === 30) return "1 month";
+  if (totalDays === 182 || totalDays === 183) return "6 months";
+  if (totalDays === 365 || totalDays === 366) return "1 year";
+
+  return `${totalDays} days`;
+}
+
 function getUtcMonthLabel(timestamp: number) {
   return new Date(timestamp).toLocaleString("en-US", {
     month: "short",
@@ -1176,6 +1190,9 @@ export default function BacktestResultPage() {
   }
 
   const result = backtest.result;
+  const dateWindowDurationLabel = formatDateRangeDuration(
+    Math.max(1, Math.ceil(result.duration / 86400000)),
+  );
   const pnlPositive = result.totalPnL >= 0;
   const averageTradeFee = Number.isFinite(result.averageTradeFee)
     ? result.averageTradeFee
@@ -1465,9 +1482,7 @@ export default function BacktestResultPage() {
                   Backtest Result
                 </span>
               </div>
-              <CardTitle>
-                {backtest.symbol} backtest result
-              </CardTitle>
+              <CardTitle>{backtest.symbol} backtest result</CardTitle>
               <CardDescription className="max-w-3xl text-sm leading-6">
                 Review the full result with performance metrics, equity
                 movement, and detailed trade history.
@@ -1480,7 +1495,7 @@ export default function BacktestResultPage() {
                   </span>
                   <span className="inline-flex items-center gap-1 rounded-full border bg-muted/30 px-2 py-0.5">
                     <Clock3 className="h-3.5 w-3.5 text-primary" />
-                    <span>{formatDuration(result.duration)}</span>
+                    <span>{dateWindowDurationLabel}</span>
                   </span>
                   <span className="inline-flex items-center gap-1 rounded-full border bg-muted/30 px-2 py-0.5">
                     <UserRound className="h-3.5 w-3.5 text-primary" />@
@@ -1774,9 +1789,7 @@ export default function BacktestResultPage() {
                     </ButtonGroup>
                   ) : null}
                 </div>
-                <div
-                  className="grid min-w-0 grid-cols-3 gap-2 text-center md:hidden"
-                >
+                <div className="grid min-w-0 grid-cols-3 gap-2 text-center md:hidden">
                   <div className="flex min-w-0 flex-col items-center">
                     <p className="text-base font-semibold tracking-tight text-foreground md:text-lg">
                       {backtest.user?.stats?.followerCount ?? 0}
@@ -1880,9 +1893,7 @@ export default function BacktestResultPage() {
                   <Percent className="h-4 w-4" />
                   Win Rate
                 </CardDescription>
-                <CardTitle>
-                  {ratio.format(result.winRate)}%
-                </CardTitle>
+                <CardTitle>{ratio.format(result.winRate)}%</CardTitle>
               </CardHeader>
               <CardContent className="text-sm text-muted-foreground">
                 <div className="space-y-1.5">
@@ -1918,9 +1929,7 @@ export default function BacktestResultPage() {
                   <Target className="h-4 w-4" />
                   Profit Factor
                 </CardDescription>
-                <CardTitle>
-                  {ratio.format(result.profitFactor)}
-                </CardTitle>
+                <CardTitle>{ratio.format(result.profitFactor)}</CardTitle>
               </CardHeader>
               <CardContent className="text-sm text-muted-foreground">
                 <div className="space-y-1.5">
@@ -1959,9 +1968,7 @@ export default function BacktestResultPage() {
                   <CircleDollarSign className="h-4 w-4" />
                   Fees
                 </CardDescription>
-                <CardTitle>
-                  {money.format(result.totalFees)}
-                </CardTitle>
+                <CardTitle>{money.format(result.totalFees)}</CardTitle>
               </CardHeader>
               <CardContent className="text-sm text-muted-foreground">
                 <div className="space-y-1.5">
@@ -2417,9 +2424,7 @@ export default function BacktestResultPage() {
                   <CalendarClock className="h-4 w-4" />
                   Date Window
                 </CardDescription>
-                <CardTitle>
-                  {formatDuration(result.duration)}
-                </CardTitle>
+                <CardTitle>{dateWindowDurationLabel}</CardTitle>
               </CardHeader>
               <CardContent className="text-sm text-muted-foreground">
                 <div className="space-y-1.5">

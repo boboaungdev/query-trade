@@ -2,6 +2,7 @@ import { WALLET_TRANSACTION_TYPES } from "../../constants/subscription.js";
 import { UserDB } from "../../models/user.js";
 import { SubscriptionPlanModel } from "../../models/subscriptionPlan.js";
 import { calculatePlanPricing } from "../../services/subscription/calculatePlanPricing.js";
+import { serializeMembership } from "../../services/subscription/serializeMembership.js";
 import { resError, resJson } from "../../utils/response.js";
 import {
   activateSubscription,
@@ -60,6 +61,7 @@ export const createCheckout = async (req, res, next) => {
 
     return resJson(res, 201, "Subscription activated with token.", {
       subscription,
+      membership: serializeMembership(subscription),
       walletTransaction,
       tokenBalance,
     });
