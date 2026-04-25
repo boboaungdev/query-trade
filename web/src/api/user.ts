@@ -38,6 +38,15 @@ export async function fetchUserByUsername(username: string) {
   });
 }
 
+export async function fetchUserById(userId: string) {
+  const normalizedUserId = userId.trim();
+
+  return dedupeUserRequest(userRequestMap, `id:${normalizedUserId}`, async () => {
+    const { data } = await api.get(`/user/id/${normalizedUserId}`);
+    return data;
+  });
+}
+
 export async function fetchUserFollowsByUsername(
   username: string,
   params: CommonListParams & {

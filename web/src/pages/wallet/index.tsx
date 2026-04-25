@@ -14,6 +14,7 @@ import {
   EyeOff,
   MessageSquareText,
   Loader2,
+  ScanLine,
   Smartphone,
   TicketPercent,
   Upload,
@@ -21,10 +22,13 @@ import {
   Wallet,
   XCircle,
 } from "lucide-react";
+import { QRCodeCanvas } from "qrcode.react";
+import jsQR from "jsqr";
 import { toast } from "sonner";
 
+import { APP_NAME } from "@/constants";
 import { getApiErrorMessage } from "@/api/axios";
-import { fetchUserByUsername } from "@/api/user";
+import { fetchUserById, fetchUserByUsername } from "@/api/user";
 import {
   cancelWalletPayment,
   createTokenDeposit,
@@ -72,6 +76,7 @@ import {
 } from "@/components/ui/pagination";
 import {
   getUserAvatarRingClass,
+  UserMembershipMark,
   type UserMembership,
 } from "@/components/user-membership";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -81,6 +86,7 @@ import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth";
 
 const USERNAME_REGEX = /^[a-z0-9]{6,20}$/;
+const WALLET_QR_APP_PREFIX = APP_NAME.toLowerCase().replace(/\s+/g, "");
 
 type SendUsernameStatus =
   | "idle"
@@ -92,10 +98,18 @@ type SendUsernameStatus =
   | "self";
 
 type SendRecipientPreview = {
+  id?: string;
   username: string;
   name?: string;
   avatar?: string;
   membership?: UserMembership;
+};
+
+type SendDialogStep = "recipient" | "details";
+
+type ParsedWalletQrPayload = {
+  userId: string;
+  amount?: number;
 };
 
 function formatUsdAmount(amount: number) {
@@ -149,6 +163,156 @@ function sanitizeTransferAmountInput(value: string) {
   }
 
   return sanitized;
+}
+
+function sanitizeReceiveAmountInput(value: string) {
+  const sanitized = value.replace(/[^\d]/g, "");
+
+  if (!sanitized) {
+    return "";
+  }
+
+  const parsedValue = Number(sanitized);
+
+  if (Number.isFinite(parsedValue) && parsedValue > 1000000000) {
+    return "1000000000";
+  }
+
+  return sanitized;
+}
+
+function buildWalletQrValue({
+  userId,
+  amount,
+}: {
+  userId: string;
+  amount?: number;
+}) {
+  const params = new URLSearchParams({
+    userId: userId.trim(),
+  });
+
+  if (typeof amount === "number" && Number.isFinite(amount) && amount > 0) {
+    params.set("amount", String(amount));
+  }
+
+  return `${WALLET_QR_APP_PREFIX}:pay?${params.toString()}`;
+}
+
+function parseWalletQrValue(rawValue: string): ParsedWalletQrPayload | null {
+  const trimmedValue = rawValue.trim();
+
+  if (!trimmedValue) {
+    return null;
+  }
+
+  const appPayPrefix = `${WALLET_QR_APP_PREFIX}:pay?`;
+
+  if (trimmedValue.startsWith(appPayPrefix)) {
+    const queryString = trimmedValue.slice(appPayPrefix.length);
+    const params = new URLSearchParams(queryString);
+    const userId = params.get("userId")?.trim() || "";
+    const amountParam = params.get("amount")?.trim() || "";
+    const amount = amountParam ? Number(amountParam) : undefined;
+
+    if (!/^[a-fA-F0-9]{24}$/.test(userId)) {
+      return null;
+    }
+
+    if (
+      typeof amount !== "undefined" &&
+      (!Number.isFinite(amount) || amount <= 0)
+    ) {
+      return null;
+    }
+
+    return {
+      userId,
+      amount,
+    };
+  }
+
+  if (trimmedValue.startsWith("@")) {
+    const username = trimmedValue.slice(1).trim().toLowerCase();
+    return USERNAME_REGEX.test(username)
+      ? {
+          userId: "",
+          amount: undefined,
+        }
+      : null;
+  }
+
+  return null;
+}
+
+async function detectQrValueFromFile(file: File) {
+  const imageBitmap = await createImageBitmap(file);
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+
+  if (!context) {
+    imageBitmap.close();
+    throw new Error("QR scan is not supported on this device.");
+  }
+
+  canvas.width = imageBitmap.width;
+  canvas.height = imageBitmap.height;
+  context.drawImage(imageBitmap, 0, 0);
+
+  try {
+    const rawValue = await detectQrValueFromCanvas(canvas);
+
+    if (!rawValue) {
+      throw new Error("No QR code found in that image.");
+    }
+
+    return rawValue;
+  } finally {
+    imageBitmap.close();
+  }
+}
+
+function getBarcodeDetector() {
+  return (
+    globalThis as typeof globalThis & {
+      BarcodeDetector?: new (options?: { formats?: string[] }) => {
+        detect: (
+          source:
+            | ImageBitmap
+            | HTMLImageElement
+            | HTMLCanvasElement
+            | HTMLVideoElement,
+        ) => Promise<Array<{ rawValue?: string }>>;
+      };
+    }
+  ).BarcodeDetector;
+}
+
+async function detectQrValueFromCanvas(canvas: HTMLCanvasElement) {
+  const BarcodeDetectorCtor = getBarcodeDetector();
+
+  if (BarcodeDetectorCtor) {
+    const detector = new BarcodeDetectorCtor({
+      formats: ["qr_code"],
+    });
+    const results = await detector.detect(canvas);
+    const rawValue = results.find((item) => item.rawValue?.trim())?.rawValue;
+
+    if (rawValue) {
+      return rawValue;
+    }
+  }
+
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+
+  if (!context) {
+    return "";
+  }
+
+  const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+  const qrResult = jsQR(imageData.data, imageData.width, imageData.height);
+
+  return qrResult?.data?.trim() || "";
 }
 
 function formatDateTime(date?: string | null) {
@@ -277,6 +441,7 @@ export default function WalletPage() {
     (state) => state.user?.tokenBalance ?? 0,
   );
   const username = useAuthStore((state) => state.user?.username ?? "");
+  const userId = useAuthStore((state) => state.user?._id ?? "");
   const hideWalletBalancePreference = useAuthStore((state) => {
     const preferences = state.user?.preferences;
 
@@ -300,7 +465,12 @@ export default function WalletPage() {
   const [depositAmount, setDepositAmount] = useState("");
   const [sendUsername, setSendUsername] = useState("");
   const [sendAmount, setSendAmount] = useState("");
+  const [isSendAmountLocked, setIsSendAmountLocked] = useState(false);
   const [sendNote, setSendNote] = useState("");
+  const [sendDialogStep, setSendDialogStep] =
+    useState<SendDialogStep>("recipient");
+  const [receiveAmount, setReceiveAmount] = useState("");
+  const [showReceiveAmountInput, setShowReceiveAmountInput] = useState(false);
   const [debouncedSendUsername, setDebouncedSendUsername] = useState("");
   const [sendUsernameStatus, setSendUsernameStatus] =
     useState<SendUsernameStatus>("idle");
@@ -308,19 +478,32 @@ export default function WalletPage() {
     useState<SendRecipientPreview | null>(null);
   const [isDepositDialogOpen, setIsDepositDialogOpen] = useState(false);
   const [isSendDialogOpen, setIsSendDialogOpen] = useState(false);
+  const [isSendConfirmDialogOpen, setIsSendConfirmDialogOpen] = useState(false);
   const [isReceiveDialogOpen, setIsReceiveDialogOpen] = useState(false);
+  const [isScanQrDialogOpen, setIsScanQrDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreatingDeposit, setIsCreatingDeposit] = useState(false);
   const [isSendingTransfer, setIsSendingTransfer] = useState(false);
+  const [isScanningQr, setIsScanningQr] = useState(false);
+  const [isStartingQrCamera, setIsStartingQrCamera] = useState(false);
   const [isCancellingPayment, setIsCancellingPayment] = useState(false);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [isUsernameCopied, setIsUsernameCopied] = useState(false);
+  const [qrScanError, setQrScanError] = useState("");
   const [activityPage, setActivityPage] = useState(1);
   const [totalActivityPages, setTotalActivityPages] = useState(1);
   const [activityReloadKey, setActivityReloadKey] = useState(0);
   const sendUsernameRequestIdRef = useRef(0);
+  const skipNextSendUsernameValidationRef = useRef(false);
+  const qrFileInputRef = useRef<HTMLInputElement | null>(null);
+  const receiveQrRef = useRef<HTMLDivElement | null>(null);
+  const qrVideoRef = useRef<HTMLVideoElement | null>(null);
+  const qrStreamRef = useRef<MediaStream | null>(null);
+  const qrScanFrameRef = useRef<number | null>(null);
+  const qrScanLockRef = useRef(false);
   const depositAmountNumber = Number(depositAmount);
   const sendAmountNumber = Number(sendAmount);
+  const receiveAmountNumber = Number(receiveAmount);
   const showDepositAmountError =
     depositAmount.length > 0 &&
     (!Number.isFinite(depositAmountNumber) ||
@@ -343,6 +526,7 @@ export default function WalletPage() {
     sendAmountNumber >= 1 &&
     sendAmountNumber <= tokenBalance;
   const isSendUsernameValid = sendUsernameStatus === "available";
+  const isSendRecipientStepValid = isSendUsernameValid;
   const isSendFormValid = isSendUsernameValid && isSendAmountValid;
   const sendUsernameHelperText =
     sendUsernameStatus === "invalid"
@@ -410,6 +594,17 @@ export default function WalletPage() {
       return;
     }
 
+    if (
+      skipNextSendUsernameValidationRef.current &&
+      sendUsernameStatus === "available" &&
+      sendRecipientPreview?.username?.trim().toLowerCase() ===
+        trimmedValue.toLowerCase()
+    ) {
+      skipNextSendUsernameValidationRef.current = false;
+      setDebouncedSendUsername("");
+      return;
+    }
+
     if (trimmedValue.toLowerCase() === username.toLowerCase()) {
       setDebouncedSendUsername("");
       setSendUsernameStatus("self");
@@ -457,8 +652,7 @@ export default function WalletPage() {
 
         setSendUsernameStatus("available");
         setSendRecipientPreview({
-          username:
-            data?.result?.user?.username || debouncedSendUsername,
+          username: data?.result?.user?.username || debouncedSendUsername,
           name: data?.result?.user?.name,
           avatar: data?.result?.user?.avatar,
           membership: data?.result?.user?.membership,
@@ -475,6 +669,18 @@ export default function WalletPage() {
       });
   }, [debouncedSendUsername]);
 
+  useEffect(() => {
+    return () => {
+      stopQrCamera();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isScanQrDialogOpen) {
+      void startQrCamera();
+    }
+  }, [isScanQrDialogOpen]);
+
   const activityPageItems = buildPageItems(activityPage, totalActivityPages);
   const walletBalanceUsdText = showBalance
     ? `~ ${formatUsdAmount(tokenBalance / tokenPerUsdt)} USD`
@@ -482,6 +688,12 @@ export default function WalletPage() {
   const walletBalanceTokenText = showBalance
     ? `${formatFullTokenAmount(tokenBalance)} token`
     : "**** token";
+  const qrReceiveAmount =
+    receiveAmount.length > 0 &&
+    Number.isFinite(receiveAmountNumber) &&
+    receiveAmountNumber > 0
+      ? receiveAmountNumber
+      : undefined;
 
   const refreshActivity = () => {
     setActivityPage(1);
@@ -504,12 +716,38 @@ export default function WalletPage() {
     setIsSendDialogOpen(open);
 
     if (!open) {
+      setSendDialogStep("recipient");
+      setIsSendConfirmDialogOpen(false);
       setSendUsername("");
       setSendAmount("");
+      setIsSendAmountLocked(false);
       setSendNote("");
       setDebouncedSendUsername("");
       setSendUsernameStatus("idle");
       setSendRecipientPreview(null);
+    }
+  };
+
+  const handleOpenSendDetailsStep = () => {
+    if (!isSendRecipientStepValid) {
+      return;
+    }
+
+    setSendDialogStep("details");
+  };
+
+  const handleScanQrDialogOpenChange = (open: boolean) => {
+    setIsScanQrDialogOpen(open);
+
+    if (!open) {
+      stopQrCamera();
+      setQrScanError("");
+      setIsScanningQr(false);
+      setIsStartingQrCamera(false);
+
+      if (qrFileInputRef.current) {
+        qrFileInputRef.current.value = "";
+      }
     }
   };
 
@@ -594,6 +832,234 @@ export default function WalletPage() {
     }, 1500);
   };
 
+  const handleSaveReceiveQr = async () => {
+    const qrCanvas = receiveQrRef.current?.querySelector("canvas");
+
+    if (!qrCanvas) {
+      toast.error("QR code is not ready yet.");
+      return;
+    }
+
+    try {
+      const link = document.createElement("a");
+      const fileSafeUsername = username.trim().toLowerCase() || "user";
+
+      link.href = qrCanvas.toDataURL("image/png");
+      link.download = `${APP_NAME.toLowerCase().replace(/\s+/g, "-")}-qr-${fileSafeUsername}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success("QR code saved.");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Failed to save QR code."));
+    }
+  };
+
+  const handleReceiveDialogOpenChange = (open: boolean) => {
+    setIsReceiveDialogOpen(open);
+
+    if (!open) {
+      setReceiveAmount("");
+      setShowReceiveAmountInput(false);
+    }
+  };
+
+  const stopQrCamera = () => {
+    if (qrScanFrameRef.current !== null) {
+      window.cancelAnimationFrame(qrScanFrameRef.current);
+      qrScanFrameRef.current = null;
+    }
+
+    qrScanLockRef.current = false;
+
+    if (qrVideoRef.current) {
+      qrVideoRef.current.srcObject = null;
+    }
+
+    if (qrStreamRef.current) {
+      qrStreamRef.current.getTracks().forEach((track) => track.stop());
+      qrStreamRef.current = null;
+    }
+  };
+
+  const applyScannedQrPayload = async (rawQrValue: string) => {
+    const parsedPayload = parseWalletQrValue(rawQrValue);
+
+    if (!parsedPayload?.userId) {
+      throw new Error("Unsupported QR code. Use a Query Trade user QR.");
+    }
+
+    const userData = await fetchUserById(parsedPayload.userId);
+    const parsedUsername =
+      userData?.result?.user?.username?.trim()?.toLowerCase() || "";
+
+    if (!USERNAME_REGEX.test(parsedUsername)) {
+      throw new Error("Recipient username is not available.");
+    }
+
+    const recipient = userData?.result?.user;
+
+    skipNextSendUsernameValidationRef.current = true;
+    setSendUsername(parsedUsername);
+    setDebouncedSendUsername(parsedUsername);
+    setSendUsernameStatus("available");
+    setSendRecipientPreview({
+      id: recipient?._id,
+      username: recipient?.username || parsedUsername,
+      name: recipient?.name,
+      avatar: recipient?.avatar,
+      membership: recipient?.membership,
+    });
+
+    if (
+      typeof parsedPayload.amount === "number" &&
+      Number.isFinite(parsedPayload.amount) &&
+      parsedPayload.amount > 0
+    ) {
+      setSendAmount(String(Math.trunc(parsedPayload.amount)));
+      setIsSendAmountLocked(true);
+    } else {
+      setIsSendAmountLocked(false);
+    }
+
+    setIsScanQrDialogOpen(false);
+    setIsSendDialogOpen(true);
+    setSendDialogStep("details");
+  };
+
+  const startQrCamera = async () => {
+    if (isStartingQrCamera || isScanningQr) {
+      return;
+    }
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setQrScanError("Camera access is not available on this device.");
+      return;
+    }
+
+    setIsStartingQrCamera(true);
+    setQrScanError("");
+
+    try {
+      stopQrCamera();
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: "environment" },
+        },
+        audio: false,
+      });
+
+      qrStreamRef.current = stream;
+
+      if (qrVideoRef.current) {
+        qrVideoRef.current.srcObject = stream;
+        await qrVideoRef.current.play();
+      }
+      const scanCanvas = document.createElement("canvas");
+      const scanContext = scanCanvas.getContext("2d", {
+        willReadFrequently: true,
+      });
+
+      if (!scanContext) {
+        throw new Error("QR scan is not supported on this device.");
+      }
+
+      const scanFrame = async () => {
+        const video = qrVideoRef.current;
+
+        if (!video || video.readyState < HTMLMediaElement.HAVE_ENOUGH_DATA) {
+          qrScanFrameRef.current = window.requestAnimationFrame(() => {
+            void scanFrame();
+          });
+          return;
+        }
+
+        if (qrScanLockRef.current) {
+          qrScanFrameRef.current = window.requestAnimationFrame(() => {
+            void scanFrame();
+          });
+          return;
+        }
+
+        qrScanLockRef.current = true;
+
+        try {
+          scanCanvas.width = video.videoWidth;
+          scanCanvas.height = video.videoHeight;
+          scanContext.drawImage(
+            video,
+            0,
+            0,
+            scanCanvas.width,
+            scanCanvas.height,
+          );
+          const rawValue = await detectQrValueFromCanvas(scanCanvas);
+
+          if (rawValue) {
+            setIsScanningQr(true);
+            await applyScannedQrPayload(rawValue);
+            stopQrCamera();
+            setIsScanningQr(false);
+            return;
+          }
+        } catch (error) {
+          setQrScanError(
+            error instanceof Error ? error.message : "Failed to scan QR code.",
+          );
+          stopQrCamera();
+          setIsScanningQr(false);
+          return;
+        } finally {
+          qrScanLockRef.current = false;
+        }
+
+        qrScanFrameRef.current = window.requestAnimationFrame(() => {
+          void scanFrame();
+        });
+      };
+
+      qrScanFrameRef.current = window.requestAnimationFrame(() => {
+        void scanFrame();
+      });
+    } catch (error) {
+      stopQrCamera();
+      setQrScanError(
+        error instanceof Error ? error.message : "Unable to access the camera.",
+      );
+    } finally {
+      setIsStartingQrCamera(false);
+    }
+  };
+
+  const handleQrFileChange = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+
+    if (!file || isScanningQr) {
+      return;
+    }
+
+    setIsScanningQr(true);
+    setQrScanError("");
+
+    try {
+      const rawQrValue = await detectQrValueFromFile(file);
+      await applyScannedQrPayload(rawQrValue);
+    } catch (error) {
+      setQrScanError(
+        error instanceof Error ? error.message : "Failed to scan QR code.",
+      );
+    } finally {
+      setIsScanningQr(false);
+
+      if (event.target) {
+        event.target.value = "";
+      }
+    }
+  };
+
   const handleSendTransfer = async () => {
     if (!isSendFormValid || isSendingTransfer) {
       return;
@@ -627,21 +1093,36 @@ export default function WalletPage() {
           <CardHeader>
             <CardTitle>Balance</CardTitle>
             <div className="flex items-center justify-between gap-3">
-              <CardDescription>Your available wallet token.</CardDescription>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-8 shrink-0"
-                onClick={toggleShowBalance}
-                aria-label={showBalance ? "Hide balance" : "Show balance"}
-              >
-                {showBalance ? (
-                  <EyeOff className="size-4" />
-                ) : (
-                  <Eye className="size-4" />
-                )}
-              </Button>
+              <div className="flex items-center gap-2">
+                <CardDescription>Your available wallet token.</CardDescription>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="size-8 shrink-0"
+                  onClick={toggleShowBalance}
+                  aria-label={showBalance ? "Hide balance" : "Show balance"}
+                >
+                  {showBalance ? (
+                    <EyeOff className="size-4" />
+                  ) : (
+                    <Eye className="size-4" />
+                  )}
+                </Button>
+              </div>
+              <div className="flex items-center gap-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="size-8 shrink-0"
+                  onClick={() => setIsScanQrDialogOpen(true)}
+                  aria-label="Scan QR"
+                  title="Scan QR"
+                >
+                  <ScanLine className="size-4" />
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -1024,180 +1505,500 @@ export default function WalletPage() {
       <Dialog open={isSendDialogOpen} onOpenChange={handleSendDialogOpenChange}>
         <DialogContent onOpenAutoFocus={(event) => event.preventDefault()}>
           <DialogHeader>
-            <DialogTitle>Send token</DialogTitle>
+            <DialogTitle>
+              {sendDialogStep === "recipient" ? "Send token" : "Send details"}
+            </DialogTitle>
             <DialogDescription>
-              Send token to another user by username.
+              {sendDialogStep === "recipient"
+                ? "Enter the username of the recipient."
+                : "Review the recipient and enter the transfer details."}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
-            <div className="space-y-2">
-              <div className="relative">
-                {sendRecipientPreview?.avatar ? (
-                  <img
-                    src={sendRecipientPreview.avatar}
-                    alt={sendRecipientPreview.name || sendRecipientPreview.username}
-                    className={cn(
-                      "pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 rounded-full object-cover",
-                      getUserAvatarRingClass(sendRecipientPreview.membership),
-                    )}
-                  />
-                ) : (
-                  <UserRound className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-                )}
-                <Input
-                  type="text"
-                  value={sendUsername}
-                  onChange={(event) =>
-                    setSendUsername(
-                      event.target.value.replace(/[^a-z0-9]/gi, "").toLowerCase(),
-                    )
-                  }
-                  placeholder="username"
-                  className="pl-9 pr-10"
-                  aria-invalid={
-                    sendUsernameStatus === "invalid" ||
-                    sendUsernameStatus === "unavailable" ||
-                    sendUsernameStatus === "error" ||
-                    sendUsernameStatus === "self"
-                  }
-                  disabled={isSendingTransfer}
-                />
-                <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2">
-                  {sendUsernameStatus === "checking" ? (
-                    <Loader2 className="size-4 animate-spin text-muted-foreground" />
-                  ) : sendUsernameStatus === "available" ? (
-                    <CheckCircle2 className="size-4 text-emerald-600" />
-                  ) : sendUsernameStatus === "invalid" ||
-                    sendUsernameStatus === "unavailable" ||
-                    sendUsernameStatus === "error" ||
-                    sendUsernameStatus === "self" ? (
-                    <XCircle className="size-4 text-destructive" />
+            {sendDialogStep === "recipient" ? (
+              <>
+                <div className="space-y-2">
+                  <div className="relative">
+                    <UserRound className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      type="text"
+                      value={sendUsername}
+                      onChange={(event) =>
+                        setSendUsername(
+                          event.target.value
+                            .replace(/[^a-z0-9]/gi, "")
+                            .toLowerCase(),
+                        )
+                      }
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" && isSendRecipientStepValid) {
+                          event.preventDefault();
+                          handleOpenSendDetailsStep();
+                        }
+                      }}
+                      placeholder="username"
+                      className="pl-9 pr-10"
+                      aria-invalid={
+                        sendUsernameStatus === "invalid" ||
+                        sendUsernameStatus === "unavailable" ||
+                        sendUsernameStatus === "error" ||
+                        sendUsernameStatus === "self"
+                      }
+                      disabled={isSendingTransfer}
+                    />
+                    <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2">
+                      {sendUsernameStatus === "checking" ? (
+                        <Loader2 className="size-4 animate-spin text-muted-foreground" />
+                      ) : sendUsernameStatus === "available" ? (
+                        <CheckCircle2 className="size-4 text-emerald-600" />
+                      ) : sendUsernameStatus === "invalid" ||
+                        sendUsernameStatus === "unavailable" ||
+                        sendUsernameStatus === "error" ||
+                        sendUsernameStatus === "self" ? (
+                        <XCircle className="size-4 text-destructive" />
+                      ) : null}
+                    </span>
+                  </div>
+                  {sendUsernameHelperText ? (
+                    <p
+                      className={`text-xs ${
+                        sendUsernameStatus === "checking"
+                          ? "text-muted-foreground"
+                          : "text-destructive"
+                      }`}
+                    >
+                      {sendUsernameHelperText}
+                    </p>
                   ) : null}
-                </span>
-              </div>
-              {sendUsernameHelperText ? (
-                <p
-                  className={`text-xs ${
-                    sendUsernameStatus === "checking"
-                      ? "text-muted-foreground"
-                      : "text-destructive"
-                  }`}
+
+                  {sendRecipientPreview ? (
+                    <div className="flex items-center gap-3 px-1 py-1">
+                      {sendRecipientPreview.avatar ? (
+                        <img
+                          src={sendRecipientPreview.avatar}
+                          alt={
+                            sendRecipientPreview.name ||
+                            sendRecipientPreview.username
+                          }
+                          className={cn(
+                            "size-9 rounded-full object-cover",
+                            getUserAvatarRingClass(
+                              sendRecipientPreview.membership,
+                            ),
+                          )}
+                        />
+                      ) : (
+                        <div className="flex size-9 items-center justify-center rounded-full bg-muted">
+                          <UserRound className="size-4 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <p className="truncate text-sm font-medium">
+                            {sendRecipientPreview.name ||
+                              sendRecipientPreview.username}
+                          </p>
+                          <UserMembershipMark
+                            membership={sendRecipientPreview.membership}
+                            interactive
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          @{sendRecipientPreview.username}
+                        </p>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+
+                <Button
+                  type="button"
+                  onClick={handleOpenSendDetailsStep}
+                  disabled={!isSendRecipientStepValid}
+                  className="w-full justify-center"
                 >
-                  {sendUsernameHelperText}
-                </p>
-              ) : null}
-            </div>
+                  Next
+                </Button>
+              </>
+            ) : (
+              <>
+                {sendRecipientPreview ? (
+                  <div className="flex flex-col items-center gap-3 px-1 py-1 text-center">
+                    {sendRecipientPreview.avatar ? (
+                      <img
+                        src={sendRecipientPreview.avatar}
+                        alt={
+                          sendRecipientPreview.name ||
+                          sendRecipientPreview.username
+                        }
+                        className={cn(
+                          "size-20 rounded-full object-cover",
+                          getUserAvatarRingClass(
+                            sendRecipientPreview.membership,
+                          ),
+                        )}
+                      />
+                    ) : (
+                      <div className="flex size-20 items-center justify-center rounded-full bg-muted">
+                        <UserRound className="size-9 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <p className="text-lg font-semibold leading-none">
+                          {sendRecipientPreview.name ||
+                            sendRecipientPreview.username}
+                        </p>
+                        <UserMembershipMark
+                          membership={sendRecipientPreview.membership}
+                          interactive
+                        />
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        @{sendRecipientPreview.username}
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
 
-            <div className="space-y-2">
-              <div className="relative">
-                <Wallet className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  type="text"
-                  inputMode="numeric"
-                  value={sendAmount}
-                  onChange={(event) =>
-                    setSendAmount(
-                      sanitizeTransferAmountInput(event.target.value),
-                    )
-                  }
-                  placeholder="1"
-                  className="pr-16 pl-9"
-                  disabled={isSendingTransfer}
-                  aria-invalid={showSendAmountError}
-                />
-                <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm text-muted-foreground">
-                  token
-                </span>
-              </div>
-              {showSendAmountError ? (
-                <p className="text-xs text-destructive">
-                  Enter a valid amount up to your available balance.
-                </p>
-              ) : (
-                <p className="text-xs text-muted-foreground">
-                  Available: {formatTokenAmount(tokenBalance)} token
-                </p>
-              )}
-            </div>
+                <div className="space-y-2">
+                  <div className="relative">
+                    <Wallet className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      value={sendAmount}
+                      onChange={(event) =>
+                        setSendAmount(
+                          sanitizeTransferAmountInput(event.target.value),
+                        )
+                      }
+                      placeholder="1"
+                      className="pr-16 pl-9"
+                      disabled={isSendingTransfer || isSendAmountLocked}
+                      aria-invalid={showSendAmountError}
+                    />
+                    <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm text-muted-foreground">
+                      token
+                    </span>
+                  </div>
+                  {isSendAmountLocked ? (
+                    <p className="text-xs text-muted-foreground">
+                      Amount was set from the QR code and cannot be edited.
+                    </p>
+                  ) : showSendAmountError ? (
+                    <p className="text-xs text-destructive">
+                      Enter a valid amount up to your available balance.
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Available: {formatFullTokenAmount(tokenBalance)} token
+                    </p>
+                  )}
+                </div>
 
-            <div className="space-y-2">
-              <div className="relative">
-                <MessageSquareText className="pointer-events-none absolute top-3 left-3 size-4 text-muted-foreground" />
-                <span className="pointer-events-none absolute top-3 right-3 text-xs text-muted-foreground">
-                  {sendNote.length}/50
-                </span>
-                <Textarea
-                  value={sendNote}
-                  onChange={(event) => setSendNote(event.target.value.slice(0, 50))}
-                  placeholder="Optional note"
-                  className="h-14 resize-none overflow-y-auto whitespace-pre-wrap break-all pr-14 pl-9"
-                  disabled={isSendingTransfer}
-                />
-              </div>
-            </div>
+                <div className="space-y-2">
+                  <div className="relative">
+                    <MessageSquareText className="pointer-events-none absolute top-3 left-3 size-4 text-muted-foreground" />
+                    <span className="pointer-events-none absolute top-3 right-3 text-xs text-muted-foreground">
+                      {sendNote.length}/50
+                    </span>
+                    <Textarea
+                      value={sendNote}
+                      onChange={(event) =>
+                        setSendNote(event.target.value.slice(0, 50))
+                      }
+                      placeholder="Optional note"
+                      className="h-14 resize-none overflow-y-auto whitespace-pre-wrap break-all pr-14 pl-9"
+                      disabled={isSendingTransfer}
+                    />
+                  </div>
+                </div>
 
-            <Button
-              onClick={() => void handleSendTransfer()}
-              disabled={!isSendFormValid || isSendingTransfer}
-              className="w-full justify-center"
-            >
-              {isSendingTransfer ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <>
-                  <ArrowUpRight className="size-4" />
-                  Send token
-                </>
-              )}
-            </Button>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="flex-1 justify-center"
+                    onClick={() =>
+                      isSendAmountLocked
+                        ? handleSendDialogOpenChange(false)
+                        : setSendDialogStep("recipient")
+                    }
+                    disabled={isSendingTransfer}
+                  >
+                    {isSendAmountLocked ? "Cancel" : "Back"}
+                  </Button>
+                  <Button
+                    type="button"
+                    disabled={!isSendFormValid || isSendingTransfer}
+                    className="flex-1 justify-center"
+                    onClick={() => setIsSendConfirmDialogOpen(true)}
+                  >
+                    {isSendingTransfer ? (
+                      <Loader2 className="absolute h-4 w-4 animate-spin" />
+                    ) : null}
+                    <span
+                      className={isSendingTransfer ? "opacity-0" : undefined}
+                    >
+                      <span className="inline-flex items-center gap-2">
+                        <ArrowUpRight className="size-4" />
+                        Send token
+                      </span>
+                    </span>
+                  </Button>
+                </div>
+
+                <AlertDialog
+                  open={isSendConfirmDialogOpen}
+                  onOpenChange={setIsSendConfirmDialogOpen}
+                >
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Send token?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        {`You are about to send ${formatFullTokenAmount(sendAmountNumber)} token to @${trimmedSendUsername}.`}
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel disabled={isSendingTransfer}>
+                        Cancel
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={(event) => {
+                          event.preventDefault();
+                          void handleSendTransfer().finally(() => {
+                            setIsSendConfirmDialogOpen(false);
+                          });
+                        }}
+                        disabled={!isSendFormValid || isSendingTransfer}
+                      >
+                        {isSendingTransfer ? (
+                          <Loader2 className="absolute h-4 w-4 animate-spin" />
+                        ) : null}
+                        <span
+                          className={
+                            isSendingTransfer ? "opacity-0" : undefined
+                          }
+                        >
+                          Send
+                        </span>
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </>
+            )}
           </div>
         </DialogContent>
       </Dialog>
 
       <Dialog
         open={isReceiveDialogOpen}
-        onOpenChange={setIsReceiveDialogOpen}
+        onOpenChange={handleReceiveDialogOpenChange}
       >
         <DialogContent onOpenAutoFocus={(event) => event.preventDefault()}>
           <DialogHeader>
             <DialogTitle>Receive token</DialogTitle>
             <DialogDescription>
-              Share your username so another user can send token to you.
+              Share your QR code or username to receive token.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
-            <div className="rounded-lg border bg-muted/40 p-4">
-              <p className="text-sm text-muted-foreground">Your username</p>
-              <p className="mt-1 text-2xl font-semibold tracking-tight">
-                @{username}
-              </p>
+            <div ref={receiveQrRef} className="flex justify-center">
+              <div className="bg-white p-3 shadow-sm">
+                <QRCodeCanvas
+                  value={buildWalletQrValue({
+                    userId,
+                    amount: qrReceiveAmount,
+                  })}
+                  size={256}
+                  level="H"
+                  includeMargin
+                  bgColor="#ffffff"
+                  fgColor="#111827"
+                  className="h-[180px] w-[180px]"
+                  imageSettings={{
+                    src: "/query-trade.svg",
+                    width: 32,
+                    height: 32,
+                    excavate: true,
+                  }}
+                />
+              </div>
             </div>
+
+            <div className="flex items-center justify-center gap-2">
+              <p className="text-sm font-semibold tracking-tight sm:text-base">
+                <span className="text-muted-foreground">@</span>
+                {username}
+              </p>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-8"
+                onClick={() => void handleCopyUsername()}
+                disabled={!username}
+                aria-label="Copy username"
+                title="Copy username"
+              >
+                {isUsernameCopied ? (
+                  <Check className="size-4" />
+                ) : (
+                  <Copy className="size-4" />
+                )}
+              </Button>
+            </div>
+
+            <div className="space-y-2">
+              {showReceiveAmountInput ? (
+                <>
+                  <div className="relative">
+                    <Wallet className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      value={receiveAmount}
+                      onChange={(event) =>
+                        setReceiveAmount(
+                          sanitizeReceiveAmountInput(event.target.value),
+                        )
+                      }
+                      placeholder="Optional amount"
+                      className="pr-16 pl-9"
+                    />
+                    <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm text-muted-foreground">
+                      token
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs text-muted-foreground">
+                      Optional QR amount.
+                    </p>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-auto px-2 py-1 text-xs"
+                      onClick={() => {
+                        setReceiveAmount("");
+                        setShowReceiveAmountInput(false);
+                      }}
+                    >
+                      Hide
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="w-full justify-center"
+                  onClick={() => setShowReceiveAmountInput(true)}
+                >
+                  <Wallet className="size-4" />
+                  Add optional amount
+                </Button>
+              )}
+            </div>
+
+            <Button
+              type="button"
+              className="w-full justify-center"
+              onClick={() => void handleSaveReceiveQr()}
+            >
+              <Download className="size-4" />
+              Save QR
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={isScanQrDialogOpen}
+        onOpenChange={handleScanQrDialogOpenChange}
+      >
+        <DialogContent onOpenAutoFocus={(event) => event.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle>Scan QR</DialogTitle>
+            <DialogDescription>
+              Scan a Query Trade QR code with your camera.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="overflow-hidden rounded-xl border bg-muted/20">
+              <div className="relative aspect-square bg-black">
+                <video
+                  ref={qrVideoRef}
+                  className="h-full w-full object-cover"
+                  autoPlay
+                  muted
+                  playsInline
+                />
+                {(isStartingQrCamera || isScanningQr) && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/45">
+                    <Loader2 className="size-5 animate-spin text-white" />
+                  </div>
+                )}
+              </div>
+              <div className="px-4 py-3 text-sm text-muted-foreground">
+                Point your camera at a recipient QR.
+              </div>
+            </div>
+
+            <input
+              ref={qrFileInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={(event) => void handleQrFileChange(event)}
+            />
+
+            <Button
+              type="button"
+              className="w-full justify-center"
+              variant="ghost"
+              onClick={() => void startQrCamera()}
+              disabled={isStartingQrCamera || isScanningQr}
+            >
+              {isStartingQrCamera ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <>
+                  <ScanLine className="size-4" />
+                  Restart camera
+                </>
+              )}
+            </Button>
 
             <Button
               type="button"
               variant="outline"
               className="w-full justify-center"
-              onClick={() => void handleCopyUsername()}
-              disabled={!username}
+              onClick={() => qrFileInputRef.current?.click()}
+              disabled={isScanningQr}
             >
-              {isUsernameCopied ? (
-                <>
-                  <Check className="size-4" />
-                  Copied
-                </>
+              {isScanningQr ? (
+                <Loader2 className="size-4 animate-spin" />
               ) : (
                 <>
-                  <Copy className="size-4" />
-                  Copy username
+                  <Upload className="size-4" />
+                  Upload QR image
                 </>
               )}
             </Button>
+
+            {qrScanError ? (
+              <p className="text-xs text-destructive">{qrScanError}</p>
+            ) : null}
           </div>
         </DialogContent>
       </Dialog>
     </div>
   );
 }
-

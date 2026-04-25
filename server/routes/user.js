@@ -5,7 +5,7 @@ import {
   validateParam,
   validateQuery,
 } from "../utils/validator.js";
-import { getUserByUsername } from "../controllers/user/get.js";
+import { getUserById, getUserByUsername } from "../controllers/user/get.js";
 import {
   getUserBacktests,
   getUserFollows,
@@ -13,6 +13,13 @@ import {
 } from "../controllers/user/lists.js";
 
 const router = express.Router();
+
+router.get(
+  "/id/:userId",
+  validateOptionalToken(),
+  validateParam(UserSchema.params.userId),
+  getUserById,
+);
 
 router.get(
   "/:username/follows",
