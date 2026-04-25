@@ -87,6 +87,14 @@ import { useAuthStore } from "@/store/auth";
 
 const USERNAME_REGEX = /^[a-z0-9]{6,20}$/;
 const WALLET_QR_APP_PREFIX = APP_NAME.trim().toLowerCase().replace(/\s+/g, "-");
+const walletSummaryRequestCache = new Map<
+  string,
+  Promise<Awaited<ReturnType<typeof getWalletSummary>>>
+>();
+const walletActivityRequestCache = new Map<
+  string,
+  Promise<Awaited<ReturnType<typeof getWalletActivity>>>
+>();
 
 type SendUsernameStatus =
   | "idle"
@@ -179,6 +187,44 @@ function sanitizeReceiveAmountInput(value: string) {
   }
 
   return sanitized;
+}
+
+async function loadWalletSummaryOnce(cacheKey: string) {
+  const existingRequest = walletSummaryRequestCache.get(cacheKey);
+
+  if (existingRequest) {
+    return existingRequest;
+  }
+
+  const request = getWalletSummary().finally(() => {
+    walletSummaryRequestCache.delete(cacheKey);
+  });
+
+  walletSummaryRequestCache.set(cacheKey, request);
+  return request;
+}
+
+async function loadWalletActivityOnce({
+  page,
+  limit,
+  cacheKey,
+}: {
+  page: number;
+  limit: number;
+  cacheKey: string;
+}) {
+  const existingRequest = walletActivityRequestCache.get(cacheKey);
+
+  if (existingRequest) {
+    return existingRequest;
+  }
+
+  const request = getWalletActivity({ page, limit }).finally(() => {
+    walletActivityRequestCache.delete(cacheKey);
+  });
+
+  walletActivityRequestCache.set(cacheKey, request);
+  return request;
 }
 
 function buildWalletQrValue({
@@ -376,15 +422,15 @@ function getActivityIcon(activity: WalletActivity) {
   }
 
   if (activity.activityType === "withdraw") {
-    return <Upload className="size-4 text-amber-500" />;
+    return <Upload className="size-4 text-rose-500" />;
   }
 
   if (activity.activityType === "send") {
-    return <ArrowUpRight className="size-4 text-blue-500" />;
+    return <ArrowUpRight className="size-4 text-rose-500" />;
   }
 
   if (activity.activityType === "receive") {
-    return <ArrowDownLeft className="size-4 text-sky-500" />;
+    return <ArrowDownLeft className="size-4 text-emerald-500" />;
   }
 
   return getStatusIcon(activity.status);
@@ -392,7 +438,12 @@ function getActivityIcon(activity: WalletActivity) {
 
 function getActivityPrimaryAmount(activity: WalletActivity) {
   if (activity.activityType === "deposit") {
-    return `${formatUsdAmount(Number(activity.amountUsd || 0))} USD`;
+    const depositPrefix =
+      activity.status === "confirmed" || activity.status === "pending"
+        ? "+"
+        : "";
+
+    return `${depositPrefix}${formatUsdAmount(Number(activity.amountUsd || 0))} USD`;
   }
 
   if (
@@ -404,12 +455,37 @@ function getActivityPrimaryAmount(activity: WalletActivity) {
     return `-${formatTokenAmount(activity.tokenAmount)} token`;
   }
 
-  return `${formatTokenAmount(activity.tokenAmount)} token`;
+  return `+${formatTokenAmount(activity.tokenAmount)} token`;
+}
+
+function getActivityPrimaryAmountTone(activity: WalletActivity) {
+  if (activity.activityType === "deposit") {
+    if (activity.status === "confirmed") {
+      return "text-emerald-600";
+    }
+
+    if (activity.status === "pending") {
+      return "text-amber-500";
+    }
+
+    return "text-foreground";
+  }
+
+  if (
+    activity.activityType === "subscription" ||
+    activity.activityType === "withdraw" ||
+    activity.activityType === "send" ||
+    activity.activityType === "spend"
+  ) {
+    return "text-rose-600";
+  }
+
+  return "text-emerald-600";
 }
 
 function getActivitySecondaryText(activity: WalletActivity) {
   if (activity.activityType === "deposit") {
-    return `+${formatTokenAmount(activity.tokenAmount)} token`;
+    return `Deposit amount: ${formatTokenAmount(activity.tokenAmount)} token`;
   }
 
   if (typeof activity.balanceAfter === "number") {
@@ -417,6 +493,10 @@ function getActivitySecondaryText(activity: WalletActivity) {
   }
 
   return activity.description || "";
+}
+
+function getActivitySecondaryTextTone() {
+  return "text-muted-foreground";
 }
 
 function buildPageItems(currentPage: number, totalPages: number) {
@@ -553,9 +633,15 @@ export default function WalletPage() {
       setIsLoading(true);
 
       try {
+        const summaryCacheKey = `summary:${activityReloadKey}`;
+        const activityCacheKey = `activity:${activityPage}:10:${activityReloadKey}`;
         const [walletData, activityData] = await Promise.all([
-          getWalletSummary(),
-          getWalletActivity({ page: activityPage, limit: 10 }),
+          loadWalletSummaryOnce(summaryCacheKey),
+          loadWalletActivityOnce({
+            page: activityPage,
+            limit: 10,
+            cacheKey: activityCacheKey,
+          }),
         ]);
 
         if (!ignore) {
@@ -849,9 +935,13 @@ export default function WalletPage() {
     try {
       const link = document.createElement("a");
       const fileSafeUsername = username.trim().toLowerCase() || "user";
+      const amountSuffix =
+        typeof qrReceiveAmount === "number" && Number.isFinite(qrReceiveAmount)
+          ? `-amount-${qrReceiveAmount}`
+          : "";
 
       link.href = qrCanvas.toDataURL("image/png");
-      link.download = `${APP_NAME.toLowerCase().replace(/\s+/g, "-")}-qr-${fileSafeUsername}.png`;
+      link.download = `${APP_NAME.toLowerCase().replace(/\s+/g, "-")}-qr-${fileSafeUsername}${amountSuffix}.png`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -895,6 +985,10 @@ export default function WalletPage() {
       throw new Error("Unsupported QR code. Use a Query Trade user QR.");
     }
 
+    if (parsedPayload.userId === userId) {
+      throw new Error("You cannot scan your own QR code.");
+    }
+
     const userData = await fetchUserById(parsedPayload.userId);
     const parsedUsername =
       userData?.result?.user?.username?.trim()?.toLowerCase() || "";
@@ -903,11 +997,15 @@ export default function WalletPage() {
       throw new Error("Recipient username is not available.");
     }
 
+    if (parsedUsername === username.toLowerCase()) {
+      throw new Error("You cannot scan your own QR code.");
+    }
+
     const recipient = userData?.result?.user;
 
     skipNextSendUsernameValidationRef.current = true;
     setSendUsername(parsedUsername);
-    setDebouncedSendUsername(parsedUsername);
+    setDebouncedSendUsername("");
     setSendUsernameStatus("available");
     setIsSendRecipientLocked(true);
     setSendRecipientPreview({
@@ -1345,12 +1443,22 @@ export default function WalletPage() {
                         </p>
                       </div>
 
-                      <span className="shrink-0 font-semibold">
+                      <span
+                        className={cn(
+                          "shrink-0 font-semibold",
+                          getActivityPrimaryAmountTone(activity),
+                        )}
+                      >
                         {getActivityPrimaryAmount(activity)}
                       </span>
                     </div>
 
-                    <p className="mt-1 text-xs text-muted-foreground">
+                    <p
+                      className={cn(
+                        "mt-1 text-xs",
+                        getActivitySecondaryTextTone(),
+                      )}
+                    >
                       {getActivitySecondaryText(activity)}
                     </p>
 
@@ -1553,7 +1661,7 @@ export default function WalletPage() {
                         }
                       }}
                       placeholder="username"
-                      className="pl-9 pr-10"
+                      className="pl-9 pr-20"
                       aria-invalid={
                         sendUsernameStatus === "invalid" ||
                         sendUsernameStatus === "unavailable" ||
@@ -1562,7 +1670,20 @@ export default function WalletPage() {
                       }
                       disabled={isSendingTransfer}
                     />
-                    <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2">
+                    <div className="absolute top-1/2 right-2 flex -translate-y-1/2 items-center gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-7"
+                        onClick={() => setIsScanQrDialogOpen(true)}
+                        disabled={isSendingTransfer}
+                        aria-label="Scan QR code"
+                        title="Scan QR code"
+                      >
+                        <ScanLine className="size-4" />
+                      </Button>
+                      <span className="pointer-events-none flex items-center">
                       {sendUsernameStatus === "checking" ? (
                         <Loader2 className="size-4 animate-spin text-muted-foreground" />
                       ) : sendUsernameStatus === "available" ? (
@@ -1573,7 +1694,8 @@ export default function WalletPage() {
                         sendUsernameStatus === "self" ? (
                         <XCircle className="size-4 text-destructive" />
                       ) : null}
-                    </span>
+                      </span>
+                    </div>
                   </div>
                   {sendUsernameHelperText ? (
                     <p
