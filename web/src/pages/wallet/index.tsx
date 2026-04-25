@@ -86,7 +86,7 @@ import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth";
 
 const USERNAME_REGEX = /^[a-z0-9]{6,20}$/;
-const WALLET_QR_APP_PREFIX = APP_NAME.toLowerCase().replace(/\s+/g, "");
+const WALLET_QR_APP_PREFIX = APP_NAME.trim().toLowerCase().replace(/\s+/g, "-");
 
 type SendUsernameStatus =
   | "idle"
@@ -1954,7 +1954,6 @@ export default function WalletPage() {
               ref={qrFileInputRef}
               type="file"
               accept="image/*"
-              capture="environment"
               className="hidden"
               onChange={(event) => void handleQrFileChange(event)}
             />
@@ -1988,7 +1987,7 @@ export default function WalletPage() {
               ) : (
                 <>
                   <Upload className="size-4" />
-                  Upload QR image
+                  Choose QR image
                 </>
               )}
             </Button>
