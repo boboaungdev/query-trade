@@ -66,17 +66,8 @@ export async function signupVerify({
   return data;
 }
 
-export const signinGoogle = async ({
-  credential,
-  accessToken,
-}: {
-  credential?: string;
-  accessToken?: string;
-}) => {
-  const { data } = await api.post("/auth/signin-google", {
-    credential,
-    accessToken,
-  });
+export const signinGoogle = async ({ credential }: { credential: string }) => {
+  const { data } = await api.post("/auth/signin-google", { credential });
   return data;
 };
 

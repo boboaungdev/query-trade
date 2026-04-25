@@ -64,43 +64,18 @@ export const signin = async (req, res, next) => {
 
 export const signinGoogle = async (req, res, next) => {
   try {
-    const { credential, accessToken: googleAccessToken } = req.body;
+    const { credential } = req.body;
 
     if (!googleClient) {
       throw resError(500, "Google sign-in is not configured.");
     }
 
-    let payload;
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: GOOGLE_CLIENT_ID,
+    });
 
-    if (credential) {
-      const ticket = await googleClient.verifyIdToken({
-        idToken: credential,
-        audience: GOOGLE_CLIENT_ID,
-      });
-
-      payload = ticket.getPayload();
-    } else if (googleAccessToken) {
-      const tokenInfo = await googleClient.getTokenInfo(googleAccessToken);
-
-      if (tokenInfo.aud !== GOOGLE_CLIENT_ID) {
-        throw resError(400, "Invalid Google access token.");
-      }
-
-      const userInfoResponse = await fetch(
-        "https://www.googleapis.com/oauth2/v3/userinfo",
-        {
-          headers: {
-            Authorization: `Bearer ${googleAccessToken}`,
-          },
-        },
-      );
-
-      if (!userInfoResponse.ok) {
-        throw resError(400, "Invalid Google access token.");
-      }
-
-      payload = await userInfoResponse.json();
-    }
+    const payload = ticket.getPayload();
 
     if (
       !payload?.sub ||

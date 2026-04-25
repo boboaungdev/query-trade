@@ -44,11 +44,8 @@ export const UserSchema = {
   }).or("email", "username"),
 
   signinGoogle: Joi.object({
-    credential: Joi.string(),
-    accessToken: Joi.string(),
-  })
-    .or("credential", "accessToken")
-    .required(),
+    credential: Joi.string().required(),
+  }),
 
   forgotPassword: Joi.object({
     email: Joi.string().email({ minDomainSegments: 2 }).lowercase().required(),

@@ -7,8 +7,9 @@ import {
 } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { useGoogleLogin } from "@react-oauth/google";
+import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
 
+import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -124,6 +125,7 @@ function AuthInput({
 
 export default function Auth() {
   const navigate = useNavigate();
+  const { theme } = useTheme();
   const passwordInputRef = useRef<HTMLInputElement | null>(null);
   const codeInputRef = useRef<HTMLInputElement | null>(null);
   const signupNameInputRef = useRef<HTMLInputElement | null>(null);
@@ -176,6 +178,9 @@ export default function Auth() {
 
   const [resendTimer, setResendTimer] = useState(60);
   const [canResend, setCanResend] = useState(false);
+  const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">(
+    theme === "dark" ? "dark" : "light",
+  );
   const normalizedEmail = email.trim().toLowerCase();
   const trimmedName = name.trim();
   const isValidEmail = EMAIL_REGEX.test(normalizedEmail);
@@ -206,6 +211,7 @@ export default function Auth() {
   const shouldShowContinueSpinner = loading && loadingSource === "submit";
   const isGoogleLoading = loading && loadingSource === "google";
   const isGoogleAuthAvailable = Boolean(GOOGLE_CLIENT_ID?.trim());
+  const googleTheme = resolvedTheme === "dark" ? "filled_black" : "outline";
   const hasInvalidField = Object.values(invalidFields).some(Boolean);
   const isSubmitDisabled =
     loading ||
@@ -340,6 +346,25 @@ export default function Auth() {
       setInvalidFieldState("email");
     }
   };
+
+  useEffect(() => {
+    if (theme === "dark" || theme === "light") {
+      setResolvedTheme(theme);
+      return;
+    }
+
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const applyTheme = () => {
+      setResolvedTheme(mediaQuery.matches ? "dark" : "light");
+    };
+
+    applyTheme();
+    mediaQuery.addEventListener("change", applyTheme);
+
+    return () => {
+      mediaQuery.removeEventListener("change", applyTheme);
+    };
+  }, [theme]);
 
   useEffect(() => {
     if (!forgotStep && !verifyStep) return;
@@ -718,56 +743,42 @@ export default function Auth() {
     }
   }, [resetStep]);
 
-  const handleGoogleSignin = useGoogleLogin({
-    scope: "openid email profile",
-    onSuccess: async (tokenResponse) => {
-      if (!tokenResponse.access_token) {
-        setLoading(false);
-        setLoadingSource(null);
-        toast.error("Google sign-in failed.");
-        return;
-      }
+  const handleGoogleSuccess = async (
+    credentialResponse: CredentialResponse,
+  ) => {
+    const credential = credentialResponse.credential;
 
-      setLoading(true);
-      setLoadingSource("google");
-
-      try {
-        const promise = signinGoogle({
-          accessToken: tokenResponse.access_token,
-        });
-        const data = await promise;
-        const { user, accessToken } = data.result;
-        setAuth(user, accessToken);
-        navigate("/strategy");
-      } catch (error) {
-        if (shouldMarkInvalidFromError(error)) {
-          markCurrentStepInvalid();
-        }
-        toastNetworkError(error, "Network error");
-      } finally {
-        setLoading(false);
-        setLoadingSource(null);
-      }
-    },
-    onError: () => {
+    if (!credential) {
       setLoading(false);
       setLoadingSource(null);
       toast.error("Google sign-in failed.");
-    },
-    onNonOAuthError: (nonOAuthError) => {
-      setLoading(false);
-      setLoadingSource(null);
+      return;
+    }
 
-      if (nonOAuthError.type !== "popup_closed") {
-        toast.error("Google sign-in failed.");
-      }
-    },
-  });
-
-  const handleGoogleSuccess = () => {
     setLoading(true);
     setLoadingSource("google");
-    handleGoogleSignin();
+
+    try {
+      const promise = signinGoogle({ credential });
+      const data = await promise;
+      const { user, accessToken } = data.result;
+      setAuth(user, accessToken);
+      navigate("/strategy");
+    } catch (error) {
+      if (shouldMarkInvalidFromError(error)) {
+        markCurrentStepInvalid();
+      }
+      toastNetworkError(error, "Network error");
+    } finally {
+      setLoading(false);
+      setLoadingSource(null);
+    }
+  };
+
+  const handleGoogleError = () => {
+    setLoading(false);
+    setLoadingSource(null);
+    toast.error("Google sign-in failed.");
   };
 
   const handleForgotPassword = () => {
@@ -1053,24 +1064,37 @@ export default function Auth() {
                 {!showPassword && !isSignup && (
                   <>
                     <div className="space-y-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="w-full"
-                        disabled={loading || !isGoogleAuthAvailable}
-                        onClick={handleGoogleSuccess}
-                      >
-                        {isGoogleLoading ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
+                      {isGoogleAuthAvailable ? (
+                        <div
+                          className={`relative w-full ${loading ? "pointer-events-none opacity-70" : ""}`}
+                        >
+                          <GoogleLogin
+                            onSuccess={handleGoogleSuccess}
+                            onError={handleGoogleError}
+                            theme={googleTheme}
+                            text="continue_with"
+                            shape="rectangular"
+                            size="medium"
+                            width="100%"
+                          />
+                          {isGoogleLoading ? (
+                            <div className="absolute inset-0 flex items-center justify-center rounded-md bg-background/80 text-sm font-medium backdrop-blur-[1px]">
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Signing in with Google...
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full"
+                          disabled
+                        >
                           <FcGoogle className="mr-2" />
-                        )}
-                        {isGoogleLoading
-                          ? "Signing in with Google..."
-                          : isGoogleAuthAvailable
-                            ? "Continue with Google"
-                            : "Google sign-in unavailable"}
-                      </Button>
+                          Google sign-in unavailable
+                        </Button>
+                      )}
 
                       {!isGoogleAuthAvailable ? (
                         <p className="text-xs text-destructive">
