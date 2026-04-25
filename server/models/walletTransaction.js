@@ -57,7 +57,7 @@ const walletTransactionSchema = new Schema(
   },
 );
 
-export const WalletTransactionDB = mongoose.model(
+export const WalletTransactionModel = mongoose.model(
   "walletTransaction",
   walletTransactionSchema,
 );

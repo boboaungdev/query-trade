@@ -1,0 +1,53 @@
+import express from "express";
+
+import { WalletSchema } from "../schemas/wallet.js";
+import {
+  validateBody,
+  validateParam,
+  validateQuery,
+  validateToken,
+} from "../utils/validator.js";
+import {
+  getPayment,
+  getPaymentHistory,
+  getWalletActivity,
+  getWalletSummary,
+} from "../controllers/wallet/get.js";
+import { createDeposit } from "../controllers/wallet/createDeposit.js";
+import { cancelPayment } from "../controllers/wallet/cancelPayment.js";
+import { verifyPayment } from "../controllers/wallet/verifyPayment.js";
+
+const router = express.Router();
+
+router.use(validateToken());
+
+router.get("/summary", getWalletSummary);
+router.get(
+  "/activity",
+  validateQuery(WalletSchema.paginationQuery),
+  getWalletActivity,
+);
+router.get(
+  "/payments",
+  validateQuery(WalletSchema.paginationQuery),
+  getPaymentHistory,
+);
+router.get(
+  "/payments/:paymentId",
+  validateParam(WalletSchema.params.paymentId),
+  getPayment,
+);
+router.post("/deposits", validateBody(WalletSchema.deposit), createDeposit);
+router.post(
+  "/payments/:paymentId/verify",
+  validateParam(WalletSchema.params.paymentId),
+  validateBody(WalletSchema.verifyPayment),
+  verifyPayment,
+);
+router.post(
+  "/payments/:paymentId/cancel",
+  validateParam(WalletSchema.params.paymentId),
+  cancelPayment,
+);
+
+export const walletRouter = router;

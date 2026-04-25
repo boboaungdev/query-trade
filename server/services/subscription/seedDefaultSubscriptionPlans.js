@@ -1,5 +1,5 @@
 import { defaultSubscriptionPlans } from "../../data/defaultSubscriptionPlans.js";
-import { SubscriptionPlanDB } from "../../models/subscriptionPlan.js";
+import { SubscriptionPlanModel } from "../../models/subscriptionPlan.js";
 
 export const seedDefaultSubscriptionPlans = async () => {
   if (!defaultSubscriptionPlans.length) {
@@ -16,7 +16,7 @@ export const seedDefaultSubscriptionPlans = async () => {
     },
   }));
 
-  const result = await SubscriptionPlanDB.bulkWrite(operations, {
+  const result = await SubscriptionPlanModel.bulkWrite(operations, {
     ordered: false,
   });
   const insertedCount = result.upsertedCount ?? 0;

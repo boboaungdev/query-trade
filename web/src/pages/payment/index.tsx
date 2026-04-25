@@ -1,5 +1,5 @@
 import { useEffect, useState, type ClipboardEvent } from "react";
-import { Navigate, useNavigate, useParams } from "react-router-dom";
+import { Navigate, useParams } from "react-router-dom";
 import {
   AlertTriangle,
   Check,
@@ -11,11 +11,7 @@ import {
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
 
-import {
-  getPayment,
-  verifySubscriptionPayment,
-  type Payment,
-} from "@/api/subscription";
+import { getPayment, verifyWalletPayment, type Payment } from "@/api/wallet";
 import { getApiErrorMessage } from "@/api/axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,7 +60,6 @@ const usdtLogoDataUri = `data:image/svg+xml;utf8,${encodeURIComponent(`
 
 export default function PaymentPage() {
   const { paymentId } = useParams();
-  const navigate = useNavigate();
   const updateUser = useAuthStore((state) => state.updateUser);
   const [payment, setPayment] = useState<Payment | null>(null);
   const [txHash, setTxHash] = useState("");
@@ -146,7 +141,7 @@ export default function PaymentPage() {
     setIsVerifying(true);
 
     try {
-      const data = await verifySubscriptionPayment({
+      const data = await verifyWalletPayment({
         paymentId,
         txHash: value,
       });

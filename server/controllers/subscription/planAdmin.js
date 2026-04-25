@@ -1,5 +1,5 @@
-import { SubscriptionPlanDB } from "../../models/subscriptionPlan.js";
-import { SubscriptionDB } from "../../models/subscription.js";
+import { SubscriptionPlanModel } from "../../models/subscriptionPlan.js";
+import { SubscriptionModel } from "../../models/subscription.js";
 import { serializePlan } from "../../services/subscription/calculatePlanPricing.js";
 import { resError, resJson } from "../../utils/response.js";
 
@@ -43,8 +43,12 @@ export const getAdminPlans = async (req, res, next) => {
         : { [sortBy]: sortOrder, sortOrder: 1, amountToken: 1 };
 
     const [plans, total] = await Promise.all([
-      SubscriptionPlanDB.find(filter).sort(sort).skip(skip).limit(limit).lean(),
-      SubscriptionPlanDB.countDocuments(filter),
+      SubscriptionPlanModel.find(filter)
+        .sort(sort)
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      SubscriptionPlanModel.countDocuments(filter),
     ]);
     const totalPage = Math.ceil(total / limit);
 
@@ -65,7 +69,7 @@ export const getAdminPlans = async (req, res, next) => {
 export const createPlan = async (req, res, next) => {
   try {
     const generatedKey = generatePlanKey(req.body.name);
-    const existingSortOrderPlan = await SubscriptionPlanDB.findOne({
+    const existingSortOrderPlan = await SubscriptionPlanModel.findOne({
       sortOrder: req.body.sortOrder,
     }).lean();
 
@@ -73,7 +77,7 @@ export const createPlan = async (req, res, next) => {
       throw resError(409, "Sort order already exists.");
     }
 
-    const existingNamePlan = await SubscriptionPlanDB.findOne({
+    const existingNamePlan = await SubscriptionPlanModel.findOne({
       name: req.body.name.trim(),
     }).lean();
 
@@ -81,7 +85,7 @@ export const createPlan = async (req, res, next) => {
       throw resError(409, "Plan name already exists.");
     }
 
-    const existingKeyPlan = await SubscriptionPlanDB.findOne({
+    const existingKeyPlan = await SubscriptionPlanModel.findOne({
       key: generatedKey,
     }).lean();
 
@@ -89,7 +93,7 @@ export const createPlan = async (req, res, next) => {
       throw resError(409, "Generated plan key already exists.");
     }
 
-    const plan = await SubscriptionPlanDB.create({
+    const plan = await SubscriptionPlanModel.create({
       ...req.body,
       key: generatedKey,
     });
@@ -109,7 +113,7 @@ export const createPlan = async (req, res, next) => {
 
 export const updatePlan = async (req, res, next) => {
   try {
-    const existingPlan = await SubscriptionPlanDB.findById(
+    const existingPlan = await SubscriptionPlanModel.findById(
       req.params.planId,
     ).lean();
 
@@ -122,7 +126,7 @@ export const updatePlan = async (req, res, next) => {
     if (typeof req.body.name === "string") {
       const nextName = req.body.name.trim();
 
-      const existingNamePlan = await SubscriptionPlanDB.findOne({
+      const existingNamePlan = await SubscriptionPlanModel.findOne({
         _id: { $ne: req.params.planId },
         name: nextName,
       }).lean();
@@ -133,7 +137,7 @@ export const updatePlan = async (req, res, next) => {
 
       nextKey = generatePlanKey(nextName);
 
-      const existingKeyPlan = await SubscriptionPlanDB.findOne({
+      const existingKeyPlan = await SubscriptionPlanModel.findOne({
         _id: { $ne: req.params.planId },
         key: nextKey,
       }).lean();
@@ -144,7 +148,7 @@ export const updatePlan = async (req, res, next) => {
     }
 
     if (typeof req.body.sortOrder === "number") {
-      const existingSortOrderPlan = await SubscriptionPlanDB.findOne({
+      const existingSortOrderPlan = await SubscriptionPlanModel.findOne({
         _id: { $ne: req.params.planId },
         sortOrder: req.body.sortOrder,
       }).lean();
@@ -155,13 +159,13 @@ export const updatePlan = async (req, res, next) => {
     }
 
     if (nextKey !== existingPlan.key) {
-      await SubscriptionDB.updateMany(
+      await SubscriptionModel.updateMany(
         { plan: existingPlan.key },
         { $set: { plan: nextKey } },
       );
     }
 
-    const plan = await SubscriptionPlanDB.findByIdAndUpdate(
+    const plan = await SubscriptionPlanModel.findByIdAndUpdate(
       req.params.planId,
       { $set: { ...req.body, key: nextKey } },
       { returnDocument: "after", runValidators: true },
@@ -181,7 +185,7 @@ export const updatePlan = async (req, res, next) => {
 
 export const deletePlan = async (req, res, next) => {
   try {
-    const existingPlan = await SubscriptionPlanDB.findById(
+    const existingPlan = await SubscriptionPlanModel.findById(
       req.params.planId,
     ).lean();
 
@@ -193,7 +197,7 @@ export const deletePlan = async (req, res, next) => {
       throw resError(400, "The free plan cannot be deleted.");
     }
 
-    const activeSubscriptionCount = await SubscriptionDB.countDocuments({
+    const activeSubscriptionCount = await SubscriptionModel.countDocuments({
       plan: existingPlan.key,
       status: "active",
       $or: [
@@ -210,7 +214,7 @@ export const deletePlan = async (req, res, next) => {
       );
     }
 
-    await SubscriptionPlanDB.deleteOne({ _id: req.params.planId });
+    await SubscriptionPlanModel.deleteOne({ _id: req.params.planId });
 
     return resJson(res, 200, "Subscription plan deleted.", {
       plan: serializePlan(existingPlan),

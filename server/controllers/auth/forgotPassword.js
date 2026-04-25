@@ -3,7 +3,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 import { UserDB } from "../../models/user.js";
-import { VerifyDB } from "../../models/verify.js";
+import { VerificationModel } from "../../models/verify.js";
 import { sendEmail } from "../../utils/sendEmail.js";
 import { resError, resJson } from "../../utils/response.js";
 import { APP_NAME, APP_URL } from "../../constants/index.js";
@@ -20,15 +20,15 @@ export const forgotPassword = async (req, res, next) => {
     }
 
     // Delete old verification
-    if (await VerifyDB.exists({ email })) {
-      await VerifyDB.deleteOne({ email });
+    if (await VerificationModel.exists({ email })) {
+      await VerificationModel.deleteOne({ email });
     }
 
     // Generate new token
     const code = generateEmailCode();
 
     // Create new verification
-    await VerifyDB.create({
+    await VerificationModel.create({
       email,
       code,
     });

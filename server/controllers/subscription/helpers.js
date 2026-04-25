@@ -1,16 +1,13 @@
-import {
-  SUBSCRIPTION_PROVIDER,
-  WALLET_TRANSACTION_TYPES,
-} from "../../constants/subscription.js";
-import { SubscriptionDB } from "../../models/subscription.js";
-import { SubscriptionPlanDB } from "../../models/subscriptionPlan.js";
-import { WalletTransactionDB } from "../../models/walletTransaction.js";
+import { WALLET_TRANSACTION_TYPES } from "../../constants/subscription.js";
+import { SubscriptionModel } from "../../models/subscription.js";
+import { SubscriptionPlanModel } from "../../models/subscriptionPlan.js";
+import { WalletTransactionModel } from "../../models/walletTransaction.js";
 import { UserDB } from "../../models/user.js";
 import { resError } from "../../utils/response.js";
 
 export const getEffectiveSubscription = async (userId) => {
   const now = new Date();
-  const subscription = await SubscriptionDB.findOne({ user: userId }).lean();
+  const subscription = await SubscriptionModel.findOne({ user: userId }).lean();
 
   if (!subscription) {
     return {
@@ -26,7 +23,7 @@ export const getEffectiveSubscription = async (userId) => {
     subscription.currentPeriodEnd &&
     subscription.currentPeriodEnd <= now
   ) {
-    await SubscriptionDB.updateOne(
+    await SubscriptionModel.updateOne(
       { _id: subscription._id },
       { $set: { plan: "free", status: "active" } },
     );
@@ -46,10 +43,10 @@ export const validatePlanChange = async (userId, nextPlanId) => {
   const [currentPlan, nextPlan] = await Promise.all([
     subscription.plan === "free"
       ? Promise.resolve({ key: "free", sortOrder: 0 })
-      : SubscriptionPlanDB.findOne({ key: subscription.plan })
+      : SubscriptionPlanModel.findOne({ key: subscription.plan })
           .select("key sortOrder")
           .lean(),
-    SubscriptionPlanDB.findOne({ key: nextPlanId, isActive: true })
+    SubscriptionPlanModel.findOne({ key: nextPlanId, isActive: true })
       .select("key sortOrder")
       .lean(),
   ]);
@@ -120,7 +117,7 @@ export const recordWalletTransaction = async ({
     throw resError(400, "Insufficient token balance.");
   }
 
-  const walletTransaction = await WalletTransactionDB.create({
+  const walletTransaction = await WalletTransactionModel.create({
     user: userId,
     type,
     amount,
@@ -142,10 +139,9 @@ export const activateSubscription = async ({
   userId,
   plan,
   durationDays = 30,
-  walletTransactionId,
 }) => {
   const now = new Date();
-  const existing = await SubscriptionDB.findOne({ user: userId });
+  const existing = await SubscriptionModel.findOne({ user: userId });
   const isSamePlanRenewal = existing?.plan === plan;
   const baseDate =
     isSamePlanRenewal &&
@@ -158,7 +154,7 @@ export const activateSubscription = async ({
 
   const currentPeriodStart = baseDate;
 
-  return SubscriptionDB.findOneAndUpdate(
+  return SubscriptionModel.findOneAndUpdate(
     { user: userId },
     {
       $set: {
@@ -166,8 +162,6 @@ export const activateSubscription = async ({
         status: "active",
         currentPeriodStart,
         currentPeriodEnd,
-        provider: SUBSCRIPTION_PROVIDER,
-        lastWalletTransaction: walletTransactionId,
       },
     },
     { returnDocument: "after", upsert: true },

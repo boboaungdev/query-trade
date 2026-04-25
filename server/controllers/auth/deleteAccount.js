@@ -4,7 +4,7 @@ import { fileURLToPath } from "url";
 
 import { UserDB } from "../../models/user.js";
 import { Encoder } from "../../utils/encoder.js";
-import { VerifyDB } from "../../models/verify.js";
+import { VerificationModel } from "../../models/verify.js";
 import { BacktestDB } from "../../models/backtest.js";
 import { StrategyDB } from "../../models/strategy.js";
 import { BookmarkDB } from "../../models/bookmark.js";
@@ -19,13 +19,13 @@ export const deleteAccountVerify = async (req, res, next) => {
     const user = req.user;
     const email = user.email;
 
-    if (await VerifyDB.exists({ email })) {
-      await VerifyDB.deleteOne({ email });
+    if (await VerificationModel.exists({ email })) {
+      await VerificationModel.deleteOne({ email });
     }
 
     const code = generateEmailCode();
 
-    await VerifyDB.create({
+    await VerificationModel.create({
       email,
       code,
     });
@@ -89,7 +89,10 @@ export const deleteAccount = async (req, res, next) => {
         throw resError(400, "Incorrect password!");
       }
     } else {
-      const record = await VerifyDB.findOne({ email: user.email, code });
+      const record = await VerificationModel.findOne({
+        email: user.email,
+        code,
+      });
       if (!record) {
         throw resError(400, "Invalid verification code!");
       }
@@ -98,7 +101,7 @@ export const deleteAccount = async (req, res, next) => {
         throw resError(410, "Expired verification code!");
       }
 
-      await VerifyDB.findByIdAndDelete(record._id);
+      await VerificationModel.findByIdAndDelete(record._id);
     }
 
     const userStrategies = await StrategyDB.find({ user: user._id })

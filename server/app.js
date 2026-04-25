@@ -14,6 +14,7 @@ import { followRouter } from "./routes/follow.js";
 import { reqLogger } from "./middlewares/reqLogger.js";
 import { indicatorRouter } from "./routes/indicator.js";
 import { subscriptionRouter } from "./routes/subscription.js";
+import { walletRouter } from "./routes/wallet.js";
 import { rateLimiter } from "./middlewares/rateLimiter.js";
 import { credentials } from "./middlewares/credentials.js";
 import { corsOptions } from "./middlewares/corsOptions.js";
@@ -49,6 +50,7 @@ app.use("/api/strategy", strategyRouter);
 app.use("/api/bookmark", bookmarkRouter);
 app.use("/api/follow", followRouter);
 app.use("/api/subscription", subscriptionRouter);
+app.use("/api/wallet", walletRouter);
 
 // Error handler
 app.use(notFoundHandler);

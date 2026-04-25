@@ -3,18 +3,18 @@ import {
   PAYMENT_STATUSES,
   WALLET_TRANSACTION_TYPES,
 } from "../../constants/subscription.js";
-import { PaymentDB } from "../../models/payment.js";
+import { PaymentModel } from "../../models/payment.js";
 import { verifyUsdtBscPayment } from "../../services/payment/bscUsdt.js";
 import { resError, resJson } from "../../utils/response.js";
-import { recordWalletTransaction } from "./helpers.js";
+import { recordWalletTransaction } from "../subscription/helpers.js";
 
-export const verifyTransaction = async (req, res, next) => {
+export const verifyPayment = async (req, res, next) => {
   try {
     const user = req.user;
     const { paymentId } = req.params;
     const txHash = req.body.txHash.toLowerCase();
 
-    const payment = await PaymentDB.findOne({
+    const payment = await PaymentModel.findOne({
       _id: paymentId,
       user: user._id,
       purpose: PAYMENT_PURPOSES.tokenTopup,
@@ -38,7 +38,7 @@ export const verifyTransaction = async (req, res, next) => {
       throw resError(400, "Payment cannot be verified.");
     }
 
-    const usedPayment = await PaymentDB.findOne({
+    const usedPayment = await PaymentModel.findOne({
       txHash,
       _id: { $ne: payment._id },
     }).lean();

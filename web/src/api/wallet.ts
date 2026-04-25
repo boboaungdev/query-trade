@@ -1,0 +1,185 @@
+import api from "./axios";
+
+export type PayCurrency = "usdtbsc";
+export type PaymentStatus = "pending" | "confirmed" | "cancelled" | "expired";
+
+export type Payment = {
+  _id: string;
+  purpose: "token_topup";
+  requestedAmountUsdt: number;
+  tokenAmount: number;
+  rateSnapshot: number;
+  status: PaymentStatus;
+  providerStatus?: string;
+  payAddress?: string;
+  payCurrencyAmount?: number;
+  payCurrency: PayCurrency;
+  txHash?: string;
+  providerReference?: string;
+  txFrom?: string;
+  txBlockNumber?: number;
+  confirmedAmountUsdt?: number;
+  createdAt: string;
+  confirmedAt?: string;
+};
+
+export type WalletTransaction = {
+  _id: string;
+  type: "deposit" | "spend" | "refund" | "adjustment";
+  amount: number;
+  balanceBefore: number;
+  balanceAfter: number;
+  planKey?: string;
+  createdAt: string;
+};
+
+export type WalletActivity = {
+  _id: string;
+  sourceType: "payment" | "wallet_transaction";
+  activityType:
+    | "deposit"
+    | "subscription"
+    | "withdraw"
+    | "send"
+    | "receive"
+    | "refund"
+    | "adjustment"
+    | "spend";
+  status: PaymentStatus | "completed";
+  amountUsd?: number;
+  tokenAmount: number;
+  rateSnapshot?: number;
+  payCurrency?: PayCurrency;
+  txHash?: string | null;
+  balanceBefore?: number;
+  balanceAfter?: number;
+  plan?: string | null;
+  description?: string;
+  createdAt: string;
+  confirmedAt?: string | null;
+};
+
+export async function getWalletSummary() {
+  const { data } = await api.get<{
+    result: {
+      latestPayment?: Payment | null;
+      tokenBalance: number;
+      tokenPerUsdt: number;
+    };
+  }>("/wallet/summary");
+
+  return data.result;
+}
+
+export async function getPaymentHistory({
+  page,
+  limit,
+}: {
+  page?: number;
+  limit?: number;
+} = {}) {
+  const { data } = await api.get<{
+    result: {
+      payments: Payment[];
+      total?: number;
+      totalPage?: number;
+      currentPage?: number;
+      limitPerPage?: number;
+      hasNextPage?: boolean;
+      hasPrevPage?: boolean;
+    };
+  }>("/wallet/payments", {
+    params: {
+      page,
+      limit,
+    },
+  });
+
+  return data.result;
+}
+
+export async function getWalletActivity({
+  page,
+  limit,
+}: {
+  page?: number;
+  limit?: number;
+} = {}) {
+  const { data } = await api.get<{
+    result: {
+      activities: WalletActivity[];
+      total?: number;
+      totalPage?: number;
+      currentPage?: number;
+      limitPerPage?: number;
+      hasNextPage?: boolean;
+      hasPrevPage?: boolean;
+    };
+  }>("/wallet/activity", {
+    params: {
+      page,
+      limit,
+    },
+  });
+
+  return data.result;
+}
+
+export async function getPayment(paymentId: string) {
+  const { data } = await api.get<{
+    result: {
+      payment: Payment;
+    };
+  }>(`/wallet/payments/${paymentId}`);
+
+  return data.result;
+}
+
+export async function createTokenDeposit({
+  amountUsdt,
+  payCurrency,
+}: {
+  amountUsdt: number;
+  payCurrency: PayCurrency;
+}) {
+  const { data } = await api.post<{
+    result: {
+      payment: Payment;
+    };
+  }>("/wallet/deposits", {
+    amountUsdt,
+    payCurrency,
+  });
+
+  return data.result;
+}
+
+export async function verifyWalletPayment({
+  paymentId,
+  txHash,
+}: {
+  paymentId: string;
+  txHash: string;
+}) {
+  const { data } = await api.post<{
+    result: {
+      payment: Payment;
+      walletTransaction?: WalletTransaction;
+      tokenBalance?: number;
+    };
+  }>(`/wallet/payments/${paymentId}/verify`, {
+    txHash,
+  });
+
+  return data.result;
+}
+
+export async function cancelWalletPayment(paymentId: string) {
+  const { data } = await api.post<{
+    result: {
+      payment: Payment;
+    };
+  }>(`/wallet/payments/${paymentId}/cancel`);
+
+  return data.result;
+}

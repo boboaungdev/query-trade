@@ -1,14 +1,14 @@
-import { VerifyDB } from "../../models/verify.js";
+import { VerificationModel } from "../../models/verify.js";
 import { resError, resJson } from "../../utils/response.js";
 
 export const forgotPasswordVerify = async (req, res, next) => {
   try {
     const { email, code } = req.body;
-    if (!(await VerifyDB.exists({ email }))) {
+    if (!(await VerificationModel.exists({ email }))) {
       throw resError(404, "Invalid email!");
     }
 
-    const record = await VerifyDB.findOne({ code });
+    const record = await VerificationModel.findOne({ code });
     if (!record) {
       throw resError(400, "Incorrect verification code!");
     }
@@ -17,7 +17,7 @@ export const forgotPasswordVerify = async (req, res, next) => {
       throw resError(410, "Expired verification code!");
     }
 
-    await VerifyDB.findByIdAndDelete(record._id);
+    await VerificationModel.findByIdAndDelete(record._id);
 
     return resJson(res, 200, "Success verify, now reset your new password.");
   } catch (error) {

@@ -24,14 +24,6 @@ const subscriptionSchema = new Schema(
     },
     currentPeriodStart: Date,
     currentPeriodEnd: Date,
-    provider: {
-      type: String,
-      enum: ["token"],
-    },
-    lastWalletTransaction: {
-      type: Schema.Types.ObjectId,
-      ref: "walletTransaction",
-    },
   },
   {
     timestamps: true,
@@ -39,7 +31,7 @@ const subscriptionSchema = new Schema(
   },
 );
 
-export const SubscriptionDB = mongoose.model(
+export const SubscriptionModel = mongoose.model(
   "subscription",
   subscriptionSchema,
 );

@@ -5,7 +5,7 @@ import { fileURLToPath } from "url";
 import { Token } from "../../utils/token.js";
 import { UserDB } from "../../models/user.js";
 import { Encoder } from "../../utils/encoder.js";
-import { VerifyDB } from "../../models/verify.js";
+import { VerificationModel } from "../../models/verify.js";
 import { sendEmail } from "../../utils/sendEmail.js";
 import { renderTemplate } from "../../utils/renderTemplate.js";
 import { generateEmailCode } from "../../utils/generateEmailCode.js";
@@ -24,8 +24,8 @@ export const signup = async (req, res, next) => {
     }
 
     // Delete old verification
-    if (await VerifyDB.findOne({ email })) {
-      await VerifyDB.deleteOne({ email });
+    if (await VerificationModel.findOne({ email })) {
+      await VerificationModel.deleteOne({ email });
     }
 
     // Generate new token
@@ -33,7 +33,7 @@ export const signup = async (req, res, next) => {
     const hashedPassword = Encoder.encode(password);
 
     // Create new verification
-    await VerifyDB.create({
+    await VerificationModel.create({
       name,
       username,
       email,
@@ -99,11 +99,11 @@ export const signup = async (req, res, next) => {
 export const signupVerify = async (req, res, next) => {
   try {
     const { email, code } = req.body;
-    if (!(await VerifyDB.findOne({ email }))) {
+    if (!(await VerificationModel.findOne({ email }))) {
       throw resError(400, "Invalid email!");
     }
 
-    const record = await VerifyDB.findOne({ code });
+    const record = await VerificationModel.findOne({ code });
     if (!record) {
       throw resError(400, "Invalid verification code!");
     }
@@ -146,7 +146,7 @@ export const signupVerify = async (req, res, next) => {
       { returnDocument: "after" },
     ).lean();
 
-    await VerifyDB.findByIdAndDelete(record._id);
+    await VerificationModel.findByIdAndDelete(record._id);
     // Send verified email
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);

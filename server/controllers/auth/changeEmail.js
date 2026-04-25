@@ -4,7 +4,7 @@ import { fileURLToPath } from "url";
 
 import { UserDB } from "../../models/user.js";
 import { Encoder } from "../../utils/encoder.js";
-import { VerifyDB } from "../../models/verify.js";
+import { VerificationModel } from "../../models/verify.js";
 import { sendEmail } from "../../utils/sendEmail.js";
 import { resError, resJson } from "../../utils/response.js";
 import { renderTemplate } from "../../utils/renderTemplate.js";
@@ -31,13 +31,13 @@ export const checkChangeEmail = async (req, res, next) => {
     }
 
     // Delete old verification
-    if (await VerifyDB.exists({ email })) {
-      await VerifyDB.deleteOne({ email });
+    if (await VerificationModel.exists({ email })) {
+      await VerificationModel.deleteOne({ email });
     }
 
     const code = generateEmailCode();
 
-    await VerifyDB.create({
+    await VerificationModel.create({
       email,
       code,
     });
@@ -90,11 +90,11 @@ export const verifyChangeEmail = async (req, res, next) => {
       throw resError(409, "Email already in use!");
     }
 
-    if (!(await VerifyDB.exists({ email }))) {
+    if (!(await VerificationModel.exists({ email }))) {
       throw resError(400, "Invalid email!");
     }
 
-    const record = await VerifyDB.findOne({ email, code });
+    const record = await VerificationModel.findOne({ email, code });
     if (!record) {
       throw resError(400, "Invalid verification code!");
     }
@@ -111,7 +111,7 @@ export const verifyChangeEmail = async (req, res, next) => {
       { returnDocument: "after" },
     ).lean();
 
-    await VerifyDB.findByIdAndDelete(record._id);
+    await VerificationModel.findByIdAndDelete(record._id);
 
     const actionSection = `
       <p><strong>Email Changed Successfully</strong></p>

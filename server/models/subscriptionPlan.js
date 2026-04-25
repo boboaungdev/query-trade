@@ -90,7 +90,7 @@ const subscriptionPlanSchema = new Schema(
   },
 );
 
-export const SubscriptionPlanDB = mongoose.model(
+export const SubscriptionPlanModel = mongoose.model(
   "subscriptionPlan",
   subscriptionPlanSchema,
 );

@@ -4,7 +4,7 @@ import { FollowDB } from "../../models/follow.js";
 import { StrategyDB } from "../../models/strategy.js";
 import { BacktestDB } from "../../models/backtest.js";
 import { BookmarkDB } from "../../models/bookmark.js";
-import { SubscriptionDB } from "../../models/subscription.js";
+import { SubscriptionModel } from "../../models/subscription.js";
 import { UserDB } from "../../models/user.js";
 import { serializePublicUser } from "../../services/user/serializePublicUser.js";
 import { resError, resJson } from "../../utils/response.js";
@@ -95,7 +95,7 @@ export const getUserFollows = async (req, res, next) => {
     let subscriptionMap = new Map();
 
     if (items.length > 0) {
-      const subscriptions = await SubscriptionDB.find({
+      const subscriptions = await SubscriptionModel.find({
         user: { $in: items.map((item) => item._id) },
       })
         .select("user plan currentPeriodEnd")

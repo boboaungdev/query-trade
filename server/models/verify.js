@@ -26,4 +26,4 @@ const verifySchema = new Schema(
 // Auto delete after 15 minutes
 verifySchema.index({ createdAt: 1 }, { expireAfterSeconds: 900 });
 
-export const VerifyDB = mongoose.model("verify", verifySchema);
+export const VerificationModel = mongoose.model("verify", verifySchema);

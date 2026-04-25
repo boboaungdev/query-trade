@@ -28,7 +28,6 @@ import {
   ListFilter,
   Sparkles,
   Target,
-  TrendingUp,
   UserRound,
   Wallet,
   type LucideIcon,
@@ -661,7 +660,7 @@ export default function BacktestPage() {
       ? locationState.strategyName
       : preselectedStrategy?.name
         ? preselectedStrategy.name
-      : "";
+        : "";
 
   useEffect(() => {
     strategyIdRef.current = strategyId;
@@ -2136,8 +2135,8 @@ export default function BacktestPage() {
                                         Hedge
                                       </span>
                                       {" - "}
-                                      lets long and short positions exist at
-                                      the same time.
+                                      lets long and short positions exist at the
+                                      same time.
                                     </p>
                                   </div>
                                 </PopoverContent>

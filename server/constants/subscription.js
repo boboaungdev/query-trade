@@ -1,6 +1,5 @@
 import { DEPOSIT_PAYMENT_MODE } from "./index.js";
 
-export const SUBSCRIPTION_PROVIDER = "token";
 export const DEPOSIT_PROVIDER = "manual";
 export const PAYMENT_PROVIDERS = {
   manual: "manual",
@@ -26,8 +25,6 @@ export const getPaymentMode = () => {
 
 export const isMockPaymentMode = () => getPaymentMode() === PAYMENT_MODES.mock;
 
-export const SUBSCRIPTION_PLAN_KEYS = ["free", "plus", "pro"];
-
 export const PAYMENT_CURRENCIES = {
   usdtbsc: {
     id: "usdtbsc",
@@ -41,7 +38,6 @@ export const PAYMENT_STATUSES = {
   pending: "pending",
   confirmed: "confirmed",
   cancelled: "cancelled",
-  failed: "failed",
   expired: "expired",
 };
 

@@ -1,5 +1,5 @@
 import { WALLET_TRANSACTION_TYPES } from "../../constants/subscription.js";
-import { SubscriptionPlanDB } from "../../models/subscriptionPlan.js";
+import { SubscriptionPlanModel } from "../../models/subscriptionPlan.js";
 import { calculatePlanPricing } from "../../services/subscription/calculatePlanPricing.js";
 import { resError, resJson } from "../../utils/response.js";
 import {
@@ -12,7 +12,7 @@ export const createCheckout = async (req, res, next) => {
   try {
     const user = req.user;
     const { plan: planId } = req.body;
-    const plan = await SubscriptionPlanDB.findOne({
+    const plan = await SubscriptionPlanModel.findOne({
       key: planId,
       isActive: true,
     }).lean();
@@ -48,8 +48,6 @@ export const createCheckout = async (req, res, next) => {
       userId: user._id,
       plan: plan.key,
       durationDays: plan.durationDays,
-      walletTransactionId: walletTransaction._id,
-      tokenAmount: pricing.finalAmountToken,
     });
 
     return resJson(res, 201, "Subscription activated with token.", {

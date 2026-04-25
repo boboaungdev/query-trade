@@ -8,17 +8,17 @@ import {
   WALLET_TRANSACTION_TYPES,
 } from "../../constants/subscription.js";
 import { TOKEN_PER_USDT } from "../../constants/index.js";
-import { PaymentDB } from "../../models/payment.js";
+import { PaymentModel } from "../../models/payment.js";
 import { getReceiveAddress } from "../../services/payment/bscUsdt.js";
 import { resJson } from "../../utils/response.js";
-import { recordWalletTransaction } from "./helpers.js";
+import { recordWalletTransaction } from "../subscription/helpers.js";
 
 export const createDeposit = async (req, res, next) => {
   try {
     const user = req.user;
     const { amountUsdt, payCurrency } = req.body;
 
-    await PaymentDB.updateMany(
+    await PaymentModel.updateMany(
       {
         user: user._id,
         purpose: PAYMENT_PURPOSES.tokenTopup,
@@ -32,7 +32,7 @@ export const createDeposit = async (req, res, next) => {
       },
     );
 
-    const payment = await PaymentDB.create({
+    const payment = await PaymentModel.create({
       user: user._id,
       purpose: PAYMENT_PURPOSES.tokenTopup,
       requestedAmountUsdt: amountUsdt,
@@ -66,18 +66,20 @@ export const createDeposit = async (req, res, next) => {
       };
       await payment.save();
 
-      const { walletTransaction, tokenBalance } = await recordWalletTransaction({
-        userId: user._id,
-        type: WALLET_TRANSACTION_TYPES.deposit,
-        amount: payment.tokenAmount,
-        paymentId: payment._id,
-        description: "Mock token deposit confirmed",
-        metadata: {
-          amountUsdt: payment.requestedAmountUsdt,
-          rateSnapshot: payment.rateSnapshot,
-          providerReference: payment.providerReference,
+      const { walletTransaction, tokenBalance } = await recordWalletTransaction(
+        {
+          userId: user._id,
+          type: WALLET_TRANSACTION_TYPES.deposit,
+          amount: payment.tokenAmount,
+          paymentId: payment._id,
+          description: "Mock token deposit confirmed",
+          metadata: {
+            amountUsdt: payment.requestedAmountUsdt,
+            rateSnapshot: payment.rateSnapshot,
+            providerReference: payment.providerReference,
+          },
         },
-      });
+      );
 
       return resJson(res, 201, "Mock token deposit confirmed.", {
         payment,

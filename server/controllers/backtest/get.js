@@ -3,7 +3,7 @@ import { BacktestDB } from "../../models/backtest.js";
 import { StrategyDB } from "../../models/strategy.js";
 import { BookmarkDB } from "../../models/bookmark.js";
 import { FollowDB } from "../../models/follow.js";
-import { SubscriptionDB } from "../../models/subscription.js";
+import { SubscriptionModel } from "../../models/subscription.js";
 import { serializePublicUser } from "../../services/user/serializePublicUser.js";
 import { resError, resJson } from "../../utils/response.js";
 
@@ -57,7 +57,7 @@ export const getBacktestById = async (req, res, next) => {
     }
 
     if (backtest.user?._id) {
-      const subscription = await SubscriptionDB.findOne({
+      const subscription = await SubscriptionModel.findOne({
         user: backtest.user._id,
       })
         .select("user plan currentPeriodEnd")
@@ -72,7 +72,7 @@ export const getBacktestById = async (req, res, next) => {
     }
 
     if (backtest.strategy?.user?._id) {
-      const strategyUserSubscription = await SubscriptionDB.findOne({
+      const strategyUserSubscription = await SubscriptionModel.findOne({
         user: backtest.strategy.user._id,
       })
         .select("user plan currentPeriodEnd")
@@ -272,8 +272,10 @@ export const getBacktests = async (req, res, next) => {
 
     let subscriptionMap = new Map();
     if (backtests.length > 0) {
-      const subscriptions = await SubscriptionDB.find({
-        user: { $in: backtests.map((backtest) => backtest.user?._id).filter(Boolean) },
+      const subscriptions = await SubscriptionModel.find({
+        user: {
+          $in: backtests.map((backtest) => backtest.user?._id).filter(Boolean),
+        },
       })
         .select("user plan currentPeriodEnd")
         .lean();

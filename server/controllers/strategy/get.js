@@ -2,7 +2,7 @@ import { UserDB } from "../../models/user.js";
 import { StrategyDB } from "../../models/strategy.js";
 import { BookmarkDB } from "../../models/bookmark.js";
 import { FollowDB } from "../../models/follow.js";
-import { SubscriptionDB } from "../../models/subscription.js";
+import { SubscriptionModel } from "../../models/subscription.js";
 import { serializePublicUser } from "../../services/user/serializePublicUser.js";
 import { resError, resJson } from "../../utils/response.js";
 
@@ -56,7 +56,7 @@ export const getStrategyById = async (req, res, next) => {
     }
 
     if (strategy.user?._id) {
-      const subscription = await SubscriptionDB.findOne({
+      const subscription = await SubscriptionModel.findOne({
         user: strategy.user._id,
       })
         .select("user plan currentPeriodEnd")
@@ -181,7 +181,7 @@ export const getStrategies = async (req, res, next) => {
         .filter(Boolean);
 
       if (userIds.length > 0) {
-        const subscriptions = await SubscriptionDB.find({
+        const subscriptions = await SubscriptionModel.find({
           user: { $in: userIds },
         })
           .select("user plan currentPeriodEnd")

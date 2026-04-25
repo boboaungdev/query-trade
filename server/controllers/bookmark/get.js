@@ -1,7 +1,7 @@
 import { resJson } from "../../utils/response.js";
 import { BacktestDB } from "../../models/backtest.js";
 import { BookmarkDB } from "../../models/bookmark.js";
-import { SubscriptionDB } from "../../models/subscription.js";
+import { SubscriptionModel } from "../../models/subscription.js";
 import { serializePublicUser } from "../../services/user/serializePublicUser.js";
 
 const bookmarkTargetMatchesSearch = (bookmark, searchValue) => {
@@ -65,7 +65,8 @@ const populateBookmarkTargets = async (bookmarks) => {
 const attachBookmarkUserMembership = async (bookmarks) => {
   const targetUsers = bookmarks
     .map((bookmark) =>
-      typeof bookmark.target?.user === "object" && bookmark.target?.user !== null
+      typeof bookmark.target?.user === "object" &&
+      bookmark.target?.user !== null
         ? bookmark.target.user
         : null,
     )
@@ -75,14 +76,17 @@ const attachBookmarkUserMembership = async (bookmarks) => {
     return bookmarks;
   }
 
-  const subscriptions = await SubscriptionDB.find({
+  const subscriptions = await SubscriptionModel.find({
     user: { $in: targetUsers.map((user) => user._id) },
   })
     .select("user plan currentPeriodEnd")
     .lean();
 
   const subscriptionMap = new Map(
-    subscriptions.map((subscription) => [String(subscription.user), subscription]),
+    subscriptions.map((subscription) => [
+      String(subscription.user),
+      subscription,
+    ]),
   );
 
   for (const bookmark of bookmarks) {

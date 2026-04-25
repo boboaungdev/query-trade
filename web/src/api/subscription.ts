@@ -8,14 +8,7 @@ export type AdminPlanSortBy =
   | "durationDays"
   | "createdAt";
 export type PlanId = string;
-export type PayCurrency = "usdtbsc";
 export type SubscriptionStatus = "active" | "expired" | "pending";
-export type PaymentStatus =
-  | "pending"
-  | "confirmed"
-  | "cancelled"
-  | "failed"
-  | "expired";
 
 export type SubscriptionPlan = {
   _id: string;
@@ -41,7 +34,7 @@ export type SubscriptionPlan = {
 };
 
 export type PaymentCurrencyOption = {
-  id: PayCurrency;
+  id: "usdtbsc";
   label: string;
   network: string;
   description: string;
@@ -54,27 +47,7 @@ export type Subscription = {
   currentPeriodEnd?: string | null;
 };
 
-export type Payment = {
-  _id: string;
-  purpose: "token_topup";
-  requestedAmountUsdt: number;
-  tokenAmount: number;
-  rateSnapshot: number;
-  status: PaymentStatus;
-  providerStatus?: string;
-  payAddress?: string;
-  payCurrencyAmount?: number;
-  payCurrency: PayCurrency;
-  txHash?: string;
-  providerReference?: string;
-  txFrom?: string;
-  txBlockNumber?: number;
-  confirmedAmountUsdt?: number;
-  createdAt: string;
-  confirmedAt?: string;
-};
-
-export type WalletTransaction = {
+export type SubscriptionWalletTransaction = {
   _id: string;
   type: "deposit" | "spend" | "refund" | "adjustment";
   amount: number;
@@ -82,31 +55,6 @@ export type WalletTransaction = {
   balanceAfter: number;
   planKey?: string;
   createdAt: string;
-};
-
-export type WalletActivity = {
-  _id: string;
-  sourceType: "payment" | "wallet_transaction";
-  activityType:
-    | "deposit"
-    | "subscription"
-    | "withdraw"
-    | "transfer"
-    | "refund"
-    | "adjustment"
-    | "spend";
-  status: PaymentStatus | "completed";
-  amountUsd?: number;
-  tokenAmount: number;
-  rateSnapshot?: number;
-  payCurrency?: PayCurrency;
-  txHash?: string | null;
-  balanceBefore?: number;
-  balanceAfter?: number;
-  plan?: string | null;
-  description?: string;
-  createdAt: string;
-  confirmedAt?: string | null;
 };
 
 export async function getSubscriptionPlans() {
@@ -125,75 +73,9 @@ export async function getMySubscription() {
   const { data } = await api.get<{
     result: {
       subscription: Subscription;
-      latestPayment?: Payment | null;
       tokenBalance: number;
-      tokenPerUsdt: number;
     };
   }>("/subscription/me");
-
-  return data.result;
-}
-
-export async function getPaymentHistory({
-  page,
-  limit,
-}: {
-  page?: number;
-  limit?: number;
-} = {}) {
-  const { data } = await api.get<{
-    result: {
-      payments: Payment[];
-      total?: number;
-      totalPage?: number;
-      currentPage?: number;
-      limitPerPage?: number;
-      hasNextPage?: boolean;
-      hasPrevPage?: boolean;
-    };
-  }>("/subscription/payments", {
-    params: {
-      page,
-      limit,
-    },
-  });
-
-  return data.result;
-}
-
-export async function getWalletActivity({
-  page,
-  limit,
-}: {
-  page?: number;
-  limit?: number;
-} = {}) {
-  const { data } = await api.get<{
-    result: {
-      activities: WalletActivity[];
-      total?: number;
-      totalPage?: number;
-      currentPage?: number;
-      limitPerPage?: number;
-      hasNextPage?: boolean;
-      hasPrevPage?: boolean;
-    };
-  }>("/subscription/activity", {
-    params: {
-      page,
-      limit,
-    },
-  });
-
-  return data.result;
-}
-
-export async function getPayment(paymentId: string) {
-  const { data } = await api.get<{
-    result: {
-      payment: Payment;
-    };
-  }>(`/subscription/payments/${paymentId}`);
 
   return data.result;
 }
@@ -206,61 +88,12 @@ export async function createSubscriptionCheckout({
   const { data } = await api.post<{
     result: {
       subscription: Subscription;
-      walletTransaction: WalletTransaction;
+      walletTransaction: SubscriptionWalletTransaction;
       tokenBalance: number;
     };
   }>("/subscription/checkout", {
     plan,
   });
-
-  return data.result;
-}
-
-export async function createTokenDeposit({
-  amountUsdt,
-  payCurrency,
-}: {
-  amountUsdt: number;
-  payCurrency: PayCurrency;
-}) {
-  const { data } = await api.post<{
-    result: {
-      payment: Payment;
-    };
-  }>("/subscription/deposits", {
-    amountUsdt,
-    payCurrency,
-  });
-
-  return data.result;
-}
-
-export async function verifySubscriptionPayment({
-  paymentId,
-  txHash,
-}: {
-  paymentId: string;
-  txHash: string;
-}) {
-  const { data } = await api.post<{
-    result: {
-      payment: Payment;
-      walletTransaction?: WalletTransaction;
-      tokenBalance?: number;
-    };
-  }>(`/subscription/payments/${paymentId}/verify`, {
-    txHash,
-  });
-
-  return data.result;
-}
-
-export async function cancelSubscriptionPayment(paymentId: string) {
-  const { data } = await api.post<{
-    result: {
-      payment: Payment;
-    };
-  }>(`/subscription/payments/${paymentId}/cancel`);
 
   return data.result;
 }

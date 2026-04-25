@@ -4,7 +4,7 @@ import { fileURLToPath } from "url";
 
 import { UserDB } from "../../models/user.js";
 import { Encoder } from "../../utils/encoder.js";
-import { VerifyDB } from "../../models/verify.js";
+import { VerificationModel } from "../../models/verify.js";
 import { sendEmail } from "../../utils/sendEmail.js";
 import { resError, resJson } from "../../utils/response.js";
 import { APP_NAME, APP_URL } from "../../constants/index.js";
@@ -82,11 +82,11 @@ export const verifyChangePassword = async (req, res, next) => {
     const user = req.user;
     const { email, newPassword, code } = req.body;
 
-    if (!(await VerifyDB.exists({ email }))) {
+    if (!(await VerificationModel.exists({ email }))) {
       throw resError(400, "Invalid email!");
     }
 
-    const record = await VerifyDB.findOne({ email, code });
+    const record = await VerificationModel.findOne({ email, code });
     if (!record) {
       throw resError(400, "Invalid verification code!");
     }
@@ -95,7 +95,7 @@ export const verifyChangePassword = async (req, res, next) => {
       throw resError(410, "Expired verification code!");
     }
 
-    await VerifyDB.findByIdAndDelete(record._id);
+    await VerificationModel.findByIdAndDelete(record._id);
 
     // Password Encryption
     const newHashedPassword = Encoder.encode(newPassword);

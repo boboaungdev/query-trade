@@ -2,17 +2,18 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowDownLeft,
-  ArrowRightLeft,
   ArrowUpRight,
   CheckCircle2,
   Clock,
   CreditCard,
   DollarSign,
+  Download,
   Eye,
   EyeOff,
   Loader2,
   Smartphone,
   TicketPercent,
+  Upload,
   Wallet,
   XCircle,
 } from "lucide-react";
@@ -20,13 +21,13 @@ import { toast } from "sonner";
 
 import { getApiErrorMessage } from "@/api/axios";
 import {
-  cancelSubscriptionPayment,
+  cancelWalletPayment,
   createTokenDeposit,
-  getMySubscription,
+  getWalletSummary,
   getWalletActivity,
   type Payment,
   type WalletActivity,
-} from "@/api/subscription";
+} from "@/api/wallet";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -125,7 +126,7 @@ function getStatusTone(status?: string | null) {
     return "text-amber-500";
   }
 
-  if (status === "cancelled" || status === "failed" || status === "expired") {
+  if (status === "cancelled" || status === "expired") {
     return "text-destructive";
   }
 
@@ -137,7 +138,7 @@ function getStatusIcon(status: Payment["status"] | "completed") {
     return <CheckCircle2 className="size-4 text-emerald-500" />;
   }
 
-  if (status === "cancelled" || status === "failed" || status === "expired") {
+  if (status === "cancelled" || status === "expired") {
     return <XCircle className="size-4 text-destructive" />;
   }
 
@@ -148,7 +149,8 @@ function getActivityLabel(activity: WalletActivity) {
   if (activity.activityType === "deposit") return "Deposit";
   if (activity.activityType === "subscription") return "Subscription";
   if (activity.activityType === "withdraw") return "Withdraw";
-  if (activity.activityType === "transfer") return "Transfer";
+  if (activity.activityType === "send") return "Send";
+  if (activity.activityType === "receive") return "Receive";
   if (activity.activityType === "refund") return "Refund";
   if (activity.activityType === "adjustment") return "Adjustment";
   return "Spend";
@@ -156,7 +158,7 @@ function getActivityLabel(activity: WalletActivity) {
 
 function getActivityIcon(activity: WalletActivity) {
   if (activity.activityType === "deposit") {
-    return <ArrowDownLeft className="size-4 text-emerald-500" />;
+    return <Download className="size-4 text-emerald-500" />;
   }
 
   if (activity.activityType === "subscription") {
@@ -164,11 +166,15 @@ function getActivityIcon(activity: WalletActivity) {
   }
 
   if (activity.activityType === "withdraw") {
-    return <ArrowUpRight className="size-4 text-amber-500" />;
+    return <Upload className="size-4 text-amber-500" />;
   }
 
-  if (activity.activityType === "transfer") {
-    return <ArrowRightLeft className="size-4 text-blue-500" />;
+  if (activity.activityType === "send") {
+    return <ArrowUpRight className="size-4 text-blue-500" />;
+  }
+
+  if (activity.activityType === "receive") {
+    return <ArrowDownLeft className="size-4 text-sky-500" />;
   }
 
   return getStatusIcon(activity.status);
@@ -182,7 +188,7 @@ function getActivityPrimaryAmount(activity: WalletActivity) {
   if (
     activity.activityType === "subscription" ||
     activity.activityType === "withdraw" ||
-    activity.activityType === "transfer" ||
+    activity.activityType === "send" ||
     activity.activityType === "spend"
   ) {
     return `-${formatTokenAmount(activity.tokenAmount)} token`;
@@ -273,7 +279,7 @@ export default function WalletPage() {
 
       try {
         const [walletData, activityData] = await Promise.all([
-          getMySubscription(),
+          getWalletSummary(),
           getWalletActivity({ page: activityPage, limit: 10 }),
         ]);
 
@@ -381,7 +387,7 @@ export default function WalletPage() {
     setIsCancellingPayment(true);
 
     try {
-      const data = await cancelSubscriptionPayment(latestPayment._id);
+      const data = await cancelWalletPayment(latestPayment._id);
       setLatestPayment(data.payment);
       setIsCancelDialogOpen(false);
       refreshActivity();
@@ -422,15 +428,14 @@ export default function WalletPage() {
               <div className="flex min-w-0 flex-1 items-center gap-2">
                 <Wallet className="size-5 text-muted-foreground" />
                 <p className="truncate text-3xl font-semibold tracking-tight">
-                  {showBalance ? formatTokenAmount(tokenBalance) : "****"}{" "}
-                  token
+                  {showBalance ? formatTokenAmount(tokenBalance) : "****"} token
                 </p>
               </div>
               <Button
                 className="shrink-0"
                 onClick={() => setIsDepositDialogOpen(true)}
               >
-                <ArrowDownLeft className="size-4" />
+                <Download className="size-4" />
                 Deposit
               </Button>
             </div>
@@ -449,16 +454,12 @@ export default function WalletPage() {
                 <ArrowUpRight className="size-4" />
                 Send
               </Button>
-              <Button
-                className="justify-center"
-                variant="outline"
-                disabled
-              >
+              <Button className="justify-center" variant="outline" disabled>
                 <ArrowDownLeft className="size-4" />
                 Receive
               </Button>
               <Button className="justify-center" variant="outline" disabled>
-                <ArrowRightLeft className="size-4" />
+                <Upload className="size-4" />
                 Withdraw
               </Button>
             </div>

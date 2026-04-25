@@ -15,7 +15,6 @@ import {
 import { toast } from "sonner";
 
 import {
-  createTokenDeposit,
   createSubscriptionCheckout,
   getMySubscription,
   getSubscriptionPlans,
@@ -23,6 +22,7 @@ import {
   type SubscriptionPlan,
 } from "@/api/subscription";
 import { getApiErrorMessage } from "@/api/axios";
+import { createTokenDeposit } from "@/api/wallet";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
