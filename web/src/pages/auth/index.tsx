@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 
 import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
 
+import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -125,6 +126,7 @@ function AuthInput({
 
 export default function Auth() {
   const navigate = useNavigate();
+  const { theme } = useTheme();
   const googleButtonWrapperRef = useRef<HTMLDivElement | null>(null);
   const passwordInputRef = useRef<HTMLInputElement | null>(null);
   const codeInputRef = useRef<HTMLInputElement | null>(null);
@@ -179,6 +181,9 @@ export default function Auth() {
   const [resendTimer, setResendTimer] = useState(60);
   const [canResend, setCanResend] = useState(false);
   const [googleButtonWidth, setGoogleButtonWidth] = useState(400);
+  const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">(
+    theme === "dark" ? "dark" : "light",
+  );
   const normalizedEmail = email.trim().toLowerCase();
   const trimmedName = name.trim();
   const isValidEmail = EMAIL_REGEX.test(normalizedEmail);
@@ -208,6 +213,7 @@ export default function Auth() {
       : "Passwords do not match";
   const shouldShowContinueSpinner = loading && loadingSource === "submit";
   const isGoogleAuthAvailable = Boolean(GOOGLE_CLIENT_ID?.trim());
+  const googleTheme = resolvedTheme === "dark" ? "filled_black" : "outline";
   const hasInvalidField = Object.values(invalidFields).some(Boolean);
   const isSubmitDisabled =
     loading ||
@@ -342,6 +348,25 @@ export default function Auth() {
       setInvalidFieldState("email");
     }
   };
+
+  useEffect(() => {
+    if (theme === "dark" || theme === "light") {
+      setResolvedTheme(theme);
+      return;
+    }
+
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const applyTheme = () => {
+      setResolvedTheme(mediaQuery.matches ? "dark" : "light");
+    };
+
+    applyTheme();
+    mediaQuery.addEventListener("change", applyTheme);
+
+    return () => {
+      mediaQuery.removeEventListener("change", applyTheme);
+    };
+  }, [theme]);
 
   useEffect(() => {
     const element = googleButtonWrapperRef.current;
@@ -1079,7 +1104,7 @@ export default function Auth() {
                           <GoogleLogin
                             onSuccess={handleGoogleSuccess}
                             onError={handleGoogleError}
-                            theme="filled_black"
+                            theme={googleTheme}
                             text="continue_with"
                             shape="rectangular"
                             size="medium"
