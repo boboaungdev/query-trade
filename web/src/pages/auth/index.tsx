@@ -34,7 +34,7 @@ import {
   signupVerify,
 } from "@/api/auth";
 import { getApiErrorMessage } from "@/api/axios";
-import { APP_NAME } from "@/constants";
+import { APP_NAME, GOOGLE_CLIENT_ID } from "@/constants";
 import {
   AtSign,
   CheckCircle2,
@@ -205,6 +205,7 @@ export default function Auth() {
       : "Passwords do not match";
   const shouldShowContinueSpinner = loading && loadingSource === "submit";
   const isGoogleLoading = loading && loadingSource === "google";
+  const isGoogleAuthAvailable = Boolean(GOOGLE_CLIENT_ID?.trim());
   const hasInvalidField = Object.values(invalidFields).some(Boolean);
   const isSubmitDisabled =
     loading ||
@@ -1033,35 +1034,50 @@ export default function Auth() {
               >
                 {!showPassword && !isSignup && (
                   <>
-                    <div className="relative w-full">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="w-full"
-                        disabled={loading}
-                      >
-                        {isGoogleLoading ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <FcGoogle className="mr-2" />
-                        )}
-                        Continue with Google
-                      </Button>
-
+                    <div className="space-y-2">
                       <div
-                        className={`absolute inset-0 overflow-hidden rounded-md opacity-0 ${
-                          loading ? "pointer-events-none" : ""
+                        className={`relative w-full ${
+                          loading ? "pointer-events-none opacity-70" : ""
                         }`}
-                        aria-hidden="true"
                       >
-                        <GoogleLogin
-                          onSuccess={handleGoogleSuccess}
-                          onError={handleGoogleError}
-                          text="continue_with"
-                          shape="rectangular"
-                          width="400"
-                        />
+                        {isGoogleAuthAvailable ? (
+                          <div className="flex w-full justify-center overflow-hidden rounded-md [&>div]:w-full [&_div[role=button]]:w-full">
+                            <GoogleLogin
+                              onSuccess={handleGoogleSuccess}
+                              onError={handleGoogleError}
+                              text="continue_with"
+                              shape="rectangular"
+                              size="medium"
+                              width="400"
+                            />
+                          </div>
+                        ) : (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full"
+                            disabled
+                          >
+                            <FcGoogle className="mr-2" />
+                            Google sign-in unavailable
+                          </Button>
+                        )}
+
+                        {isGoogleLoading ? (
+                          <div className="absolute inset-0 flex items-center justify-center rounded-md bg-background/85 text-sm font-medium">
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Signing in with Google...
+                          </div>
+                        ) : null}
                       </div>
+
+                      {!isGoogleAuthAvailable ? (
+                        <p className="text-xs text-destructive">
+                          Google sign-in is not configured for this deployment.
+                          Set `VITE_GOOGLE_CLIENT_ID` in Vercel and add your
+                          Vercel domain to the Google OAuth authorized origins.
+                        </p>
+                      ) : null}
                     </div>
 
                     <div className="flex items-center gap-2">
