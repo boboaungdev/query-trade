@@ -1,28 +1,34 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowDownLeft,
   ArrowUpRight,
+  Check,
   CheckCircle2,
   Clock,
+  Copy,
   CreditCard,
   DollarSign,
   Download,
   Eye,
   EyeOff,
+  MessageSquareText,
   Loader2,
   Smartphone,
   TicketPercent,
   Upload,
+  UserRound,
   Wallet,
   XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { getApiErrorMessage } from "@/api/axios";
+import { fetchUserByUsername } from "@/api/user";
 import {
   cancelWalletPayment,
   createTokenDeposit,
+  createWalletTransfer,
   getWalletSummary,
   getWalletActivity,
   type Payment,
@@ -64,9 +70,33 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import {
+  getUserAvatarRingClass,
+  type UserMembership,
+} from "@/components/user-membership";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import { formatCompactTokenAmount } from "@/lib/formatTokenAmount";
+import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth";
+
+const USERNAME_REGEX = /^[a-z0-9]{6,20}$/;
+
+type SendUsernameStatus =
+  | "idle"
+  | "invalid"
+  | "checking"
+  | "available"
+  | "unavailable"
+  | "error"
+  | "self";
+
+type SendRecipientPreview = {
+  username: string;
+  name?: string;
+  avatar?: string;
+  membership?: UserMembership;
+};
 
 function formatUsdAmount(amount: number) {
   return amount.toLocaleString(undefined, {
@@ -103,6 +133,22 @@ function sanitizeDepositAmountInput(value: string) {
   }
 
   return nextValue;
+}
+
+function sanitizeTransferAmountInput(value: string) {
+  const sanitized = value.replace(/[^\d]/g, "");
+
+  if (!sanitized) {
+    return "";
+  }
+
+  const parsedValue = Number(sanitized);
+
+  if (Number.isFinite(parsedValue) && parsedValue > 1000000000) {
+    return "1000000000";
+  }
+
+  return sanitized;
 }
 
 function formatDateTime(date?: string | null) {
@@ -230,6 +276,7 @@ export default function WalletPage() {
   const userTokenBalance = useAuthStore(
     (state) => state.user?.tokenBalance ?? 0,
   );
+  const username = useAuthStore((state) => state.user?.username ?? "");
   const hideWalletBalancePreference = useAuthStore((state) => {
     const preferences = state.user?.preferences;
 
@@ -251,15 +298,29 @@ export default function WalletPage() {
   const [activities, setActivities] = useState<WalletActivity[]>([]);
   const [showBalance, setShowBalance] = useState(!hideWalletBalancePreference);
   const [depositAmount, setDepositAmount] = useState("");
+  const [sendUsername, setSendUsername] = useState("");
+  const [sendAmount, setSendAmount] = useState("");
+  const [sendNote, setSendNote] = useState("");
+  const [debouncedSendUsername, setDebouncedSendUsername] = useState("");
+  const [sendUsernameStatus, setSendUsernameStatus] =
+    useState<SendUsernameStatus>("idle");
+  const [sendRecipientPreview, setSendRecipientPreview] =
+    useState<SendRecipientPreview | null>(null);
   const [isDepositDialogOpen, setIsDepositDialogOpen] = useState(false);
+  const [isSendDialogOpen, setIsSendDialogOpen] = useState(false);
+  const [isReceiveDialogOpen, setIsReceiveDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreatingDeposit, setIsCreatingDeposit] = useState(false);
+  const [isSendingTransfer, setIsSendingTransfer] = useState(false);
   const [isCancellingPayment, setIsCancellingPayment] = useState(false);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+  const [isUsernameCopied, setIsUsernameCopied] = useState(false);
   const [activityPage, setActivityPage] = useState(1);
   const [totalActivityPages, setTotalActivityPages] = useState(1);
   const [activityReloadKey, setActivityReloadKey] = useState(0);
+  const sendUsernameRequestIdRef = useRef(0);
   const depositAmountNumber = Number(depositAmount);
+  const sendAmountNumber = Number(sendAmount);
   const showDepositAmountError =
     depositAmount.length > 0 &&
     (!Number.isFinite(depositAmountNumber) ||
@@ -270,6 +331,31 @@ export default function WalletPage() {
     Number.isFinite(depositAmountNumber) &&
     depositAmountNumber >= 1 &&
     depositAmountNumber <= 1000000;
+  const trimmedSendUsername = sendUsername.trim().toLowerCase();
+  const showSendAmountError =
+    sendAmount.length > 0 &&
+    (!Number.isFinite(sendAmountNumber) ||
+      sendAmountNumber < 1 ||
+      sendAmountNumber > tokenBalance);
+  const isSendAmountValid =
+    sendAmount.length > 0 &&
+    Number.isFinite(sendAmountNumber) &&
+    sendAmountNumber >= 1 &&
+    sendAmountNumber <= tokenBalance;
+  const isSendUsernameValid = sendUsernameStatus === "available";
+  const isSendFormValid = isSendUsernameValid && isSendAmountValid;
+  const sendUsernameHelperText =
+    sendUsernameStatus === "invalid"
+      ? "Username must be 6-20 characters"
+      : sendUsernameStatus === "checking"
+        ? "Checking username..."
+        : sendUsernameStatus === "unavailable"
+          ? "User not found"
+          : sendUsernameStatus === "error"
+            ? "Unable to check username right now"
+            : sendUsernameStatus === "self"
+              ? "You cannot send token to yourself"
+              : "";
 
   useEffect(() => {
     let ignore = false;
@@ -284,7 +370,9 @@ export default function WalletPage() {
         ]);
 
         if (!ignore) {
-          setTokenBalance(walletData.tokenBalance ?? 0);
+          const nextTokenBalance = Number(walletData.tokenBalance ?? 0);
+          setTokenBalance(nextTokenBalance);
+          updateUser({ tokenBalance: nextTokenBalance });
           setTokenPerUsdt(walletData.tokenPerUsdt ?? 1000);
           setLatestPayment(walletData.latestPayment ?? null);
           setActivities(activityData.activities ?? []);
@@ -306,13 +394,94 @@ export default function WalletPage() {
     return () => {
       ignore = true;
     };
-  }, [activityPage, activityReloadKey]);
+  }, [activityPage, activityReloadKey, updateUser]);
 
   useEffect(() => {
     setShowBalance(!hideWalletBalancePreference);
   }, [hideWalletBalancePreference]);
 
+  useEffect(() => {
+    const trimmedValue = sendUsername.trim();
+
+    if (!trimmedValue) {
+      setDebouncedSendUsername("");
+      setSendUsernameStatus("idle");
+      setSendRecipientPreview(null);
+      return;
+    }
+
+    if (trimmedValue.toLowerCase() === username.toLowerCase()) {
+      setDebouncedSendUsername("");
+      setSendUsernameStatus("self");
+      setSendRecipientPreview(null);
+      return;
+    }
+
+    if (!USERNAME_REGEX.test(trimmedValue)) {
+      setDebouncedSendUsername("");
+      setSendUsernameStatus("invalid");
+      setSendRecipientPreview(null);
+      return;
+    }
+
+    setSendUsernameStatus("checking");
+    setSendRecipientPreview(null);
+
+    const timeout = window.setTimeout(() => {
+      setDebouncedSendUsername(trimmedValue.toLowerCase());
+    }, 350);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [sendUsername, username]);
+
+  useEffect(() => {
+    setTokenBalance(userTokenBalance);
+  }, [userTokenBalance]);
+
+  useEffect(() => {
+    if (!debouncedSendUsername) {
+      return;
+    }
+
+    const requestId = sendUsernameRequestIdRef.current + 1;
+    sendUsernameRequestIdRef.current = requestId;
+    setSendUsernameStatus("checking");
+
+    fetchUserByUsername(debouncedSendUsername)
+      .then((data) => {
+        if (sendUsernameRequestIdRef.current !== requestId) {
+          return;
+        }
+
+        setSendUsernameStatus("available");
+        setSendRecipientPreview({
+          username:
+            data?.result?.user?.username || debouncedSendUsername,
+          name: data?.result?.user?.name,
+          avatar: data?.result?.user?.avatar,
+          membership: data?.result?.user?.membership,
+        });
+      })
+      .catch((error) => {
+        if (sendUsernameRequestIdRef.current !== requestId) {
+          return;
+        }
+
+        const status = error?.response?.status;
+        setSendUsernameStatus(status === 404 ? "unavailable" : "error");
+        setSendRecipientPreview(null);
+      });
+  }, [debouncedSendUsername]);
+
   const activityPageItems = buildPageItems(activityPage, totalActivityPages);
+  const walletBalanceUsdText = showBalance
+    ? `~ ${formatUsdAmount(tokenBalance / tokenPerUsdt)} USD`
+    : "~ hidden USD";
+  const walletBalanceTokenText = showBalance
+    ? `${formatFullTokenAmount(tokenBalance)} token`
+    : "**** token";
 
   const refreshActivity = () => {
     setActivityPage(1);
@@ -328,6 +497,19 @@ export default function WalletPage() {
 
     if (!open) {
       setDepositAmount("");
+    }
+  };
+
+  const handleSendDialogOpenChange = (open: boolean) => {
+    setIsSendDialogOpen(open);
+
+    if (!open) {
+      setSendUsername("");
+      setSendAmount("");
+      setSendNote("");
+      setDebouncedSendUsername("");
+      setSendUsernameStatus("idle");
+      setSendRecipientPreview(null);
     }
   };
 
@@ -399,6 +581,45 @@ export default function WalletPage() {
     }
   };
 
+  const handleCopyUsername = async () => {
+    if (!username) {
+      return;
+    }
+
+    await navigator.clipboard.writeText(username);
+    setIsUsernameCopied(true);
+    toast.success("Username copied.");
+    window.setTimeout(() => {
+      setIsUsernameCopied(false);
+    }, 1500);
+  };
+
+  const handleSendTransfer = async () => {
+    if (!isSendFormValid || isSendingTransfer) {
+      return;
+    }
+
+    setIsSendingTransfer(true);
+
+    try {
+      const data = await createWalletTransfer({
+        username: trimmedSendUsername,
+        amount: sendAmountNumber,
+        note: sendNote.trim(),
+      });
+
+      setTokenBalance(data.tokenBalance);
+      updateUser({ tokenBalance: data.tokenBalance });
+      handleSendDialogOpenChange(false);
+      refreshActivity();
+      toast.success(`Sent token to @${data.transfer.recipient.username}.`);
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Failed to send token."));
+    } finally {
+      setIsSendingTransfer(false);
+    }
+  };
+
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
       <div className="grid gap-4 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
@@ -440,21 +661,25 @@ export default function WalletPage() {
               </Button>
             </div>
             <p className="hidden text-sm text-muted-foreground">
-              {showBalance
-                ? `~ ${formatUsdAmount(tokenBalance / tokenPerUsdt)} USD`
-                : "~ •••••• USD"}
+              {walletBalanceUsdText}
             </p>
             <p className="text-sm text-muted-foreground">
-              {showBalance
-                ? `${formatFullTokenAmount(tokenBalance)} token`
-                : "**** token"}
+              {walletBalanceTokenText}
             </p>
             <div className="grid grid-cols-3 gap-3">
-              <Button className="justify-center" variant="outline" disabled>
+              <Button
+                className="justify-center"
+                variant="outline"
+                onClick={() => setIsSendDialogOpen(true)}
+              >
                 <ArrowUpRight className="size-4" />
                 Send
               </Button>
-              <Button className="justify-center" variant="outline" disabled>
+              <Button
+                className="justify-center"
+                variant="outline"
+                onClick={() => setIsReceiveDialogOpen(true)}
+              >
                 <ArrowDownLeft className="size-4" />
                 Receive
               </Button>
@@ -795,6 +1020,184 @@ export default function WalletPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={isSendDialogOpen} onOpenChange={handleSendDialogOpenChange}>
+        <DialogContent onOpenAutoFocus={(event) => event.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle>Send token</DialogTitle>
+            <DialogDescription>
+              Send token to another user by username.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <div className="relative">
+                {sendRecipientPreview?.avatar ? (
+                  <img
+                    src={sendRecipientPreview.avatar}
+                    alt={sendRecipientPreview.name || sendRecipientPreview.username}
+                    className={cn(
+                      "pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 rounded-full object-cover",
+                      getUserAvatarRingClass(sendRecipientPreview.membership),
+                    )}
+                  />
+                ) : (
+                  <UserRound className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                )}
+                <Input
+                  type="text"
+                  value={sendUsername}
+                  onChange={(event) =>
+                    setSendUsername(
+                      event.target.value.replace(/[^a-z0-9]/gi, "").toLowerCase(),
+                    )
+                  }
+                  placeholder="username"
+                  className="pl-9 pr-10"
+                  aria-invalid={
+                    sendUsernameStatus === "invalid" ||
+                    sendUsernameStatus === "unavailable" ||
+                    sendUsernameStatus === "error" ||
+                    sendUsernameStatus === "self"
+                  }
+                  disabled={isSendingTransfer}
+                />
+                <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2">
+                  {sendUsernameStatus === "checking" ? (
+                    <Loader2 className="size-4 animate-spin text-muted-foreground" />
+                  ) : sendUsernameStatus === "available" ? (
+                    <CheckCircle2 className="size-4 text-emerald-600" />
+                  ) : sendUsernameStatus === "invalid" ||
+                    sendUsernameStatus === "unavailable" ||
+                    sendUsernameStatus === "error" ||
+                    sendUsernameStatus === "self" ? (
+                    <XCircle className="size-4 text-destructive" />
+                  ) : null}
+                </span>
+              </div>
+              {sendUsernameHelperText ? (
+                <p
+                  className={`text-xs ${
+                    sendUsernameStatus === "checking"
+                      ? "text-muted-foreground"
+                      : "text-destructive"
+                  }`}
+                >
+                  {sendUsernameHelperText}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="space-y-2">
+              <div className="relative">
+                <Wallet className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  value={sendAmount}
+                  onChange={(event) =>
+                    setSendAmount(
+                      sanitizeTransferAmountInput(event.target.value),
+                    )
+                  }
+                  placeholder="1"
+                  className="pr-16 pl-9"
+                  disabled={isSendingTransfer}
+                  aria-invalid={showSendAmountError}
+                />
+                <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm text-muted-foreground">
+                  token
+                </span>
+              </div>
+              {showSendAmountError ? (
+                <p className="text-xs text-destructive">
+                  Enter a valid amount up to your available balance.
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Available: {formatTokenAmount(tokenBalance)} token
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <div className="relative">
+                <MessageSquareText className="pointer-events-none absolute top-3 left-3 size-4 text-muted-foreground" />
+                <span className="pointer-events-none absolute top-3 right-3 text-xs text-muted-foreground">
+                  {sendNote.length}/50
+                </span>
+                <Textarea
+                  value={sendNote}
+                  onChange={(event) => setSendNote(event.target.value.slice(0, 50))}
+                  placeholder="Optional note"
+                  className="h-14 resize-none overflow-y-auto whitespace-pre-wrap break-all pr-14 pl-9"
+                  disabled={isSendingTransfer}
+                />
+              </div>
+            </div>
+
+            <Button
+              onClick={() => void handleSendTransfer()}
+              disabled={!isSendFormValid || isSendingTransfer}
+              className="w-full justify-center"
+            >
+              {isSendingTransfer ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <>
+                  <ArrowUpRight className="size-4" />
+                  Send token
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={isReceiveDialogOpen}
+        onOpenChange={setIsReceiveDialogOpen}
+      >
+        <DialogContent onOpenAutoFocus={(event) => event.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle>Receive token</DialogTitle>
+            <DialogDescription>
+              Share your username so another user can send token to you.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="rounded-lg border bg-muted/40 p-4">
+              <p className="text-sm text-muted-foreground">Your username</p>
+              <p className="mt-1 text-2xl font-semibold tracking-tight">
+                @{username}
+              </p>
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full justify-center"
+              onClick={() => void handleCopyUsername()}
+              disabled={!username}
+            >
+              {isUsernameCopied ? (
+                <>
+                  <Check className="size-4" />
+                  Copied
+                </>
+              ) : (
+                <>
+                  <Copy className="size-4" />
+                  Copy username
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+

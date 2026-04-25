@@ -117,17 +117,24 @@ export const recordWalletTransaction = async ({
     throw resError(400, "Insufficient token balance.");
   }
 
-  const walletTransaction = await WalletTransactionModel.create({
+  const walletTransactionPayload = {
     user: userId,
     type,
     amount,
     balanceBefore,
     balanceAfter: Number(updatedUser.tokenBalance || 0),
-    payment: paymentId,
     planKey,
     description,
     metadata,
-  });
+  };
+
+  if (paymentId) {
+    walletTransactionPayload.payment = paymentId;
+  }
+
+  const walletTransaction = await WalletTransactionModel.create(
+    walletTransactionPayload,
+  );
 
   return {
     walletTransaction,

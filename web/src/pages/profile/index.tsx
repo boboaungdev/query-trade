@@ -21,6 +21,7 @@ import {
   Loader2,
   Lock,
   MoreHorizontal,
+  MessageSquareText,
   Pencil,
   Search,
   SearchX,
@@ -2111,31 +2112,32 @@ export default function Profile() {
                       </div>
 
                       <div className="space-y-2">
-                        <div className="flex items-center justify-between gap-3">
-                          <Label
-                            htmlFor="profile-sheet-bio"
-                            className="text-muted-foreground"
-                          >
-                            Bio
-                          </Label>
-                          <span className="text-xs text-muted-foreground">
+                        <Label
+                          htmlFor="profile-sheet-bio"
+                          className="text-muted-foreground"
+                        >
+                          Bio
+                        </Label>
+                        <div className="relative">
+                          <MessageSquareText className="pointer-events-none absolute top-3 left-3 size-4 text-muted-foreground" />
+                          <span className="pointer-events-none absolute top-3 right-3 text-xs text-muted-foreground">
                             {form.bio.length}/50
                           </span>
+                          <Textarea
+                            id="profile-sheet-bio"
+                            className="h-14 field-sizing-fixed resize-none overflow-y-auto whitespace-pre-wrap break-all pr-14 pl-9"
+                            value={form.bio}
+                            maxLength={50}
+                            disabled={isSaving}
+                            placeholder="Tell people a little about yourself"
+                            onChange={(event) =>
+                              setForm((prev) => ({
+                                ...prev,
+                                bio: event.target.value,
+                              }))
+                            }
+                          />
                         </div>
-                        <Textarea
-                          id="profile-sheet-bio"
-                          className="h-24 field-sizing-fixed resize-none"
-                          value={form.bio}
-                          maxLength={50}
-                          disabled={isSaving}
-                          placeholder="Tell people a little about yourself"
-                          onChange={(event) =>
-                            setForm((prev) => ({
-                              ...prev,
-                              bio: event.target.value,
-                            }))
-                          }
-                        />
                       </div>
                     </div>
                   </div>

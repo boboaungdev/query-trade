@@ -25,12 +25,22 @@ export type Payment = {
 
 export type WalletTransaction = {
   _id: string;
-  type: "deposit" | "spend" | "refund" | "adjustment";
+  type: "deposit" | "spend" | "send" | "receive" | "refund" | "adjustment";
   amount: number;
   balanceBefore: number;
   balanceAfter: number;
   planKey?: string;
   createdAt: string;
+};
+
+export type WalletTransfer = {
+  senderTransaction: WalletTransaction;
+  recipientTransaction: WalletTransaction;
+  recipient: {
+    _id: string;
+    username: string;
+    name: string;
+  };
 };
 
 export type WalletActivity = {
@@ -180,6 +190,29 @@ export async function cancelWalletPayment(paymentId: string) {
       payment: Payment;
     };
   }>(`/wallet/payments/${paymentId}/cancel`);
+
+  return data.result;
+}
+
+export async function createWalletTransfer({
+  username,
+  amount,
+  note,
+}: {
+  username: string;
+  amount: number;
+  note?: string;
+}) {
+  const { data } = await api.post<{
+    result: {
+      transfer: WalletTransfer;
+      tokenBalance: number;
+    };
+  }>("/wallet/transfers", {
+    username,
+    amount,
+    note,
+  });
 
   return data.result;
 }

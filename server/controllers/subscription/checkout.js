@@ -1,4 +1,5 @@
 import { WALLET_TRANSACTION_TYPES } from "../../constants/subscription.js";
+import { UserDB } from "../../models/user.js";
 import { SubscriptionPlanModel } from "../../models/subscriptionPlan.js";
 import { calculatePlanPricing } from "../../services/subscription/calculatePlanPricing.js";
 import { resError, resJson } from "../../utils/response.js";
@@ -23,8 +24,15 @@ export const createCheckout = async (req, res, next) => {
 
     const pricing = calculatePlanPricing(plan);
     await validatePlanChange(user._id, planId);
+    const currentUser = await UserDB.findById(user._id)
+      .select("tokenBalance")
+      .lean();
 
-    if (Number(user.tokenBalance || 0) < pricing.finalAmountToken) {
+    if (!currentUser) {
+      throw resError(404, "User not found.");
+    }
+
+    if (Number(currentUser.tokenBalance || 0) < pricing.finalAmountToken) {
       throw resError(
         400,
         `You need ${pricing.finalAmountToken} token to subscribe to ${plan.name}.`,

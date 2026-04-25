@@ -48,6 +48,8 @@ export const PAYMENT_PURPOSES = {
 export const WALLET_TRANSACTION_TYPES = {
   deposit: "deposit",
   spend: "spend",
+  send: "send",
+  receive: "receive",
   refund: "refund",
   adjustment: "adjustment",
 };

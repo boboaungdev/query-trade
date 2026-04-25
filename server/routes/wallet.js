@@ -14,6 +14,7 @@ import {
   getWalletSummary,
 } from "../controllers/wallet/get.js";
 import { createDeposit } from "../controllers/wallet/createDeposit.js";
+import { createTransfer } from "../controllers/wallet/createTransfer.js";
 import { cancelPayment } from "../controllers/wallet/cancelPayment.js";
 import { verifyPayment } from "../controllers/wallet/verifyPayment.js";
 
@@ -38,6 +39,7 @@ router.get(
   getPayment,
 );
 router.post("/deposits", validateBody(WalletSchema.deposit), createDeposit);
+router.post("/transfers", validateBody(WalletSchema.transfer), createTransfer);
 router.post(
   "/payments/:paymentId/verify",
   validateParam(WalletSchema.params.paymentId),

@@ -10,6 +10,21 @@ export const WalletSchema = {
       .required(),
   }),
 
+  transfer: Joi.object({
+    username: Joi.string()
+      .trim()
+      .pattern(/^[a-z][a-z0-9]*$/)
+      .min(6)
+      .max(20)
+      .required()
+      .messages({
+        "string.pattern.base":
+          "Use a valid username with lowercase letters and numbers only.",
+      }),
+    amount: Joi.number().integer().min(1).required(),
+    note: Joi.string().trim().max(50).allow("").default(""),
+  }),
+
   verifyPayment: Joi.object({
     txHash: Joi.string()
       .trim()

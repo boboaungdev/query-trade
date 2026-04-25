@@ -4134,25 +4134,25 @@ export function StrategyBuilder({
               </div>
 
               <div className="space-y-2">
-                <div className="flex items-center justify-between gap-3">
-                  <Label
-                    htmlFor="strategy-description"
-                    className="text-muted-foreground"
-                  >
-                    Description
-                  </Label>
-                  <span className="text-xs text-muted-foreground">
+                <Label
+                  htmlFor="strategy-description"
+                  className="text-muted-foreground"
+                >
+                  Description
+                </Label>
+                <div className="relative">
+                  <span className="pointer-events-none absolute top-3 right-3 text-xs text-muted-foreground">
                     {description.length}/{STRATEGY_DESCRIPTION_MAX_LENGTH}
                   </span>
+                  <Textarea
+                    id="strategy-description"
+                    value={description}
+                    maxLength={STRATEGY_DESCRIPTION_MAX_LENGTH}
+                    onChange={(event) => setDescription(event.target.value)}
+                    placeholder="Buy on bullish EMA crossover with RSI confirmation, sell on bearish crossover."
+                    className="h-14 field-sizing-fixed resize-none overflow-y-auto whitespace-pre-wrap break-all pr-14"
+                  />
                 </div>
-                <Textarea
-                  id="strategy-description"
-                  value={description}
-                  maxLength={STRATEGY_DESCRIPTION_MAX_LENGTH}
-                  onChange={(event) => setDescription(event.target.value)}
-                  placeholder="Buy on bullish EMA crossover with RSI confirmation, sell on bearish crossover."
-                  className="h-24 field-sizing-fixed resize-none"
-                />
               </div>
 
               <div className="space-y-2">
