@@ -22,11 +22,13 @@ import {
   Wallet,
   XCircle,
 } from "lucide-react";
-import { QRCodeCanvas } from "qrcode.react";
+import { QRCodeCanvas, QRCodeSVG } from "qrcode.react";
 import jsQR from "jsqr";
 import { toast } from "sonner";
 
-import { APP_NAME } from "@/constants";
+import {
+  APP_NAME,
+} from "@/constants";
 import { getApiErrorMessage } from "@/api/axios";
 import { fetchUserById, fetchUserByUsername } from "@/api/user";
 import {
@@ -87,6 +89,10 @@ import { useAuthStore } from "@/store/auth";
 
 const USERNAME_REGEX = /^[a-z0-9]{6,20}$/;
 const WALLET_QR_APP_PREFIX = APP_NAME.trim().toLowerCase().replace(/\s+/g, "-");
+const WALLET_QR_RECEIVE_TITLE = "Receive Token";
+const WALLET_QR_SCAN_LABEL = "Scan with";
+const WALLET_QR_USAGE_NOTE = "Only use this QR inside the app";
+const WALLET_QR_SECURITY_NOTE = "Protected by wallet";
 const walletSummaryRequestCache = new Map<
   string,
   Promise<Awaited<ReturnType<typeof getWalletSummary>>>
@@ -119,6 +125,77 @@ type ParsedWalletQrPayload = {
   userId: string;
   amount?: number;
 };
+
+function drawRoundedRect(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number,
+) {
+  const normalizedRadius = Math.min(radius, width / 2, height / 2);
+
+  context.beginPath();
+  context.moveTo(x + normalizedRadius, y);
+  context.lineTo(x + width - normalizedRadius, y);
+  context.quadraticCurveTo(x + width, y, x + width, y + normalizedRadius);
+  context.lineTo(x + width, y + height - normalizedRadius);
+  context.quadraticCurveTo(
+    x + width,
+    y + height,
+    x + width - normalizedRadius,
+    y + height,
+  );
+  context.lineTo(x + normalizedRadius, y + height);
+  context.quadraticCurveTo(x, y + height, x, y + height - normalizedRadius);
+  context.lineTo(x, y + normalizedRadius);
+  context.quadraticCurveTo(x, y, x + normalizedRadius, y);
+  context.closePath();
+}
+
+function loadImage(src: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Failed to load image."));
+    image.src = src;
+  });
+}
+
+function getThemePrimaryColor() {
+  const rootStyles = window.getComputedStyle(document.documentElement);
+  const rawPrimaryColor =
+    rootStyles.getPropertyValue("--color-primary").trim() ||
+    rootStyles.getPropertyValue("--primary").trim();
+
+  if (!rawPrimaryColor) {
+    return "#2563eb";
+  }
+
+  const colorProbeCanvas = document.createElement("canvas");
+  const colorProbeContext = colorProbeCanvas.getContext("2d");
+
+  if (!colorProbeContext) {
+    return rawPrimaryColor;
+  }
+
+  colorProbeContext.fillStyle = "#2563eb";
+  colorProbeContext.fillStyle = rawPrimaryColor;
+  return String(colorProbeContext.fillStyle || "#2563eb");
+}
+
+function withCanvasAlpha(
+  context: CanvasRenderingContext2D,
+  alpha: number,
+  draw: () => void,
+) {
+  context.save();
+  context.globalAlpha = alpha;
+  draw();
+  context.restore();
+}
 
 function formatUsdAmount(amount: number) {
   return amount.toLocaleString(undefined, {
@@ -578,6 +655,7 @@ export default function WalletPage() {
   const skipNextSendUsernameValidationRef = useRef(false);
   const qrFileInputRef = useRef<HTMLInputElement | null>(null);
   const receiveQrRef = useRef<HTMLDivElement | null>(null);
+  const receiveQrExportRef = useRef<HTMLDivElement | null>(null);
   const qrVideoRef = useRef<HTMLVideoElement | null>(null);
   const qrStreamRef = useRef<MediaStream | null>(null);
   const qrScanFrameRef = useRef<number | null>(null);
@@ -925,7 +1003,9 @@ export default function WalletPage() {
   };
 
   const handleSaveReceiveQr = async () => {
-    const qrCanvas = receiveQrRef.current?.querySelector("canvas");
+    const qrCanvas =
+      receiveQrExportRef.current?.querySelector("canvas") ??
+      receiveQrRef.current?.querySelector("canvas");
 
     if (!qrCanvas) {
       toast.error("QR code is not ready yet.");
@@ -933,14 +1013,155 @@ export default function WalletPage() {
     }
 
     try {
+      const exportCanvas = document.createElement("canvas");
+      exportCanvas.width = 1080;
+      exportCanvas.height = 1920;
+      const context = exportCanvas.getContext("2d");
+
+      if (!context) {
+        toast.error("QR card is not ready yet.");
+        return;
+      }
+
+      const qrImage = await loadImage(qrCanvas.toDataURL("image/png"));
+      const logoImage = await loadImage("/query-trade.svg");
       const link = document.createElement("a");
       const fileSafeUsername = username.trim().toLowerCase() || "user";
       const amountSuffix =
         typeof qrReceiveAmount === "number" && Number.isFinite(qrReceiveAmount)
           ? `-amount-${qrReceiveAmount}`
           : "";
+      const primaryColor = getThemePrimaryColor();
 
-      link.href = qrCanvas.toDataURL("image/png");
+      const backgroundGradient = context.createLinearGradient(0, 0, 1080, 1920);
+      backgroundGradient.addColorStop(0, "#f3f8ff");
+      backgroundGradient.addColorStop(0.42, "#dbeafe");
+      backgroundGradient.addColorStop(1, "#e2e8f0");
+      context.fillStyle = backgroundGradient;
+      context.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+
+      withCanvasAlpha(context, 0.12, () => {
+        context.fillStyle = primaryColor;
+        context.beginPath();
+        context.arc(920, 180, 180, 0, Math.PI * 2);
+        context.fill();
+        context.beginPath();
+        context.arc(170, 1580, 220, 0, Math.PI * 2);
+        context.fill();
+      });
+
+      drawRoundedRect(context, 90, 90, 900, 1740, 48);
+      context.fillStyle = "rgba(255, 255, 255, 0.97)";
+      context.shadowColor = "rgba(15, 23, 42, 0.12)";
+      context.shadowBlur = 32;
+      context.shadowOffsetY = 18;
+      context.fill();
+      context.shadowColor = "transparent";
+      context.shadowBlur = 0;
+      context.shadowOffsetY = 0;
+
+      drawRoundedRect(context, 140, 150, 800, 210, 32);
+      context.fillStyle = primaryColor;
+      context.fill();
+
+      drawRoundedRect(context, 172, 182, 96, 96, 28);
+      context.fillStyle = "#ffffff";
+      context.fill();
+      context.drawImage(logoImage, 186, 196, 68, 68);
+
+      context.fillStyle = "#eff6ff";
+      context.font =
+        "700 52px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+      context.fillText(APP_NAME, 296, 236);
+
+      context.fillStyle = "rgba(239, 246, 255, 0.82)";
+      context.font =
+        "600 32px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+      context.fillText(WALLET_QR_RECEIVE_TITLE, 296, 291);
+
+      drawRoundedRect(context, 210, 460, 660, 660, 28);
+      context.fillStyle = "#ffffff";
+      context.fill();
+      context.strokeStyle = "#e2e8f0";
+      context.lineWidth = 2;
+      context.stroke();
+
+      context.save();
+      context.imageSmoothingEnabled = false;
+      context.drawImage(qrImage, 230, 480, 620, 620);
+      context.restore();
+
+      context.fillStyle = "#64748b";
+      context.font =
+        "600 24px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+      context.textAlign = "center";
+      context.fillText("USERNAME", 540, 1205);
+
+      context.fillStyle = primaryColor;
+      context.font =
+        "700 52px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+      context.fillText(`@${username}`, 540, 1267);
+
+      const infoCardY = 1360;
+      drawRoundedRect(context, 170, infoCardY, 740, 170, 28);
+      context.fillStyle = "#f8fafc";
+      context.fill();
+      context.strokeStyle = "#e2e8f0";
+      context.lineWidth = 2;
+      context.stroke();
+
+      const infoRows = [
+        {
+          label: "Type",
+          value: "Receive",
+          y: infoCardY + 58,
+        },
+        {
+          label: "Amount",
+          value:
+            typeof qrReceiveAmount === "number" && Number.isFinite(qrReceiveAmount)
+              ? `${formatFullTokenAmount(qrReceiveAmount)} token`
+              : "Flexible",
+          y: infoCardY + 122,
+        },
+      ];
+
+      infoRows.forEach((row) => {
+        context.textAlign = "start";
+        context.fillStyle = "#64748b";
+        context.font =
+          "600 24px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+        context.fillText(row.label, 210, row.y);
+
+        context.textAlign = "end";
+        context.fillStyle = "#0f172a";
+        context.font =
+          "700 28px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+        context.fillText(row.value, 870, row.y);
+      });
+
+      drawRoundedRect(context, 280, 1572, 520, 72, 36);
+      withCanvasAlpha(context, 0.12, () => {
+        context.fillStyle = primaryColor;
+        context.fill();
+      });
+
+      context.fillStyle = primaryColor;
+      context.font =
+        "700 30px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+      context.textAlign = "center";
+      context.fillText(`${WALLET_QR_SCAN_LABEL} ${APP_NAME}`, 540, 1618);
+
+      context.fillStyle = "#94a3b8";
+      context.font =
+        "500 28px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+      context.fillText(WALLET_QR_USAGE_NOTE, 540, 1702);
+      context.font =
+        "500 24px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+      context.fillText(`${WALLET_QR_SECURITY_NOTE} ${APP_NAME}`, 540, 1746);
+      context.textAlign = "start";
+
+      link.href = exportCanvas.toDataURL("image/png");
       link.download = `${APP_NAME.toLowerCase().replace(/\s+/g, "-")}-qr-${fileSafeUsername}${amountSuffix}.png`;
       document.body.appendChild(link);
       link.click();
@@ -1949,26 +2170,45 @@ export default function WalletPage() {
           <div className="space-y-4">
             <div className="space-y-2">
               <div ref={receiveQrRef} className="flex justify-center">
-                <div className="bg-white p-3 shadow-sm">
-                  <QRCodeCanvas
+                <div className="bg-white p-1 shadow-sm">
+                  <QRCodeSVG
                     value={buildWalletQrValue({
                       userId,
                       amount: qrReceiveAmount,
                     })}
-                    size={256}
+                    size={320}
                     level="H"
                     includeMargin
                     bgColor="#ffffff"
                     fgColor="#111827"
-                    className="h-[180px] w-[180px]"
+                    className="h-[220px] w-[220px]"
                     imageSettings={{
                       src: "/query-trade.svg",
-                      width: 32,
-                      height: 32,
+                      width: 48,
+                      height: 48,
                       excavate: true,
                     }}
                   />
                 </div>
+              </div>
+              <div ref={receiveQrExportRef} className="sr-only">
+                <QRCodeCanvas
+                  value={buildWalletQrValue({
+                    userId,
+                    amount: qrReceiveAmount,
+                  })}
+                  size={1024}
+                  level="H"
+                  includeMargin
+                  bgColor="#ffffff"
+                  fgColor="#111827"
+                  imageSettings={{
+                    src: "/query-trade.svg",
+                    width: 144,
+                    height: 144,
+                    excavate: true,
+                  }}
+                />
               </div>
               <p className="text-center text-xs text-muted-foreground">
                 Your permanent receive QR
