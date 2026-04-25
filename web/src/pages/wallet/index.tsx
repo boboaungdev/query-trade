@@ -166,7 +166,7 @@ function sanitizeTransferAmountInput(value: string) {
 }
 
 function sanitizeReceiveAmountInput(value: string) {
-  const sanitized = value.replace(/[^\d]/g, "");
+  const sanitized = value.replace(/[^\d]/g, "").replace(/^0+/, "");
 
   if (!sanitized) {
     return "";
@@ -466,6 +466,7 @@ export default function WalletPage() {
   const [sendUsername, setSendUsername] = useState("");
   const [sendAmount, setSendAmount] = useState("");
   const [isSendAmountLocked, setIsSendAmountLocked] = useState(false);
+  const [isSendRecipientLocked, setIsSendRecipientLocked] = useState(false);
   const [sendNote, setSendNote] = useState("");
   const [sendDialogStep, setSendDialogStep] =
     useState<SendDialogStep>("recipient");
@@ -520,6 +521,10 @@ export default function WalletPage() {
     (!Number.isFinite(sendAmountNumber) ||
       sendAmountNumber < 1 ||
       sendAmountNumber > tokenBalance);
+  const hasInsufficientSendBalance =
+    sendAmount.length > 0 &&
+    Number.isFinite(sendAmountNumber) &&
+    sendAmountNumber > tokenBalance;
   const isSendAmountValid =
     sendAmount.length > 0 &&
     Number.isFinite(sendAmountNumber) &&
@@ -721,6 +726,7 @@ export default function WalletPage() {
       setSendUsername("");
       setSendAmount("");
       setIsSendAmountLocked(false);
+      setIsSendRecipientLocked(false);
       setSendNote("");
       setDebouncedSendUsername("");
       setSendUsernameStatus("idle");
@@ -903,6 +909,7 @@ export default function WalletPage() {
     setSendUsername(parsedUsername);
     setDebouncedSendUsername(parsedUsername);
     setSendUsernameStatus("available");
+    setIsSendRecipientLocked(true);
     setSendRecipientPreview({
       id: recipient?._id,
       username: recipient?.username || parsedUsername,
@@ -916,9 +923,12 @@ export default function WalletPage() {
       Number.isFinite(parsedPayload.amount) &&
       parsedPayload.amount > 0
     ) {
-      setSendAmount(String(Math.trunc(parsedPayload.amount)));
+      const scannedAmount = Math.trunc(parsedPayload.amount);
+
+      setSendAmount(String(scannedAmount));
       setIsSendAmountLocked(true);
     } else {
+      setSendAmount("");
       setIsSendAmountLocked(false);
     }
 
@@ -1062,6 +1072,11 @@ export default function WalletPage() {
 
   const handleSendTransfer = async () => {
     if (!isSendFormValid || isSendingTransfer) {
+      return;
+    }
+
+    if (sendAmountNumber > tokenBalance) {
+      toast.error("Insufficient token.");
       return;
     }
 
@@ -1683,19 +1698,20 @@ export default function WalletPage() {
                       token
                     </span>
                   </div>
-                  {isSendAmountLocked ? (
+                  {showSendAmountError ? (
+                    <p className="text-xs text-destructive">
+                      {hasInsufficientSendBalance
+                        ? "Insufficient token."
+                        : "Enter a valid amount up to your available balance."}
+                    </p>
+                  ) : isSendAmountLocked ? (
                     <p className="text-xs text-muted-foreground">
                       Amount was set from the QR code and cannot be edited.
                     </p>
-                  ) : showSendAmountError ? (
-                    <p className="text-xs text-destructive">
-                      Enter a valid amount up to your available balance.
-                    </p>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">
-                      Available: {formatFullTokenAmount(tokenBalance)} token
-                    </p>
-                  )}
+                  ) : null}
+                  <p className="text-xs text-muted-foreground">
+                    Available: {formatFullTokenAmount(tokenBalance)} token
+                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -1719,16 +1735,18 @@ export default function WalletPage() {
                 <div className="flex gap-2">
                   <Button
                     type="button"
-                    variant="ghost"
+                    variant="outline"
                     className="flex-1 justify-center"
                     onClick={() =>
-                      isSendAmountLocked
+                      isSendRecipientLocked || isSendAmountLocked
                         ? handleSendDialogOpenChange(false)
                         : setSendDialogStep("recipient")
                     }
                     disabled={isSendingTransfer}
                   >
-                    {isSendAmountLocked ? "Cancel" : "Back"}
+                    {isSendRecipientLocked || isSendAmountLocked
+                      ? "Cancel"
+                      : "Back"}
                   </Button>
                   <Button
                     type="button"
@@ -1802,32 +1820,37 @@ export default function WalletPage() {
           <DialogHeader>
             <DialogTitle>Receive token</DialogTitle>
             <DialogDescription>
-              Share your QR code or username to receive token.
+              Share your QR code or username.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
-            <div ref={receiveQrRef} className="flex justify-center">
-              <div className="bg-white p-3 shadow-sm">
-                <QRCodeCanvas
-                  value={buildWalletQrValue({
-                    userId,
-                    amount: qrReceiveAmount,
-                  })}
-                  size={256}
-                  level="H"
-                  includeMargin
-                  bgColor="#ffffff"
-                  fgColor="#111827"
-                  className="h-[180px] w-[180px]"
-                  imageSettings={{
-                    src: "/query-trade.svg",
-                    width: 32,
-                    height: 32,
-                    excavate: true,
-                  }}
-                />
+            <div className="space-y-2">
+              <div ref={receiveQrRef} className="flex justify-center">
+                <div className="bg-white p-3 shadow-sm">
+                  <QRCodeCanvas
+                    value={buildWalletQrValue({
+                      userId,
+                      amount: qrReceiveAmount,
+                    })}
+                    size={256}
+                    level="H"
+                    includeMargin
+                    bgColor="#ffffff"
+                    fgColor="#111827"
+                    className="h-[180px] w-[180px]"
+                    imageSettings={{
+                      src: "/query-trade.svg",
+                      width: 32,
+                      height: 32,
+                      excavate: true,
+                    }}
+                  />
+                </div>
               </div>
+              <p className="text-center text-xs text-muted-foreground">
+                Your permanent receive QR
+              </p>
             </div>
 
             <div className="flex items-center justify-center gap-2">
@@ -1876,7 +1899,7 @@ export default function WalletPage() {
                   </div>
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-xs text-muted-foreground">
-                      Optional QR amount.
+                      Optional QR input.
                     </p>
                     <Button
                       type="button"
