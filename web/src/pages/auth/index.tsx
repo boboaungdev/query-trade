@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useEffectEvent,
   useRef,
   useState,
   type ComponentProps,
@@ -124,6 +125,7 @@ function AuthInput({
 
 export default function Auth() {
   const navigate = useNavigate();
+  const googleButtonWrapperRef = useRef<HTMLDivElement | null>(null);
   const passwordInputRef = useRef<HTMLInputElement | null>(null);
   const codeInputRef = useRef<HTMLInputElement | null>(null);
   const signupNameInputRef = useRef<HTMLInputElement | null>(null);
@@ -176,6 +178,7 @@ export default function Auth() {
 
   const [resendTimer, setResendTimer] = useState(60);
   const [canResend, setCanResend] = useState(false);
+  const [googleButtonWidth, setGoogleButtonWidth] = useState(400);
   const normalizedEmail = email.trim().toLowerCase();
   const trimmedName = name.trim();
   const isValidEmail = EMAIL_REGEX.test(normalizedEmail);
@@ -339,6 +342,32 @@ export default function Auth() {
       setInvalidFieldState("email");
     }
   };
+
+  useEffect(() => {
+    const element = googleButtonWrapperRef.current;
+
+    if (!element) return;
+
+    const updateWidth = () => {
+      const nextWidth = Math.round(element.getBoundingClientRect().width);
+
+      if (nextWidth > 0) {
+        setGoogleButtonWidth(nextWidth);
+      }
+    };
+
+    updateWidth();
+
+    const observer = new ResizeObserver(() => {
+      updateWidth();
+    });
+
+    observer.observe(element);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
 
   useEffect(() => {
     if (!forgotStep && !verifyStep) return;
@@ -678,6 +707,10 @@ export default function Auth() {
     }
   };
 
+  const triggerAutoVerify = useEffectEvent(() => {
+    handleContinue();
+  });
+
   useEffect(() => {
     const shouldVerifyCode =
       code.length === 6 &&
@@ -696,7 +729,7 @@ export default function Auth() {
     }
 
     autoSubmittedCodeRef.current = code;
-    handleContinue();
+    triggerAutoVerify();
   }, [code, forgotStep, loading, resetStep, verifyStep]);
 
   useEffect(() => {
@@ -1040,6 +1073,7 @@ export default function Auth() {
                     <div className="space-y-2">
                       {isGoogleAuthAvailable ? (
                         <div
+                          ref={googleButtonWrapperRef}
                           className={`relative w-full ${loading ? "pointer-events-none opacity-70" : ""}`}
                         >
                           <GoogleLogin
@@ -1049,7 +1083,7 @@ export default function Auth() {
                             text="continue_with"
                             shape="rectangular"
                             size="medium"
-                            width="100%"
+                            width={googleButtonWidth}
                           />
                         </div>
                       ) : (
