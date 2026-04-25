@@ -209,7 +209,6 @@ export default function Auth() {
       ? ""
       : "Passwords do not match";
   const shouldShowContinueSpinner = loading && loadingSource === "submit";
-  const isGoogleLoading = loading && loadingSource === "google";
   const isGoogleAuthAvailable = Boolean(GOOGLE_CLIENT_ID?.trim());
   const googleTheme = resolvedTheme === "dark" ? "filled_black" : "outline";
   const hasInvalidField = Object.values(invalidFields).some(Boolean);
@@ -1077,12 +1076,6 @@ export default function Auth() {
                             size="medium"
                             width="100%"
                           />
-                          {isGoogleLoading ? (
-                            <div className="absolute inset-0 flex items-center justify-center rounded-md bg-background/80 text-sm font-medium backdrop-blur-[1px]">
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Signing in with Google...
-                            </div>
-                          ) : null}
                         </div>
                       ) : (
                         <Button
