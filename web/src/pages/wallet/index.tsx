@@ -444,14 +444,22 @@ export default function WalletPage() {
                 ? `${formatFullTokenAmount(tokenBalance)} token`
                 : "**** token"}
             </p>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <Button className="justify-center" variant="outline" disabled>
                 <ArrowUpRight className="size-4" />
-                Withdraw
+                Send
+              </Button>
+              <Button
+                className="justify-center"
+                variant="outline"
+                disabled
+              >
+                <ArrowDownLeft className="size-4" />
+                Receive
               </Button>
               <Button className="justify-center" variant="outline" disabled>
                 <ArrowRightLeft className="size-4" />
-                Transfer
+                Withdraw
               </Button>
             </div>
           </CardContent>
