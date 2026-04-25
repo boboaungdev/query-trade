@@ -7,7 +7,7 @@ import {
 } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
+import { useGoogleLogin } from "@react-oauth/google";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -718,38 +718,56 @@ export default function Auth() {
     }
   }, [resetStep]);
 
-  const handleGoogleSuccess = async (
-    credentialResponse: CredentialResponse,
-  ) => {
-    const credential = credentialResponse.credential;
-
-    if (!credential) {
-      return;
-    }
-
-    setLoading(true);
-    setLoadingSource("google");
-
-    try {
-      const promise = signinGoogle({ credential });
-      const data = await promise;
-      const { user, accessToken } = data.result;
-      setAuth(user, accessToken);
-      navigate("/strategy");
-    } catch (error) {
-      if (shouldMarkInvalidFromError(error)) {
-        markCurrentStepInvalid();
+  const handleGoogleSignin = useGoogleLogin({
+    scope: "openid email profile",
+    onSuccess: async (tokenResponse) => {
+      if (!tokenResponse.access_token) {
+        setLoading(false);
+        setLoadingSource(null);
+        toast.error("Google sign-in failed.");
+        return;
       }
-      toastNetworkError(error, "Network error");
-    } finally {
+
+      setLoading(true);
+      setLoadingSource("google");
+
+      try {
+        const promise = signinGoogle({
+          accessToken: tokenResponse.access_token,
+        });
+        const data = await promise;
+        const { user, accessToken } = data.result;
+        setAuth(user, accessToken);
+        navigate("/strategy");
+      } catch (error) {
+        if (shouldMarkInvalidFromError(error)) {
+          markCurrentStepInvalid();
+        }
+        toastNetworkError(error, "Network error");
+      } finally {
+        setLoading(false);
+        setLoadingSource(null);
+      }
+    },
+    onError: () => {
       setLoading(false);
       setLoadingSource(null);
-    }
-  };
+      toast.error("Google sign-in failed.");
+    },
+    onNonOAuthError: (nonOAuthError) => {
+      setLoading(false);
+      setLoadingSource(null);
 
-  const handleGoogleError = () => {
-    setLoading(false);
-    setLoadingSource(null);
+      if (nonOAuthError.type !== "popup_closed") {
+        toast.error("Google sign-in failed.");
+      }
+    },
+  });
+
+  const handleGoogleSuccess = () => {
+    setLoading(true);
+    setLoadingSource("google");
+    handleGoogleSignin();
   };
 
   const handleForgotPassword = () => {
@@ -1035,41 +1053,24 @@ export default function Auth() {
                 {!showPassword && !isSignup && (
                   <>
                     <div className="space-y-2">
-                      <div
-                        className={`relative w-full ${
-                          loading ? "pointer-events-none opacity-70" : ""
-                        }`}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full"
+                        disabled={loading || !isGoogleAuthAvailable}
+                        onClick={handleGoogleSuccess}
                       >
-                        {isGoogleAuthAvailable ? (
-                          <div className="flex w-full justify-center overflow-hidden rounded-md [&>div]:w-full [&_div[role=button]]:w-full">
-                            <GoogleLogin
-                              onSuccess={handleGoogleSuccess}
-                              onError={handleGoogleError}
-                              text="continue_with"
-                              shape="rectangular"
-                              size="medium"
-                              width="400"
-                            />
-                          </div>
-                        ) : (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="w-full"
-                            disabled
-                          >
-                            <FcGoogle className="mr-2" />
-                            Google sign-in unavailable
-                          </Button>
-                        )}
-
                         {isGoogleLoading ? (
-                          <div className="absolute inset-0 flex items-center justify-center rounded-md bg-background/85 text-sm font-medium">
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Signing in with Google...
-                          </div>
-                        ) : null}
-                      </div>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <FcGoogle className="mr-2" />
+                        )}
+                        {isGoogleLoading
+                          ? "Signing in with Google..."
+                          : isGoogleAuthAvailable
+                            ? "Continue with Google"
+                            : "Google sign-in unavailable"}
+                      </Button>
 
                       {!isGoogleAuthAvailable ? (
                         <p className="text-xs text-destructive">
