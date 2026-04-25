@@ -1,5 +1,6 @@
 import { BacktestDB } from "../../models/backtest.js";
 import { StrategyDB } from "../../models/strategy.js";
+import { ensureStrategyAccessible } from "../../services/strategy/access.js";
 import { resError, resJson } from "../../utils/response.js";
 import { fetchOHLCV } from "../../services/backtest/fetchOHLCV.js";
 import { simulateBacktest } from "../../services/backtest/simulateBacktest.js";
@@ -46,6 +47,8 @@ export const updateBacktest = async (req, res, next) => {
     if (!strategy) {
       throw resError(404, "Strategy not found!");
     }
+
+    ensureStrategyAccessible(strategy, user._id);
 
     const candles = await fetchOHLCV({
       exchange,

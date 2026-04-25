@@ -1,6 +1,7 @@
 import { BacktestDB } from "../../models/backtest.js";
 import { BookmarkDB } from "../../models/bookmark.js";
 import { StrategyDB } from "../../models/strategy.js";
+import { ensureStrategyAccessible } from "../../services/strategy/access.js";
 import { resError, resJson } from "../../utils/response.js";
 
 const getTargetModel = (targetType) => {
@@ -40,10 +41,16 @@ export const createBookmark = async (req, res, next) => {
     const { targetType, target } = req.body;
 
     const TargetDB = getTargetModel(targetType);
-    const targetDoc = await TargetDB.findById(target).select("_id").lean();
+    const targetDoc = await TargetDB.findById(target)
+      .select("_id isPublic user")
+      .lean();
 
     if (!targetDoc) {
       throw resError(404, `${targetType} not found!`);
+    }
+
+    if (targetType === "strategy") {
+      ensureStrategyAccessible(targetDoc, user._id);
     }
 
     const existingBookmark = await BookmarkDB.findOne({

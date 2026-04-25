@@ -71,6 +71,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth";
+import NotFoundPage from "@/pages/not-found";
 
 type ConditionNode =
   | { logic: "and" | "or"; conditions: ConditionNode[] }
@@ -244,6 +245,18 @@ function formatCompactNumber(value?: number) {
 function formatIndicatorParams(params?: Record<string, unknown>) {
   if (!params) return [];
   return Object.entries(params).filter(([, value]) => value !== undefined);
+}
+
+function getStrategyLoadErrorMessage(loadError: string) {
+  if (!loadError) {
+    return "Strategy not found.";
+  }
+
+  if (/not found/i.test(loadError)) {
+    return "Strategy not found.";
+  }
+
+  return "Unable to open this strategy.";
 }
 
 function countConditionNodes(nodes: ConditionNode[]): number {
@@ -538,6 +551,10 @@ export default function StrategyDetailPage() {
         </div>
       </div>
     );
+  }
+
+  if (!strategy && /not found/i.test(loadError)) {
+    return <NotFoundPage />;
   }
 
   const creatorUsername = strategy?.user?.username?.trim().replace(/^@/, "");
@@ -905,8 +922,8 @@ export default function StrategyDetailPage() {
             </div>
 
             {loadError || !strategy ? (
-              <div className="rounded-xl border bg-muted/30 px-4 py-8 text-sm text-muted-foreground">
-                {loadError || "Strategy not found."}
+              <div className="py-6 text-center text-sm text-muted-foreground">
+                {getStrategyLoadErrorMessage(loadError)}
               </div>
             ) : (
               <div className="min-w-0 overflow-hidden space-y-1">

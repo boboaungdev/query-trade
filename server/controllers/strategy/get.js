@@ -3,6 +3,10 @@ import { StrategyDB } from "../../models/strategy.js";
 import { BookmarkDB } from "../../models/bookmark.js";
 import { FollowDB } from "../../models/follow.js";
 import { SubscriptionModel } from "../../models/subscription.js";
+import {
+  buildAccessibleStrategyFilter,
+  ensureStrategyAccessible,
+} from "../../services/strategy/access.js";
 import { serializePublicUser } from "../../services/user/serializePublicUser.js";
 import { resError, resJson } from "../../utils/response.js";
 
@@ -11,11 +15,7 @@ export const getStrategyById = async (req, res, next) => {
     const user = req.user;
     const { strategyId } = req.params;
 
-    const strategy = await StrategyDB.findOneAndUpdate(
-      { _id: strategyId },
-      { $inc: { "stats.viewCount": 1 } },
-      { returnDocument: "after" },
-    )
+    const strategy = await StrategyDB.findById(strategyId)
       .populate([
         { path: "indicators.indicator", select: "name description category" },
         {
@@ -29,6 +29,17 @@ export const getStrategyById = async (req, res, next) => {
     if (!strategy) {
       throw resError(404, "Strategy not found!");
     }
+
+    ensureStrategyAccessible(strategy, user?._id);
+
+    await StrategyDB.updateOne(
+      { _id: strategyId },
+      { $inc: { "stats.viewCount": 1 } },
+    );
+    strategy.stats = {
+      ...strategy.stats,
+      viewCount: Number(strategy.stats?.viewCount ?? 0) + 1,
+    };
 
     if (user?._id) {
       const [bookmark, follow] = await Promise.all([
@@ -87,6 +98,7 @@ export const getStrategies = async (req, res, next) => {
     const skip = (page - 1) * limit;
 
     const andConditions = [];
+    const accessibleStrategyFilter = buildAccessibleStrategyFilter(user?._id);
 
     if (source === "bookmarked" && user?._id) {
       const bookmarkedStrategyIds = await BookmarkDB.find({
@@ -101,6 +113,7 @@ export const getStrategies = async (req, res, next) => {
           $in: bookmarkedStrategyIds.map((bookmark) => bookmark.target),
         },
       });
+      andConditions.push(accessibleStrategyFilter);
     }
 
     if (source === "mine" && user?._id) {
@@ -113,6 +126,8 @@ export const getStrategies = async (req, res, next) => {
       }
     } else if (typeof isPublic === "boolean") {
       andConditions.push({ isPublic });
+    } else if (source !== "mine") {
+      andConditions.push(accessibleStrategyFilter);
     }
 
     if (search) {

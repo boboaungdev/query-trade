@@ -1,7 +1,9 @@
 import { resJson } from "../../utils/response.js";
 import { BacktestDB } from "../../models/backtest.js";
 import { BookmarkDB } from "../../models/bookmark.js";
+import { StrategyDB } from "../../models/strategy.js";
 import { SubscriptionModel } from "../../models/subscription.js";
+import { isStrategyAccessible } from "../../services/strategy/access.js";
 import { serializePublicUser } from "../../services/user/serializePublicUser.js";
 
 const bookmarkTargetMatchesSearch = (bookmark, searchValue) => {
@@ -104,6 +106,58 @@ const attachBookmarkUserMembership = async (bookmarks) => {
   return bookmarks;
 };
 
+const pruneInaccessibleStrategyBookmarks = async (bookmarks, userId) => {
+  const inaccessibleBookmarks = bookmarks.filter(
+    (bookmark) =>
+      bookmark.targetType === "strategy" &&
+      bookmark.target &&
+      !isStrategyAccessible(bookmark.target, userId),
+  );
+
+  if (inaccessibleBookmarks.length === 0) {
+    return bookmarks;
+  }
+
+  const bookmarkIds = inaccessibleBookmarks.map((bookmark) =>
+    String(bookmark._id),
+  );
+  const bookmarkIdSet = new Set(bookmarkIds);
+  const strategyBookmarkCounts = inaccessibleBookmarks.reduce(
+    (map, bookmark) => {
+      const strategyId = String(bookmark.target._id);
+      map.set(strategyId, (map.get(strategyId) ?? 0) + 1);
+      return map;
+    },
+    new Map(),
+  );
+
+  await BookmarkDB.deleteMany({
+    _id: { $in: inaccessibleBookmarks.map((bookmark) => bookmark._id) },
+  });
+
+  if (strategyBookmarkCounts.size > 0) {
+    await StrategyDB.bulkWrite(
+      [...strategyBookmarkCounts.entries()].map(([strategyId, count]) => ({
+        updateOne: {
+          filter: {
+            _id: strategyId,
+            "stats.bookmarkCount": { $gt: 0 },
+          },
+          update: {
+            $inc: {
+              "stats.bookmarkCount": -count,
+            },
+          },
+        },
+      })),
+    );
+  }
+
+  return bookmarks.filter(
+    (bookmark) => !bookmarkIdSet.has(String(bookmark._id)),
+  );
+};
+
 export const getBookmarks = async (req, res, next) => {
   try {
     const user = req.user;
@@ -147,9 +201,13 @@ export const getBookmarks = async (req, res, next) => {
         .lean();
 
       await populateBookmarkTargets(allBookmarks);
-      await attachBookmarkUserMembership(allBookmarks);
+      const visibleBookmarks = await pruneInaccessibleStrategyBookmarks(
+        allBookmarks,
+        user._id,
+      );
+      await attachBookmarkUserMembership(visibleBookmarks);
 
-      const matchedBookmarks = allBookmarks.filter((bookmark) =>
+      const matchedBookmarks = visibleBookmarks.filter((bookmark) =>
         bookmarkTargetMatchesSearch(bookmark, searchValue),
       );
 
@@ -166,7 +224,9 @@ export const getBookmarks = async (req, res, next) => {
       ]);
 
       await populateBookmarkTargets(bookmarks);
+      bookmarks = await pruneInaccessibleStrategyBookmarks(bookmarks, user._id);
       await attachBookmarkUserMembership(bookmarks);
+      total = await BookmarkDB.countDocuments(filter);
     }
 
     const totalPage = Math.ceil(total / limit);
