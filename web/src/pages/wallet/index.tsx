@@ -1463,7 +1463,7 @@ export default function WalletPage() {
             <div className="flex flex-nowrap items-center justify-between gap-3">
               <div className="flex min-w-0 flex-1 items-center gap-2">
                 <Wallet className="size-5 text-muted-foreground" />
-                <p className="truncate text-3xl font-semibold tracking-tight">
+                <p className="truncate text-2xl font-semibold tracking-tight">
                   {showBalance ? formatTokenAmount(tokenBalance) : "****"} token
                 </p>
               </div>

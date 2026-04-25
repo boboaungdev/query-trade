@@ -1326,7 +1326,7 @@ export default function AdminDashboard() {
               <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/8 px-2.5 py-1 text-[11px] font-medium tracking-[0.16em] text-primary uppercase">
                 Admin
               </span>
-              <CardTitle className="flex items-center gap-2 text-xl tracking-tight">
+              <CardTitle className="flex items-center gap-2">
                 <ShieldCheck className="size-5 text-primary" />
                 Dashboard
               </CardTitle>
@@ -1574,7 +1574,7 @@ export default function AdminDashboard() {
                     <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                       <div className="min-w-0 space-y-2">
                         <div className="flex flex-wrap items-center gap-2">
-                          <CardTitle className="text-base">
+                          <CardTitle>
                             {plan.name}
                           </CardTitle>
                           <span className="rounded-md bg-muted px-2 py-1 text-[11px] font-medium uppercase text-muted-foreground">
@@ -1659,7 +1659,7 @@ export default function AdminDashboard() {
                     <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                       <div className="min-w-0 space-y-2">
                         <div className="flex flex-wrap items-center gap-2">
-                          <CardTitle className="text-base">
+                          <CardTitle>
                             {indicator.name}
                           </CardTitle>
                           <span className="rounded-md bg-muted px-2 py-1 text-[11px] font-medium text-muted-foreground">

@@ -625,7 +625,7 @@ export default function StrategyPage() {
               <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/8 px-2.5 py-1 text-[11px] font-medium tracking-[0.16em] text-primary uppercase">
                 Strategy Hub
               </span>
-              <CardTitle className="text-xl tracking-tight">
+              <CardTitle>
                 Strategy Library
               </CardTitle>
               <CardDescription className="flex flex-wrap items-center gap-2 text-sm leading-6">

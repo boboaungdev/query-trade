@@ -1257,7 +1257,7 @@ export default function BacktestPage() {
                   {isEditing ? "Editing" : "New Run"}
                 </span>
               </div>
-              <CardTitle className="text-lg tracking-tight md:text-xl">
+              <CardTitle>
                 {isEditing ? "Update this backtest" : "Create a backtest run"}
               </CardTitle>
               <CardDescription className="max-w-3xl text-sm leading-6">
@@ -1280,9 +1280,7 @@ export default function BacktestPage() {
                   <CardContent className="min-w-0 space-y-4">
                     <div>
                       <div>
-                        <p className="text-base font-semibold text-foreground">
-                          Market setup
-                        </p>
+                        <CardTitle>Market setup</CardTitle>
                         <p className="text-xs text-muted-foreground">
                           Choose the pair, timeframe, and backtest range.
                         </p>
@@ -1998,9 +1996,7 @@ export default function BacktestPage() {
                 <Card className="min-w-0 overflow-hidden border-border/70 text-sm">
                   <CardContent className="min-w-0 space-y-4">
                     <div>
-                      <p className="text-base font-semibold text-foreground">
-                        Capital plan
-                      </p>
+                      <CardTitle>Capital plan</CardTitle>
                       <p className="text-xs text-muted-foreground">
                         Set wallet size, order sizing, and fees before you run.
                       </p>
@@ -2073,9 +2069,7 @@ export default function BacktestPage() {
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div>
-                          <p className="text-base font-semibold text-foreground">
-                            Advanced options
-                          </p>
+                          <CardTitle>Advanced options</CardTitle>
                           <p className="text-xs text-muted-foreground">
                             Optional controls for how positions behave during
                             the backtest run.

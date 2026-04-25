@@ -1465,7 +1465,7 @@ export default function BacktestResultPage() {
                   Backtest Result
                 </span>
               </div>
-              <CardTitle className="text-lg tracking-tight md:text-xl">
+              <CardTitle>
                 {backtest.symbol} backtest result
               </CardTitle>
               <CardDescription className="max-w-3xl text-sm leading-6">
@@ -1880,7 +1880,7 @@ export default function BacktestResultPage() {
                   <Percent className="h-4 w-4" />
                   Win Rate
                 </CardDescription>
-                <CardTitle className="text-xl md:text-2xl">
+                <CardTitle>
                   {ratio.format(result.winRate)}%
                 </CardTitle>
               </CardHeader>
@@ -1900,7 +1900,7 @@ export default function BacktestResultPage() {
                   <ShieldAlert className="h-4 w-4" />
                   Max Drawdown
                 </CardDescription>
-                <CardTitle className="text-xl text-destructive md:text-2xl">
+                <CardTitle className="text-destructive">
                   -{ratio.format(Math.abs(result.maxDrawdownPercent))}%
                 </CardTitle>
               </CardHeader>
@@ -1918,7 +1918,7 @@ export default function BacktestResultPage() {
                   <Target className="h-4 w-4" />
                   Profit Factor
                 </CardDescription>
-                <CardTitle className="text-xl md:text-2xl">
+                <CardTitle>
                   {ratio.format(result.profitFactor)}
                 </CardTitle>
               </CardHeader>
@@ -1933,7 +1933,7 @@ export default function BacktestResultPage() {
 
           <Card className="border-border/70 bg-card">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
+              <CardTitle className="flex items-center gap-2">
                 <CandlestickChart className="h-4 w-4 text-primary" />
                 Trade Distribution
               </CardTitle>
@@ -1959,7 +1959,7 @@ export default function BacktestResultPage() {
                   <CircleDollarSign className="h-4 w-4" />
                   Fees
                 </CardDescription>
-                <CardTitle className="text-xl md:text-2xl">
+                <CardTitle>
                   {money.format(result.totalFees)}
                 </CardTitle>
               </CardHeader>
@@ -1980,7 +1980,7 @@ export default function BacktestResultPage() {
                   <TrendingUp className="h-4 w-4" />
                   Win / Loss Streak
                 </CardDescription>
-                <CardTitle className="text-xl md:text-2xl">
+                <CardTitle>
                   <span className="text-success">
                     {result.maxWinStreak ?? 0}
                   </span>
@@ -2004,7 +2004,7 @@ export default function BacktestResultPage() {
 
           <Card className="border-border/70 bg-card">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
+              <CardTitle className="flex items-center gap-2">
                 <AreaChart className="h-4 w-4 text-primary" />
                 Performance Insights
               </CardTitle>
@@ -2194,7 +2194,7 @@ export default function BacktestResultPage() {
             <CardHeader>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <CardTitle className="flex items-center gap-2 text-base">
+                  <CardTitle className="flex items-center gap-2">
                     <Target className="h-4 w-4 text-primary" />
                     Edge Radar
                   </CardTitle>
@@ -2256,7 +2256,7 @@ export default function BacktestResultPage() {
         <TabsContent value="setup" className="space-y-4 md:space-y-6">
           <Card className="border-border/70 bg-card">
             <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
+              <CardTitle className="flex items-center gap-2">
                 <Target className="h-4 w-4 text-primary" />
                 Strategy
               </CardTitle>
@@ -2417,7 +2417,7 @@ export default function BacktestResultPage() {
                   <CalendarClock className="h-4 w-4" />
                   Date Window
                 </CardDescription>
-                <CardTitle className="text-xl md:text-2xl">
+                <CardTitle>
                   {formatDuration(result.duration)}
                 </CardTitle>
               </CardHeader>
@@ -2440,7 +2440,7 @@ export default function BacktestResultPage() {
                   <SlidersHorizontal className="h-4 w-4" />
                   Trade Setup
                 </CardDescription>
-                <CardTitle className="text-xl md:text-2xl">
+                <CardTitle>
                   {backtest.hedgeMode ? "Hedge" : "One-way"}
                 </CardTitle>
               </CardHeader>
@@ -2458,7 +2458,7 @@ export default function BacktestResultPage() {
                   <Clock3 className="h-4 w-4" />
                   Position Duration
                 </CardDescription>
-                <CardTitle className="text-xl md:text-2xl">
+                <CardTitle>
                   {formatDuration(result.averageTradeDuration ?? 0)}
                   <span className="ml-1 text-xs font-medium text-muted-foreground">
                     avg
@@ -2482,7 +2482,7 @@ export default function BacktestResultPage() {
         <TabsContent value="equity" className="space-y-4 md:space-y-6">
           <Card className="max-w-full min-w-0 border-border/70 bg-card">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
+              <CardTitle className="flex items-center gap-2">
                 <AreaChart className="h-4 w-4 text-primary" />
                 Equity Curve
               </CardTitle>
@@ -2505,7 +2505,7 @@ export default function BacktestResultPage() {
         <TabsContent value="trades" className="space-y-4 md:space-y-6">
           <Card className="border-border/70 bg-card">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
+              <CardTitle className="flex items-center gap-2">
                 <CalendarClock className="h-4 w-4 text-primary" />
                 Trade Activity
               </CardTitle>
@@ -2521,7 +2521,7 @@ export default function BacktestResultPage() {
 
           <Card className="border-border/70 bg-card">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
+              <CardTitle className="flex items-center gap-2">
                 <CandlestickChart className="h-4 w-4 text-primary" />
                 Trade History
               </CardTitle>

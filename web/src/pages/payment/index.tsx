@@ -519,7 +519,7 @@ function PaymentHeader() {
           <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/8 px-2.5 py-1 text-[11px] font-medium tracking-[0.16em] text-primary uppercase">
             Deposit Details
           </span>
-          <CardTitle className="text-xl tracking-tight">Deposit USDT</CardTitle>
+          <CardTitle>Deposit USDT</CardTitle>
           <CardDescription className="max-w-2xl text-sm leading-6">
             Send USDT and verify the transaction to receive token in your app
             wallet.

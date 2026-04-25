@@ -394,7 +394,7 @@ function RulePanel({
     <Card className="min-w-0 overflow-hidden border-border/70">
       <CardContent className="space-y-4 md:px-5">
         <div className="space-y-3">
-          <CardTitle className="flex items-center gap-2 text-base">
+          <CardTitle className="flex items-center gap-2">
             {isBuy ? (
               <TrendingUp className="h-4 w-4 text-success" />
             ) : (
@@ -1230,7 +1230,7 @@ export default function StrategyDetailPage() {
           <div className="grid min-w-0 gap-5 lg:grid-cols-3 lg:items-start">
             <Card className="min-w-0 overflow-hidden border-border/70 lg:col-span-3">
               <CardHeader className="space-y-2">
-                <CardTitle className="flex items-center gap-2 text-base">
+                <CardTitle className="flex items-center gap-2">
                   <Activity className="h-4 w-4 text-primary" />
                   Indicators
                 </CardTitle>

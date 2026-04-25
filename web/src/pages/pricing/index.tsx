@@ -421,7 +421,7 @@ export default function Pricing() {
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/8 px-2.5 py-1 text-[11px] font-medium tracking-[0.16em] text-primary uppercase">
                   Access Plans
                 </span>
-                <CardTitle className="text-xl tracking-tight">
+                <CardTitle>
                   Pricing
                 </CardTitle>
                 <CardDescription className="max-w-2xl text-sm leading-6">
@@ -432,32 +432,13 @@ export default function Pricing() {
                 </p>
                 {isAuthenticated ? (
                   <div className="mt-3 space-y-1">
-                    <div className="flex items-center gap-2">
-                      <p className="text-xs text-muted-foreground">Balance</p>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="size-6"
-                        onClick={() => setShowBalance((current) => !current)}
-                        aria-label={
-                          showBalance ? "Hide balance" : "Show balance"
-                        }
-                      >
-                        {showBalance ? (
-                          <EyeOff className="size-3.5" />
-                        ) : (
-                          <Eye className="size-3.5" />
-                        )}
-                      </Button>
-                    </div>
                     <div className="flex flex-nowrap items-center justify-between gap-3">
                       <div className="flex min-w-0 flex-1 items-center gap-2">
                         <Wallet className="size-5 text-muted-foreground" />
                         <p className="truncate text-2xl font-semibold tracking-tight">
                           {showBalance
                             ? `${formatTokenAmount(tokenBalance)} token`
-                            : "•••••• token"}
+                            : "**** token"}
                         </p>
                       </div>
                       <Button
@@ -469,10 +450,40 @@ export default function Pricing() {
                       </Button>
                     </div>
                     {showBalance ? (
-                      <p className="text-sm text-muted-foreground">
-                        {formatFullTokenAmount(tokenBalance)} token
-                      </p>
-                    ) : null}
+                      <div className="flex items-center gap-1">
+                        <p className="text-sm text-muted-foreground">
+                          {formatFullTokenAmount(tokenBalance)} token
+                        </p>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="size-6"
+                          onClick={() => setShowBalance((current) => !current)}
+                          aria-label={
+                            showBalance ? "Hide balance" : "Show balance"
+                          }
+                        >
+                          <EyeOff className="size-3.5" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        <p className="text-sm text-muted-foreground">
+                          **** token
+                        </p>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="size-6"
+                          onClick={() => setShowBalance((current) => !current)}
+                          aria-label="Show balance"
+                        >
+                          <Eye className="size-3.5" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 ) : null}
               </div>
@@ -485,7 +496,7 @@ export default function Pricing() {
             <Loader2 className="size-4 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {sortedPlans.map((plan) => {
               const isPaid = plan.id !== "free";
               const isActive = activePlan === plan.id;
@@ -526,7 +537,7 @@ export default function Pricing() {
                           {formatTokenAmount(plan.originalAmountToken)} token
                         </p>
                       ) : null}
-                      <div className="text-3xl font-bold">
+                      <div className="text-2xl font-bold">
                         {formatTokenAmount(plan.amountToken)} token
                       </div>
                       <p className="text-sm text-muted-foreground">
@@ -759,3 +770,4 @@ export default function Pricing() {
     </>
   );
 }
+
