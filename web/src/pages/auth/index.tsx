@@ -211,7 +211,8 @@ export default function Auth() {
     confirmNewPassword.length === 0 || confirmNewPassword === newPassword
       ? ""
       : "Passwords do not match";
-  const shouldShowContinueSpinner = loading && loadingSource === "submit";
+  const shouldShowContinueSpinner =
+    loading && (loadingSource === "submit" || loadingSource === "google");
   const isGoogleAuthAvailable = Boolean(GOOGLE_CLIENT_ID?.trim());
   const googleTheme = resolvedTheme === "dark" ? "filled_black" : "outline";
   const hasInvalidField = Object.values(invalidFields).some(Boolean);
