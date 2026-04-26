@@ -3,6 +3,7 @@ import {
   PAYMENT_STATUSES,
 } from "../../constants/subscription.js";
 import { PaymentModel } from "../../models/payment.js";
+import { TransactionModel } from "../../models/transaction.js";
 import { resError, resJson } from "../../utils/response.js";
 
 export const cancelPayment = async (req, res, next) => {
@@ -39,9 +40,24 @@ export const cancelPayment = async (req, res, next) => {
       message: "Token deposit request cancelled by user.",
     };
     await payment.save();
+    const transaction = await TransactionModel.findOneAndUpdate(
+      {
+        payment: payment._id,
+      },
+      {
+        $set: {
+          status: PAYMENT_STATUSES.cancelled,
+          description: "Token deposit request cancelled",
+        },
+      },
+      {
+        new: true,
+      },
+    );
 
     return resJson(res, 200, "Payment cancelled.", {
       payment,
+      transaction,
     });
   } catch (error) {
     next(error);

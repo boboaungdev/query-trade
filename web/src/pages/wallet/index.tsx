@@ -34,6 +34,7 @@ import {
   cancelWalletPayment,
   createTokenDeposit,
   createWalletTransfer,
+  type PayCurrency,
   type Payment,
   type WalletActivity,
 } from "@/api/wallet";
@@ -531,6 +532,40 @@ function getReceiptDescription(activity: WalletActivity) {
   return activity.description || getReceiptTitle(activity);
 }
 
+function getReceiptPartyLabel(
+  party?: WalletActivity["actor"] | WalletActivity["counterparty"] | null,
+) {
+  if (!party) {
+    return "";
+  }
+
+  if (party.username) {
+    return `@${party.username}`;
+  }
+
+  return party.name || "";
+}
+
+function getReceiptNetworkLabel(payCurrency?: PayCurrency) {
+  if (payCurrency === "usdtbsc") {
+    return "BNB Smart Chain";
+  }
+
+  return "";
+}
+
+function getActivityDescription(activity: WalletActivity) {
+  if (activity.activityType === "send" && activity.counterparty?.username) {
+    return `Sent to @${activity.counterparty.username}`;
+  }
+
+  if (activity.activityType === "receive" && activity.counterparty?.username) {
+    return `Received from @${activity.counterparty.username}`;
+  }
+
+  return activity.description || getActivityLabel(activity);
+}
+
 function getActivitySecondaryText(activity: WalletActivity) {
   if (activity.activityType === "deposit") {
     return `Deposit amount: ${formatFullTokenAmount(activity.tokenAmount)} token`;
@@ -540,7 +575,7 @@ function getActivitySecondaryText(activity: WalletActivity) {
     return `After balance: ${formatFullTokenAmount(activity.balanceAfter)} token`;
   }
 
-  return activity.description || "";
+  return getActivityDescription(activity);
 }
 
 function getActivitySecondaryTextTone() {
@@ -1625,7 +1660,7 @@ export default function WalletPage() {
                           </span>
                         </div>
                         <p className="text-muted-foreground">
-                          {activity.description || getActivityLabel(activity)}
+                          {getActivityDescription(activity)}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {formatDateTime(activity.createdAt)}
@@ -1749,9 +1784,7 @@ export default function WalletPage() {
             <>
               <DialogHeader>
                 <DialogTitle>Transaction Receipt</DialogTitle>
-                <DialogDescription>
-                  Transaction details.
-                </DialogDescription>
+                <DialogDescription>Transaction details.</DialogDescription>
               </DialogHeader>
 
               <div className="space-y-4">
@@ -1806,7 +1839,9 @@ export default function WalletPage() {
                           <Avatar
                             className={cn(
                               "h-10 w-10",
-                              getUserAvatarRingClass(receiptReceiver.membership),
+                              getUserAvatarRingClass(
+                                receiptReceiver.membership,
+                              ),
                             )}
                           >
                             <AvatarImage
@@ -1879,6 +1914,44 @@ export default function WalletPage() {
                     </div>
                   ) : null}
 
+                  {receiptSender ? (
+                    <div className="flex items-start justify-between gap-4">
+                      <span className="text-muted-foreground">From</span>
+                      <span className="max-w-[16rem] text-right">
+                        {getReceiptPartyLabel(receiptSender)}
+                      </span>
+                    </div>
+                  ) : null}
+
+                  {receiptReceiver ? (
+                    <div className="flex items-start justify-between gap-4">
+                      <span className="text-muted-foreground">To</span>
+                      <span className="max-w-[16rem] text-right">
+                        {getReceiptPartyLabel(receiptReceiver)}
+                      </span>
+                    </div>
+                  ) : null}
+
+                  {selectedReceiptActivity.payCurrency ? (
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-muted-foreground">Network</span>
+                      <span className="text-right">
+                        {getReceiptNetworkLabel(
+                          selectedReceiptActivity.payCurrency,
+                        )}
+                      </span>
+                    </div>
+                  ) : null}
+
+                  {selectedReceiptActivity.note ? (
+                    <div className="flex items-start justify-between gap-4">
+                      <span className="text-muted-foreground">Note</span>
+                      <p className="max-w-[16rem] text-right">
+                        {selectedReceiptActivity.note}
+                      </p>
+                    </div>
+                  ) : null}
+
                   {selectedReceiptActivity.plan ? (
                     <div className="flex items-center justify-between gap-4">
                       <span className="text-muted-foreground">Plan</span>
@@ -1941,7 +2014,9 @@ export default function WalletPage() {
                   ) : null}
 
                   <div className="flex items-start justify-between gap-4">
-                    <span className="text-muted-foreground">Transaction ID</span>
+                    <span className="text-muted-foreground">
+                      Transaction ID
+                    </span>
                     <p className="max-w-[16rem] break-all text-right text-xs">
                       {selectedReceiptActivity.transactionId ||
                         selectedReceiptActivity._id}

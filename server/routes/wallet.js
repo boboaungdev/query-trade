@@ -10,6 +10,7 @@ import {
 import {
   getPayment,
   getPaymentHistory,
+  getTransactionReceipt,
   getWalletActivity,
   getWalletSummary,
 } from "../controllers/wallet/get.js";
@@ -37,6 +38,11 @@ router.get(
   "/payments/:paymentId",
   validateParam(WalletSchema.params.paymentId),
   getPayment,
+);
+router.get(
+  "/transactions/:transactionId",
+  validateParam(WalletSchema.params.transactionId),
+  getTransactionReceipt,
 );
 router.post("/deposits", validateBody(WalletSchema.deposit), createDeposit);
 router.post("/transfers", validateBody(WalletSchema.transfer), createTransfer);

@@ -1,4 +1,9 @@
 import { WALLET_TRANSACTION_TYPES } from "../../constants/subscription.js";
+import {
+  TransactionModel,
+  TRANSACTION_STATUSES,
+  TRANSACTION_TYPES,
+} from "../../models/transaction.js";
 import { UserDB } from "../../models/user.js";
 import { SubscriptionPlanModel } from "../../models/subscriptionPlan.js";
 import { calculatePlanPricing } from "../../services/subscription/calculatePlanPricing.js";
@@ -58,10 +63,27 @@ export const createCheckout = async (req, res, next) => {
       plan: plan.key,
       durationDays: plan.durationDays,
     });
+    const transaction = await TransactionModel.create({
+      type: TRANSACTION_TYPES.subscription,
+      status: TRANSACTION_STATUSES.completed,
+      participants: [user._id],
+      user: user._id,
+      walletTransactions: [walletTransaction._id],
+      subscription: subscription._id,
+      tokenAmount: Number(pricing.finalAmountToken || 0),
+      planKey: plan.key,
+      description: `Subscribed to ${plan.name}`,
+      metadata: {
+        durationDays: plan.durationDays,
+        originalAmountToken: pricing.originalAmountToken,
+        discountAmountToken: pricing.discountAmountToken,
+      },
+    });
 
     return resJson(res, 201, "Subscription activated with token.", {
       subscription,
       membership: serializeMembership(subscription),
+      transaction,
       walletTransaction,
       tokenBalance,
     });

@@ -35,6 +35,7 @@ export type WalletTransaction = {
 };
 
 export type WalletTransfer = {
+  transaction?: WalletActivity;
   senderTransaction: WalletTransaction;
   recipientTransaction: WalletTransaction;
   recipient: {
@@ -47,7 +48,7 @@ export type WalletTransfer = {
 export type WalletActivity = {
   _id: string;
   transactionId?: string;
-  sourceType: "payment" | "wallet_transaction";
+  sourceType: "payment" | "wallet_transaction" | "transaction";
   activityType:
     | "deposit"
     | "subscription"
@@ -152,6 +153,16 @@ export async function getWalletActivity({
   return data.result;
 }
 
+export async function getTransactionReceipt(transactionId: string) {
+  const { data } = await api.get<{
+    result: {
+      transaction: WalletActivity;
+    };
+  }>(`/wallet/transactions/${transactionId}`);
+
+  return data.result;
+}
+
 export async function getPayment(paymentId: string) {
   const { data } = await api.get<{
     result: {
@@ -172,6 +183,7 @@ export async function createTokenDeposit({
   const { data } = await api.post<{
     result: {
       payment: Payment;
+      transaction?: WalletActivity;
     };
   }>("/wallet/deposits", {
     amountUsdt,
@@ -191,6 +203,7 @@ export async function verifyWalletPayment({
   const { data } = await api.post<{
     result: {
       payment: Payment;
+      transaction?: WalletActivity;
       walletTransaction?: WalletTransaction;
       tokenBalance?: number;
     };
@@ -205,6 +218,7 @@ export async function cancelWalletPayment(paymentId: string) {
   const { data } = await api.post<{
     result: {
       payment: Payment;
+      transaction?: WalletActivity | null;
     };
   }>(`/wallet/payments/${paymentId}/cancel`);
 

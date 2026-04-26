@@ -1,12 +1,12 @@
 import { TOKEN_PER_USD } from "../../constants/index.js";
-import {
-  PAYMENT_PURPOSES,
-  WALLET_TRANSACTION_TYPES,
-} from "../../constants/subscription.js";
+import { PAYMENT_PURPOSES } from "../../constants/subscription.js";
 import { PaymentModel } from "../../models/payment.js";
 import { SubscriptionModel } from "../../models/subscription.js";
+import {
+  TransactionModel,
+  TRANSACTION_TYPES,
+} from "../../models/transaction.js";
 import { UserDB } from "../../models/user.js";
-import { WalletTransactionModel } from "../../models/walletTransaction.js";
 import { serializeMembership } from "../../services/subscription/serializeMembership.js";
 import { resError, resJson } from "../../utils/response.js";
 
@@ -64,66 +64,88 @@ export const getPaymentHistory = async (req, res, next) => {
   }
 };
 
-function serializeWalletPaymentActivity(payment) {
-  return {
-    _id: payment._id,
-    sourceType: "payment",
-    activityType: "deposit",
-    status: payment.status,
-    amountUsd: Number(payment.requestedAmountUsdt || 0),
-    tokenAmount: Number(payment.tokenAmount || 0),
-    rateSnapshot: Number(payment.rateSnapshot || TOKEN_PER_USD),
-    payCurrency: payment.payCurrency,
-    txHash: payment.txHash || null,
-    description:
-      payment.status === "confirmed"
-        ? "Deposit confirmed"
-        : payment.status === "pending"
-          ? "Deposit pending"
-          : payment.status === "cancelled"
-            ? "Deposit cancelled"
-            : payment.status === "expired"
-              ? "Deposit expired"
-              : "Deposit",
-    createdAt: payment.createdAt,
-    confirmedAt: payment.confirmedAt || null,
-  };
-}
-
-function serializeWalletTokenActivity(
+function serializeUniversalWalletActivity(
   transaction,
+  currentUserId,
   userMap = new Map(),
   subscriptionMap = new Map(),
 ) {
-  let activityType = transaction.type;
-  let description = transaction.description || "Wallet activity";
-
-  if (
-    transaction.type === WALLET_TRANSACTION_TYPES.spend &&
-    typeof transaction.planKey === "string" &&
-    transaction.planKey
-  ) {
-    activityType = "subscription";
-    description = `Subscribed to ${transaction.planKey}`;
-  }
-
-  const actorId = String(transaction.user?._id || transaction.user || "");
-  const counterpartyId = String(transaction.metadata?.counterpartyUserId || "");
+  const currentUserIdString = String(currentUserId || "");
+  const actorId = String(transaction.user || "");
+  const fromUserId = String(transaction.fromUser || "");
+  const toUserId = String(transaction.toUser || "");
   const actorUser = userMap.get(actorId);
-  const counterpartyUser = userMap.get(counterpartyId);
+  const fromUser = userMap.get(fromUserId);
+  const toUser = userMap.get(toUserId);
+
+  if (transaction.type === TRANSACTION_TYPES.transfer) {
+    const isSender = fromUserId === currentUserIdString;
+    const actor = isSender ? fromUser : toUser;
+    const counterparty = isSender ? toUser : fromUser;
+
+    return {
+      _id: transaction._id,
+      transactionId: String(transaction._id || ""),
+      sourceType: "transaction",
+      activityType: isSender ? "send" : "receive",
+      status: transaction.status,
+      tokenAmount: Number(transaction.tokenAmount || 0),
+      rateSnapshot: Number(transaction.rateSnapshot || 0) || undefined,
+      payCurrency: transaction.payCurrency,
+      txHash: transaction.txHash || null,
+      plan: transaction.planKey || null,
+      description: transaction.description || "Token transfer",
+      note: transaction.note || "",
+      actor: actor
+        ? {
+            _id: actor._id,
+            username: actor.username,
+            name: actor.name,
+            avatar: actor.avatar || "",
+            membership: serializeMembership(
+              subscriptionMap.get(String(actor._id)),
+            ),
+          }
+        : null,
+      counterparty: counterparty
+        ? {
+            _id: counterparty._id,
+            username: counterparty.username,
+            name: counterparty.name,
+            avatar: counterparty.avatar || "",
+            membership: serializeMembership(
+              subscriptionMap.get(String(counterparty._id)),
+            ),
+          }
+        : null,
+      createdAt: transaction.createdAt,
+      confirmedAt: transaction.confirmedAt || null,
+    };
+  }
 
   return {
     _id: transaction._id,
     transactionId: String(transaction._id || ""),
-    sourceType: "wallet_transaction",
-    activityType,
-    status: "completed",
-    tokenAmount: Number(transaction.amount || 0),
-    balanceBefore: Number(transaction.balanceBefore || 0),
-    balanceAfter: Number(transaction.balanceAfter || 0),
+    sourceType: "transaction",
+    activityType:
+      transaction.type === TRANSACTION_TYPES.subscription
+        ? "subscription"
+        : transaction.type,
+    status: transaction.status,
+    amountUsd:
+      typeof transaction.amountUsd === "number"
+        ? Number(transaction.amountUsd || 0)
+        : undefined,
+    tokenAmount: Number(transaction.tokenAmount || 0),
+    rateSnapshot:
+      typeof transaction.rateSnapshot === "number"
+        ? Number(transaction.rateSnapshot || 0)
+        : undefined,
+    payCurrency: transaction.payCurrency,
+    txHash: transaction.txHash || null,
     plan: transaction.planKey || null,
-    description,
-    note: transaction.metadata?.note || "",
+    description: transaction.description || "Transaction",
+    note: transaction.note || "",
     actor: actorUser
       ? {
           _id: actorUser._id,
@@ -133,24 +155,9 @@ function serializeWalletTokenActivity(
           membership: serializeMembership(subscriptionMap.get(actorId)),
         }
       : null,
-    counterparty: counterpartyUser
-      ? {
-          _id: counterpartyUser._id,
-          username: counterpartyUser.username,
-          name: counterpartyUser.name,
-          avatar: counterpartyUser.avatar || "",
-          membership: serializeMembership(subscriptionMap.get(counterpartyId)),
-        }
-      : transaction.metadata?.counterpartyUsername
-        ? {
-            _id: transaction.metadata?.counterpartyUserId || null,
-            username: transaction.metadata.counterpartyUsername,
-            name: "",
-            avatar: "",
-            membership: serializeMembership(null),
-          }
-        : null,
+    counterparty: null,
     createdAt: transaction.createdAt,
+    confirmedAt: transaction.confirmedAt || null,
   };
 }
 
@@ -159,59 +166,41 @@ export const getWalletActivity = async (req, res, next) => {
     const user = req.user;
     const page = Number(req.query.page || 1);
     const limit = Number(req.query.limit || 10);
-    const combinedLimit = page * limit;
     const skip = (page - 1) * limit;
 
-    const paymentQuery = {
-      user: user._id,
-      purpose: PAYMENT_PURPOSES.tokenTopup,
-    };
-    const tokenQuery = {
-      user: user._id,
-      type: { $ne: WALLET_TRANSACTION_TYPES.deposit },
-    };
-
-    const [
-      payments,
-      paymentsTotal,
-      walletTransactions,
-      walletTransactionsTotal,
-    ] = await Promise.all([
-      PaymentModel.find(paymentQuery)
+    const [transactions, total] = await Promise.all([
+      TransactionModel.find({
+        participants: user._id,
+      })
         .sort({ createdAt: -1 })
-        .limit(combinedLimit)
+        .skip(skip)
+        .limit(limit)
         .lean(),
-      PaymentModel.countDocuments(paymentQuery),
-      WalletTransactionModel.find(tokenQuery)
-        .sort({ createdAt: -1 })
-        .limit(combinedLimit)
-        .lean(),
-      WalletTransactionModel.countDocuments(tokenQuery),
+      TransactionModel.countDocuments({
+        participants: user._id,
+      }),
     ]);
 
-    const walletUserIds = Array.from(
+    const relatedUserIds = Array.from(
       new Set(
-        walletTransactions.flatMap((transaction) =>
-          [
-            transaction.user,
-            transaction.metadata?.counterpartyUserId,
-          ]
+        transactions.flatMap((transaction) =>
+          [transaction.user, transaction.fromUser, transaction.toUser]
             .filter(Boolean)
             .map((value) => String(value)),
         ),
       ),
     );
 
-    const relatedUsers = walletUserIds.length
+    const relatedUsers = relatedUserIds.length
       ? await UserDB.find({
-          _id: { $in: walletUserIds },
+          _id: { $in: relatedUserIds },
         })
           .select("_id username name avatar")
           .lean()
       : [];
-    const relatedSubscriptions = walletUserIds.length
+    const relatedSubscriptions = relatedUserIds.length
       ? await SubscriptionModel.find({
-          user: { $in: walletUserIds },
+          user: { $in: relatedUserIds },
         }).lean()
       : [];
 
@@ -224,16 +213,14 @@ export const getWalletActivity = async (req, res, next) => {
         subscription,
       ]),
     );
-
-    const total = paymentsTotal + walletTransactionsTotal;
-    const activities = [
-      ...payments.map(serializeWalletPaymentActivity),
-      ...walletTransactions.map((transaction) =>
-        serializeWalletTokenActivity(transaction, userMap, subscriptionMap),
+    const activities = transactions.map((transaction) =>
+      serializeUniversalWalletActivity(
+        transaction,
+        user._id,
+        userMap,
+        subscriptionMap,
       ),
-    ]
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-      .slice(skip, skip + limit);
+    );
 
     return resJson(res, 200, "Wallet activity.", {
       activities,
@@ -243,6 +230,61 @@ export const getWalletActivity = async (req, res, next) => {
       limitPerPage: limit,
       hasNextPage: skip + activities.length < total,
       hasPrevPage: page > 1,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getTransactionReceipt = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const { transactionId } = req.params;
+    const transaction = await TransactionModel.findOne({
+      _id: transactionId,
+      participants: user._id,
+    }).lean();
+
+    if (!transaction) {
+      throw resError(404, "Transaction not found.");
+    }
+
+    const relatedUserIds = Array.from(
+      new Set(
+        [transaction.user, transaction.fromUser, transaction.toUser]
+          .filter(Boolean)
+          .map((value) => String(value)),
+      ),
+    );
+    const relatedUsers = relatedUserIds.length
+      ? await UserDB.find({
+          _id: { $in: relatedUserIds },
+        })
+          .select("_id username name avatar")
+          .lean()
+      : [];
+    const relatedSubscriptions = relatedUserIds.length
+      ? await SubscriptionModel.find({
+          user: { $in: relatedUserIds },
+        }).lean()
+      : [];
+    const userMap = new Map(
+      relatedUsers.map((relatedUser) => [String(relatedUser._id), relatedUser]),
+    );
+    const subscriptionMap = new Map(
+      relatedSubscriptions.map((subscription) => [
+        String(subscription.user),
+        subscription,
+      ]),
+    );
+
+    return resJson(res, 200, "Transaction receipt.", {
+      transaction: serializeUniversalWalletActivity(
+        transaction,
+        user._id,
+        userMap,
+        subscriptionMap,
+      ),
     });
   } catch (error) {
     next(error);

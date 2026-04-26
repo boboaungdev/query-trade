@@ -9,6 +9,10 @@ import {
 } from "../../constants/subscription.js";
 import { TOKEN_PER_USD } from "../../constants/index.js";
 import { PaymentModel } from "../../models/payment.js";
+import {
+  TransactionModel,
+  TRANSACTION_TYPES,
+} from "../../models/transaction.js";
 import { getReceiveAddress } from "../../services/payment/bscUsdt.js";
 import { resJson } from "../../utils/response.js";
 import { recordWalletTransaction } from "../subscription/helpers.js";
@@ -28,6 +32,18 @@ export const createDeposit = async (req, res, next) => {
         $set: {
           status: PAYMENT_STATUSES.expired,
           providerStatus: "manual_replaced",
+        },
+      },
+    );
+    await TransactionModel.updateMany(
+      {
+        user: user._id,
+        type: TRANSACTION_TYPES.deposit,
+        status: PAYMENT_STATUSES.pending,
+      },
+      {
+        $set: {
+          status: PAYMENT_STATUSES.expired,
         },
       },
     );
@@ -80,17 +96,56 @@ export const createDeposit = async (req, res, next) => {
           },
         },
       );
+      const transaction = await TransactionModel.create({
+        type: TRANSACTION_TYPES.deposit,
+        status: payment.status,
+        participants: [user._id],
+        user: user._id,
+        payment: payment._id,
+        walletTransactions: [walletTransaction._id],
+        tokenAmount: Number(payment.tokenAmount || 0),
+        amountUsd: Number(payment.requestedAmountUsdt || 0),
+        rateSnapshot: Number(payment.rateSnapshot || TOKEN_PER_USD),
+        payCurrency: payment.payCurrency,
+        txHash: payment.txHash || undefined,
+        description: "Mock token deposit confirmed",
+        metadata: {
+          provider: payment.provider,
+          providerReference: payment.providerReference,
+        },
+        confirmedAt: payment.confirmedAt,
+      });
 
       return resJson(res, 201, "Mock token deposit confirmed.", {
         payment,
+        transaction,
         walletTransaction,
         tokenBalance,
         mock: true,
       });
     }
 
+    const transaction = await TransactionModel.create({
+      type: TRANSACTION_TYPES.deposit,
+      status: payment.status,
+      participants: [user._id],
+      user: user._id,
+      payment: payment._id,
+      tokenAmount: Number(payment.tokenAmount || 0),
+      amountUsd: Number(payment.requestedAmountUsdt || 0),
+      rateSnapshot: Number(payment.rateSnapshot || TOKEN_PER_USD),
+      payCurrency: payment.payCurrency,
+      description: "Token deposit created",
+      metadata: {
+        provider: payment.provider,
+        payAddress: payment.payAddress,
+        orderId: payment.orderId,
+      },
+    });
+
     return resJson(res, 201, "Token deposit created.", {
       payment,
+      transaction,
     });
   } catch (error) {
     next(error);

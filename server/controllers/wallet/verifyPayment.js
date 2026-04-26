@@ -4,6 +4,10 @@ import {
   WALLET_TRANSACTION_TYPES,
 } from "../../constants/subscription.js";
 import { PaymentModel } from "../../models/payment.js";
+import {
+  TransactionModel,
+  TRANSACTION_TYPES,
+} from "../../models/transaction.js";
 import { verifyUsdtBscPayment } from "../../services/payment/bscUsdt.js";
 import { resError, resJson } from "../../utils/response.js";
 import { recordWalletTransaction } from "../subscription/helpers.js";
@@ -78,9 +82,53 @@ export const verifyPayment = async (req, res, next) => {
         rateSnapshot: payment.rateSnapshot,
       },
     });
+    let transaction = await TransactionModel.findOneAndUpdate(
+      {
+        payment: payment._id,
+      },
+      {
+        $set: {
+          status: PAYMENT_STATUSES.confirmed,
+          walletTransactions: [walletTransaction._id],
+          txHash,
+          confirmedAt: payment.confirmedAt,
+          description: "Token deposit confirmed",
+          metadata: {
+            provider: payment.provider,
+            providerReference: payment.providerReference,
+          },
+        },
+      },
+      {
+        new: true,
+      },
+    );
+
+    if (!transaction) {
+      transaction = await TransactionModel.create({
+        type: TRANSACTION_TYPES.deposit,
+        status: PAYMENT_STATUSES.confirmed,
+        participants: [user._id],
+        user: user._id,
+        payment: payment._id,
+        walletTransactions: [walletTransaction._id],
+        tokenAmount: Number(payment.tokenAmount || 0),
+        amountUsd: Number(payment.requestedAmountUsdt || 0),
+        rateSnapshot: Number(payment.rateSnapshot || 0),
+        payCurrency: payment.payCurrency,
+        txHash,
+        description: "Token deposit confirmed",
+        metadata: {
+          provider: payment.provider,
+          providerReference: payment.providerReference,
+        },
+        confirmedAt: payment.confirmedAt,
+      });
+    }
 
     return resJson(res, 200, "Deposit verified and token credited.", {
       payment,
+      transaction,
       walletTransaction,
       tokenBalance,
     });

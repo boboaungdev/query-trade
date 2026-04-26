@@ -258,6 +258,27 @@ function renderBookmarkStrategyCard({
                 className="size-3"
               />
             </div>
+
+            <div className="mt-4 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+              <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                {(target?.access?.accessType ?? target?.accessType) === "paid" ? (
+                  <BadgeDollarSign className="h-3.5 w-3.5 text-primary" />
+                ) : (
+                  <HandCoins className="h-3.5 w-3.5 text-muted-foreground" />
+                )}
+                {(target?.access?.accessType ?? target?.accessType) === "paid"
+                  ? "Paid"
+                  : "Free"}
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                {target?.stats?.viewCount ?? 0}
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                <Bookmark className="h-3.5 w-3.5 text-muted-foreground" />
+                {target?.stats?.bookmarkCount ?? 0}
+              </span>
+            </div>
           </div>
 
           <ButtonGroup className="shrink-0">
@@ -331,32 +352,13 @@ function renderBookmarkStrategyCard({
           </ButtonGroup>
         </div>
 
-        <p
-          className="truncate text-sm text-muted-foreground"
-          title={target?.description?.trim() || "No description"}
-        >
-          {target?.description?.trim() || "No description"}
-        </p>
-
-        <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-          <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
-            {(target?.access?.accessType ?? target?.accessType) === "paid" ? (
-              <BadgeDollarSign className="h-3.5 w-3.5 text-primary" />
-            ) : (
-              <HandCoins className="h-3.5 w-3.5 text-muted-foreground" />
-            )}
-            {(target?.access?.accessType ?? target?.accessType) === "paid"
-              ? "Paid"
-              : "Free"}
-          </span>
-          <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
-            <Eye className="h-3.5 w-3.5 text-muted-foreground" />
-            {target?.stats?.viewCount ?? 0}
-          </span>
-          <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
-            <Bookmark className="h-3.5 w-3.5 text-muted-foreground" />
-            {target?.stats?.bookmarkCount ?? 0}
-          </span>
+        <div className="min-w-0 flex-1">
+          <p
+            className="truncate text-sm text-muted-foreground"
+            title={target?.description?.trim() || "No description"}
+          >
+            {target?.description?.trim() || "No description"}
+          </p>
         </div>
       </CardContent>
     </Card>

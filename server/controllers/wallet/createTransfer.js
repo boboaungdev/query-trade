@@ -4,6 +4,11 @@ import mongoose from "mongoose";
 
 import { WALLET_TRANSACTION_TYPES } from "../../constants/subscription.js";
 import { UserDB } from "../../models/user.js";
+import {
+  TransactionModel,
+  TRANSACTION_TYPES,
+  TRANSACTION_STATUSES,
+} from "../../models/transaction.js";
 import { WalletTransactionModel } from "../../models/walletTransaction.js";
 import { resError, resJson } from "../../utils/response.js";
 
@@ -36,6 +41,7 @@ export const createTransfer = async (req, res, next) => {
 
     let senderTransaction = null;
     let recipientTransaction = null;
+    let transaction = null;
     let senderBalance = 0;
 
     await session.withTransaction(async () => {
@@ -139,11 +145,39 @@ export const createTransfer = async (req, res, next) => {
         },
       );
 
+      [transaction] = await TransactionModel.create(
+        [
+          {
+            type: TRANSACTION_TYPES.transfer,
+            status: TRANSACTION_STATUSES.completed,
+            participants: [sender._id, recipient._id],
+            fromUser: sender._id,
+            toUser: recipient._id,
+            walletTransactions: [
+              senderTransaction._id,
+              recipientTransaction._id,
+            ],
+            tokenAmount: Number(amount || 0),
+            description: note
+              ? `Transfer to @${recipient.username}: ${note}`
+              : `Transfer to @${recipient.username}`,
+            note,
+            metadata: {
+              transferId,
+            },
+          },
+        ],
+        {
+          session,
+        },
+      );
+
       senderBalance = senderBalanceAfter;
     });
 
     return resJson(res, 201, "Token sent successfully.", {
       transfer: {
+        transaction,
         senderTransaction,
         recipientTransaction,
         recipient: {
