@@ -102,6 +102,7 @@ export const StrategySchema = {
     name: Joi.string().trim().min(2).max(50).required(),
     description: strategyDescriptionSchema,
     isPublic: Joi.boolean().default(true),
+    accessType: Joi.string().valid("free", "paid").default("free"),
     indicators: Joi.array().items(strategyIndicatorSchema),
     entry: Joi.object({
       buy: logicBlockSchema.required(),
@@ -113,6 +114,7 @@ export const StrategySchema = {
     name: Joi.string().trim().min(2).max(50),
     description: strategyDescriptionSchema,
     isPublic: Joi.boolean(),
+    accessType: Joi.string().valid("free", "paid"),
     indicators: Joi.array().items(strategyIndicatorSchema),
     entry: Joi.object({
       buy: logicBlockSchema,
@@ -125,7 +127,9 @@ export const StrategySchema = {
       page: Joi.number().integer().min(1).default(1),
       limit: Joi.number().integer().min(1).max(60).default(12),
       search: Joi.string().trim().allow(""),
-      source: Joi.string().valid("all", "mine", "bookmarked").default("all"),
+      category: Joi.string()
+        .valid("all", "mine", "bookmarked", "paid")
+        .default("all"),
       sortBy: Joi.string()
         .valid("name", "createdAt", "updatedAt", "popular")
         .default("name"),

@@ -1,7 +1,11 @@
 import { BacktestDB } from "../../models/backtest.js";
 import { BookmarkDB } from "../../models/bookmark.js";
 import { StrategyDB } from "../../models/strategy.js";
-import { ensureStrategyAccessible } from "../../services/strategy/access.js";
+import {
+  ensureStrategyAccessible,
+  getViewerPlan,
+} from "../../services/strategy/access.js";
+import { getEffectiveSubscription } from "../subscription/helpers.js";
 import { resError, resJson } from "../../utils/response.js";
 
 const getTargetModel = (targetType) => {
@@ -38,6 +42,8 @@ const populateBookmarkTarget = async (bookmark) => {
 export const createBookmark = async (req, res, next) => {
   try {
     const user = req.user;
+    const viewerSubscription = await getEffectiveSubscription(user._id);
+    const viewerPlan = getViewerPlan(viewerSubscription);
     const { targetType, target } = req.body;
 
     const TargetDB = getTargetModel(targetType);
@@ -50,7 +56,7 @@ export const createBookmark = async (req, res, next) => {
     }
 
     if (targetType === "strategy") {
-      ensureStrategyAccessible(targetDoc, user._id);
+      ensureStrategyAccessible(targetDoc, user._id, viewerPlan);
     }
 
     const existingBookmark = await BookmarkDB.findOne({

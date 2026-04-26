@@ -9,6 +9,7 @@ import {
 import {
   Activity,
   AlertTriangle,
+  BadgeDollarSign,
   CalendarDays,
   ChevronDown,
   ChevronLeft,
@@ -19,6 +20,7 @@ import {
   CopyPlus,
   Eye,
   Globe,
+  HandCoins,
   Loader2,
   Lock,
   MoreHorizontal,
@@ -36,6 +38,7 @@ import { getApiErrorMessage } from "@/api/axios";
 import { createBookmark, deleteBookmark } from "@/api/bookmark";
 import { createFollow, deleteFollow } from "@/api/follow";
 import { deleteStrategy, fetchStrategyById } from "@/api/strategy";
+import type { StrategyAccessState, StrategyAccessType } from "@/api/strategy";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   AlertDialog,
@@ -97,6 +100,8 @@ type StrategyDetailItem = {
   description?: string;
   isBookmarked?: boolean;
   isPublic?: boolean;
+  accessType?: StrategyAccessType;
+  access?: StrategyAccessState;
   createdAt?: string;
   updatedAt?: string;
   user?: {
@@ -568,6 +573,9 @@ export default function StrategyDetailPage() {
           name: strategy.name,
           description: strategy.description,
           isPublic: strategy.isPublic,
+          accessType:
+            strategy.access?.accessType ?? strategy.accessType ?? "free",
+          access: strategy.access,
           stats: strategy.stats,
           user: strategy.user
             ? {
@@ -972,6 +980,20 @@ export default function StrategyDetailPage() {
                           : strategy.isPublic
                             ? "Public"
                             : "Private"}
+                      </span>
+                    </span>
+                    <span className="inline-flex min-w-0 items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                      {(strategy.access?.accessType ?? strategy.accessType) ===
+                      "paid" ? (
+                        <BadgeDollarSign className="h-3.5 w-3.5 shrink-0 text-primary" />
+                      ) : (
+                        <HandCoins className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      )}
+                      <span>
+                        {(strategy.access?.accessType ??
+                          strategy.accessType) === "paid"
+                          ? "Paid"
+                          : "Free"}
                       </span>
                     </span>
                     <span className="inline-flex min-w-0 items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">

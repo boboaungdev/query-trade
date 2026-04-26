@@ -7,6 +7,7 @@ import {
   useParams,
 } from "react-router-dom";
 import {
+  BadgeDollarSign,
   Bookmark,
   BookmarkCheck,
   CandlestickChart,
@@ -15,11 +16,10 @@ import {
   ChevronDown,
   Copy,
   Gauge,
-  Globe,
+  HandCoins,
   ImagePlus,
   ListFilter,
   Loader2,
-  Lock,
   MoreHorizontal,
   MessageSquareText,
   Pencil,
@@ -187,6 +187,10 @@ type ProfileStrategyListItem = {
   name?: string;
   description?: string;
   isPublic?: boolean;
+  accessType?: "free" | "paid";
+  access?: {
+    accessType?: "free" | "paid";
+  };
   createdAt?: string;
   updatedAt?: string;
   stats?: {
@@ -2609,14 +2613,20 @@ export default function Profile() {
                                                       </span>
                                                     </span>
                                                     <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
-                                                      {item.isPublic ? (
-                                                        <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+                                                      {(item.access
+                                                        ?.accessType ??
+                                                        item.accessType) ===
+                                                      "paid" ? (
+                                                        <BadgeDollarSign className="h-3.5 w-3.5 text-primary" />
                                                       ) : (
-                                                        <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                                                        <HandCoins className="h-3.5 w-3.5 text-muted-foreground" />
                                                       )}
-                                                      {item.isPublic
-                                                        ? "Public"
-                                                        : "Private"}
+                                                      {(item.access
+                                                        ?.accessType ??
+                                                        item.accessType) ===
+                                                      "paid"
+                                                        ? "Paid"
+                                                        : "Free"}
                                                     </span>
                                                     <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
                                                       <Eye className="h-3.5 w-3.5" />
@@ -2744,7 +2754,7 @@ export default function Profile() {
                                                 >
                                                   <div className="min-w-0">
                                                     <p className="truncate font-medium">
-                                                      {item.symbol || "-"} /{" "}
+                                                      {item.symbol || "-"} -{" "}
                                                       {item.timeframe || "-"}
                                                     </p>
                                                     <p className="truncate text-xs text-muted-foreground">

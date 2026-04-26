@@ -5,7 +5,7 @@ import type { DateRange } from "react-day-picker";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeftRight,
-  ArrowRight,
+  BadgeDollarSign,
   Bitcoin,
   Copy,
   CalendarRange,
@@ -21,7 +21,6 @@ import {
   Play,
   Bookmark,
   BookmarkCheck,
-  Globe,
   Lock,
   Search,
   ShieldAlert,
@@ -42,7 +41,7 @@ import {
   runBacktest,
   updateBacktest,
 } from "@/api/backtest";
-import { fetchStrategies, type StrategySource } from "@/api/strategy";
+import { fetchStrategies, type StrategyCategory } from "@/api/strategy";
 
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
@@ -90,7 +89,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Switch } from "@/components/ui/switch";
 import {
   UserMembershipMark,
   type UserMembership,
@@ -189,6 +188,10 @@ type StrategyItem = {
   description?: string;
   isBookmarked?: boolean;
   isPublic?: boolean;
+  accessType?: "free" | "paid";
+  access?: {
+    accessType?: "free" | "paid";
+  };
   stats?: {
     viewCount?: number;
     bookmarkCount?: number;
@@ -238,17 +241,32 @@ type BacktestPlanUiPolicy = {
   canUseHedgeMode: boolean;
 };
 
-const strategySourceOptions: Array<{
+const strategyCategoryOptions: Array<{
   label: string;
-  value: StrategySource;
+  value: StrategyCategory;
 }> = [
   { label: "All", value: "all" },
+  { label: "Paid", value: "paid" },
   { label: "Bookmarked", value: "bookmarked" },
   { label: "My Strategy", value: "mine" },
 ];
 
 const inFlightRequestMap = new Map<string, Promise<unknown>>();
 const freePlanSupportedTimeframes = ["5m", "15m", "1h", "4h", "1d"];
+const proPlanOnlyTimeframes = ["6h", "12h", "1M"];
+const plusPlanSupportedTimeframes = [
+  "1m",
+  "3m",
+  "5m",
+  "15m",
+  "30m",
+  "1h",
+  "2h",
+  "4h",
+  "8h",
+  "1d",
+  "1w",
+];
 
 function addDaysToDate(date: Date, days: number) {
   const next = new Date(date);
@@ -319,7 +337,7 @@ function getBacktestPlanUiPolicy(tier: BacktestPlanTier): BacktestPlanUiPolicy {
     return {
       tier,
       label: "Plus",
-      allowedTimeframes: null,
+      allowedTimeframes: plusPlanSupportedTimeframes,
       dateRangeLimitLabel: "Up to 1 year",
       dateRangeLimitDays: 365,
       dateRangeLimitMonths: null,
@@ -340,6 +358,48 @@ function getBacktestPlanUiPolicy(tier: BacktestPlanTier): BacktestPlanUiPolicy {
     canEditCapitalPlan: false,
     canUseHedgeMode: false,
   };
+}
+
+function getBacktestPlanMembershipMark(
+  tier: BacktestPlanTier,
+): UserMembership | undefined {
+  if (tier !== "plus" && tier !== "pro") {
+    return undefined;
+  }
+
+  const label = tier === "pro" ? "Pro" : "Plus";
+
+  return {
+    verifiedVariant: tier,
+    badgeLabel: label,
+    title: `${label} plan`,
+  };
+}
+
+function getStrategyAccessType(strategy: StrategyItem) {
+  return strategy.access?.accessType ?? strategy.accessType ?? "free";
+}
+
+function getRequiredPlanForTimeframe(timeframe: string): BacktestPlanTier {
+  if (proPlanOnlyTimeframes.includes(timeframe)) {
+    return "pro";
+  }
+
+  if (freePlanSupportedTimeframes.includes(timeframe)) {
+    return "free";
+  }
+
+  return "plus";
+}
+
+function getLockedTimeframePlanLabel(timeframe: string) {
+  return getRequiredPlanForTimeframe(timeframe) === "pro" ? "Pro" : "Plus";
+}
+
+function getLockedTimeframePlanClassName(timeframe: string) {
+  return getRequiredPlanForTimeframe(timeframe) === "pro"
+    ? "text-amber-500"
+    : "text-sky-500";
 }
 
 function dedupeRequest<T>(key: string, requestFn: () => Promise<T>) {
@@ -730,7 +790,8 @@ export default function BacktestPage() {
     "name" | "createdAt" | "updatedAt" | "popular"
   >("name");
   const [strategyOrder, setStrategyOrder] = useState<"asc" | "desc">("asc");
-  const [strategySource, setStrategySource] = useState<StrategySource>("all");
+  const [strategyCategory, setStrategyCategory] =
+    useState<StrategyCategory>("all");
   const [strategyPublicOnly, setStrategyPublicOnly] = useState(true);
   const [selectedStrategyName, setSelectedStrategyName] = useState("");
   const [strategyId, setStrategyId] = useState("");
@@ -794,6 +855,10 @@ export default function BacktestPage() {
     () => getBacktestPlanUiPolicy(currentPlanTier),
     [currentPlanTier],
   );
+  const currentPlanMembershipMark = useMemo(
+    () => getBacktestPlanMembershipMark(currentPlanPolicy.tier),
+    [currentPlanPolicy.tier],
+  );
 
   useEffect(() => {
     strategyIdRef.current = strategyId;
@@ -804,7 +869,7 @@ export default function BacktestPage() {
       return;
     }
 
-    setStrategySource("all");
+    setStrategyCategory("all");
     setStrategyPage(1);
   }, [currentPlanPolicy.requiresPublicStrategiesOnly]);
 
@@ -996,7 +1061,7 @@ export default function BacktestPage() {
           debouncedStrategySearch,
           strategySortBy,
           strategyOrder,
-          strategySource,
+          strategyCategory,
           strategyPublicOnly,
         ].join(":");
 
@@ -1006,8 +1071,9 @@ export default function BacktestPage() {
             search: debouncedStrategySearch,
             sortBy: strategySortBy,
             order: strategyOrder,
-            source: strategySource,
-            isPublic: strategySource === "all" ? strategyPublicOnly : undefined,
+            category: strategyCategory,
+            isPublic:
+              strategyCategory === "all" ? strategyPublicOnly : undefined,
           }),
         )) as StrategyListResponse;
 
@@ -1065,7 +1131,7 @@ export default function BacktestPage() {
     strategyPage,
     strategyPublicOnly,
     strategySortBy,
-    strategySource,
+    strategyCategory,
   ]);
 
   const timeframeOptions = Object.keys(timeframes);
@@ -1132,7 +1198,20 @@ export default function BacktestPage() {
   }, [endDate, startDate]);
   const selectedStrategyLabel =
     selectedStrategy?.name || selectedStrategyName || "No strategy selected";
-  const firstVisibleStrategy = visibleStrategies[0];
+  const canSelectStrategy = (item: StrategyItem) => {
+    if (
+      currentPlanPolicy.requiresPublicStrategiesOnly &&
+      item.isPublic === false
+    ) {
+      return false;
+    }
+
+    return !(
+      currentPlanPolicy.tier === "free" &&
+      getStrategyAccessType(item) === "paid"
+    );
+  };
+  const firstSelectableStrategy = visibleStrategies.find(canSelectStrategy);
   const currentStartDateIso = startDate ? toUtcStartOfDayIso(startDate) : "";
   const currentEndDateIso = endDate ? toUtcStartOfDayIso(endDate) : "";
   const dateRangeLimitEnd = useMemo(() => {
@@ -1216,18 +1295,31 @@ export default function BacktestPage() {
   }, [currentPlanPolicy.canUseHedgeMode, hedgeMode]);
 
   useEffect(() => {
-    if (!strategyId || !currentPlanPolicy.requiresPublicStrategiesOnly) {
+    if (!strategyId) {
       return;
     }
 
     const activeStrategy = strategies.find((item) => item._id === strategyId);
-    if (!activeStrategy || activeStrategy.isPublic !== false) {
+    const isUnavailablePrivate =
+      currentPlanPolicy.requiresPublicStrategiesOnly &&
+      activeStrategy?.isPublic === false;
+    const isUnavailablePaid =
+      currentPlanPolicy.tier === "free" &&
+      activeStrategy &&
+      getStrategyAccessType(activeStrategy) === "paid";
+
+    if (!activeStrategy || (!isUnavailablePrivate && !isUnavailablePaid)) {
       return;
     }
 
     setStrategyId("");
     setSelectedStrategyName("");
-  }, [currentPlanPolicy.requiresPublicStrategiesOnly, strategies, strategyId]);
+  }, [
+    currentPlanPolicy.requiresPublicStrategiesOnly,
+    currentPlanPolicy.tier,
+    strategies,
+    strategyId,
+  ]);
 
   useEffect(() => {
     if (!endDate || !maxSelectableEndDate) {
@@ -1311,7 +1403,7 @@ export default function BacktestPage() {
           ),
         );
         updateStrategyBookmarkCount(-1);
-        if (strategySource === "bookmarked") {
+        if (strategyCategory === "bookmarked") {
           setStrategies((prev) =>
             prev.filter((item) => item._id !== strategyIdToToggle),
           );
@@ -1348,7 +1440,7 @@ export default function BacktestPage() {
           ),
         );
         updateStrategyBookmarkCount(-1);
-        if (strategySource === "bookmarked") {
+        if (strategyCategory === "bookmarked") {
           setStrategies((prev) =>
             prev.filter((item) => item._id !== strategyIdToToggle),
           );
@@ -1383,6 +1475,14 @@ export default function BacktestPage() {
       currentPlanPolicy.requiresPublicStrategiesOnly &&
       item.isPublic === false
     ) {
+      return;
+    }
+
+    if (
+      currentPlanPolicy.tier === "free" &&
+      getStrategyAccessType(item) === "paid"
+    ) {
+      toast.error("Paid strategies require a paid plan.");
       return;
     }
 
@@ -1547,8 +1647,12 @@ export default function BacktestPage() {
                     Current plan
                   </p>
                   <div className="flex items-center gap-2 md:justify-end">
-                    <p className="text-sm font-semibold text-foreground">
+                    <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-foreground">
                       {currentPlanPolicy.label}
+                      <UserMembershipMark
+                        membership={currentPlanMembershipMark}
+                        className="size-3.5"
+                      />
                     </p>
                     <span className="inline-flex items-center rounded-full border border-border/70 bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                       Backtest rules
@@ -1559,6 +1663,7 @@ export default function BacktestPage() {
                   <Button
                     type="button"
                     variant="outline"
+                    size="sm"
                     className="w-full md:w-auto"
                     onClick={() => navigate("/pricing")}
                   >
@@ -1765,9 +1870,18 @@ export default function BacktestPage() {
                                       <span className="inline-flex items-center gap-2">
                                         <span>{tf}</span>
                                         {!allowedTimeframeSet.has(tf) ? (
-                                          <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+                                          <span
+                                            className={cn(
+                                              "inline-flex items-center gap-1 text-xs font-medium",
+                                              getLockedTimeframePlanClassName(
+                                                tf,
+                                              ),
+                                            )}
+                                          >
                                             <Lock className="h-3 w-3" />
-                                            Plus
+                                            <span>
+                                              {getLockedTimeframePlanLabel(tf)}
+                                            </span>
                                           </span>
                                         ) : null}
                                       </span>
@@ -1932,15 +2046,6 @@ export default function BacktestPage() {
                                   Pick the strategy you want to run in this
                                   backtest.
                                 </DialogDescription>
-                                <div className="pt-2">
-                                  <span className="inline-flex items-center rounded-full border border-border/70 bg-muted/40 px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
-                                    {currentPlanPolicy.tier === "free"
-                                      ? "Free plan: free strategies only"
-                                      : currentPlanPolicy.tier === "plus"
-                                        ? "Plus plan: free and paid strategies"
-                                        : "Pro plan: all exclusive strategies"}
-                                  </span>
-                                </div>
                               </DialogHeader>
                               <div className="space-y-3 px-4 py-4">
                                 <div className="flex flex-col gap-3 md:flex-row md:items-center">
@@ -1958,12 +2063,12 @@ export default function BacktestPage() {
                                           return;
                                         }
 
-                                        if (!firstVisibleStrategy) {
+                                        if (!firstSelectableStrategy) {
                                           return;
                                         }
 
                                         event.preventDefault();
-                                        selectStrategy(firstVisibleStrategy);
+                                        selectStrategy(firstSelectableStrategy);
                                       }}
                                       aria-label="Search strategy"
                                       placeholder="Search strategy"
@@ -2065,14 +2170,12 @@ export default function BacktestPage() {
                                           type="button"
                                           variant="outline"
                                           className="h-8 w-full justify-between gap-2"
-                                          disabled={
-                                            currentPlanPolicy.requiresPublicStrategiesOnly
-                                          }
                                         >
                                           {
-                                            strategySourceOptions.find(
+                                            strategyCategoryOptions.find(
                                               (option) =>
-                                                option.value === strategySource,
+                                                option.value ===
+                                                strategyCategory,
                                             )?.label
                                           }
                                           <ChevronsUpDown className="h-3.5 w-3.5 opacity-60" />
@@ -2088,18 +2191,18 @@ export default function BacktestPage() {
                                           Category
                                         </DropdownMenuLabel>
                                         <DropdownMenuRadioGroup
-                                          value={strategySource}
+                                          value={strategyCategory}
                                           onValueChange={(value) => {
                                             const nextSource =
-                                              value as StrategySource;
-                                            setStrategySource(nextSource);
+                                              value as StrategyCategory;
+                                            setStrategyCategory(nextSource);
                                             setStrategyPublicOnly(
                                               nextSource === "all",
                                             );
                                             setStrategyPage(1);
                                           }}
                                         >
-                                          {strategySourceOptions.map(
+                                          {strategyCategoryOptions.map(
                                             (option) => (
                                               <DropdownMenuRadioItem
                                                 key={option.value}
@@ -2167,27 +2270,53 @@ export default function BacktestPage() {
                                         {visibleStrategies.map((item) => {
                                           const isSelected =
                                             item._id === strategyId;
+                                          const accessType =
+                                            getStrategyAccessType(item);
+                                          const isPaidStrategy =
+                                            accessType === "paid";
+                                          const isDisabledStrategy =
+                                            !canSelectStrategy(item);
 
                                           return (
                                             <CommandItem
                                               key={item._id}
                                               value={item._id}
+                                              aria-disabled={isDisabledStrategy}
                                               className={cn(
                                                 "theme-hover-surface flex min-w-0 overflow-hidden cursor-pointer items-center justify-between gap-3 rounded-md py-2 pl-3 pr-0 text-left hover:bg-muted/60 data-[selected=true]:bg-transparent data-[selected=true]:hover:bg-muted/60",
                                                 isSelected &&
                                                   "bg-muted text-foreground",
+                                                isDisabledStrategy &&
+                                                  "hover:bg-transparent data-[selected=true]:hover:bg-transparent",
                                               )}
                                               onSelect={() =>
                                                 selectStrategy(item)
                                               }
                                             >
-                                              <div className="w-0 min-w-0 flex-1 overflow-hidden">
+                                              <div
+                                                className={cn(
+                                                  "w-0 min-w-0 flex-1 overflow-hidden",
+                                                  isDisabledStrategy &&
+                                                    "opacity-60",
+                                                )}
+                                              >
                                                 <p className="block w-full truncate font-medium">
                                                   {item.name}
                                                 </p>
-                                                <p className="block w-full truncate text-xs text-muted-foreground">
-                                                  {item.description?.trim() ||
-                                                    "No description provided."}
+                                                <p
+                                                  className={cn(
+                                                    "block w-full truncate text-xs",
+                                                    isDisabledStrategy &&
+                                                      isPaidStrategy
+                                                      ? "font-medium text-primary"
+                                                      : "text-muted-foreground",
+                                                  )}
+                                                >
+                                                  {isDisabledStrategy &&
+                                                  isPaidStrategy
+                                                    ? "Upgrade to a paid plan to use this strategy."
+                                                    : item.description?.trim() ||
+                                                      "No description provided."}
                                                 </p>
                                                 <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
                                                   <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
@@ -2207,14 +2336,14 @@ export default function BacktestPage() {
                                                     </span>
                                                   </span>
                                                   <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
-                                                    {item.isPublic ? (
-                                                      <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+                                                    {isPaidStrategy ? (
+                                                      <BadgeDollarSign className="h-3.5 w-3.5 text-primary" />
                                                     ) : (
-                                                      <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                                                      <HandCoins className="h-3.5 w-3.5 text-muted-foreground" />
                                                     )}
-                                                    {item.isPublic
-                                                      ? "Public"
-                                                      : "Private"}
+                                                    {isPaidStrategy
+                                                      ? "Paid"
+                                                      : "Free"}
                                                   </span>
                                                   <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
                                                     <Eye className="h-3.5 w-3.5" />
@@ -2227,101 +2356,105 @@ export default function BacktestPage() {
                                                   </span>
                                                 </div>
                                               </div>
-                                              <ButtonGroup
-                                                aria-label={`Bookmark actions for ${item.name || "strategy"}`}
-                                                className="min-w-0 shrink-0"
-                                              >
-                                                <Button
-                                                  type="button"
-                                                  size="icon-sm"
-                                                  variant="ghost"
-                                                  className={cn(
-                                                    "rounded-r-none border-transparent shadow-none",
-                                                    item.isBookmarked
-                                                      ? "text-primary"
-                                                      : "text-muted-foreground",
-                                                  )}
-                                                  disabled={updatingStrategyIds.has(
-                                                    item._id,
-                                                  )}
-                                                  onClick={(event) => {
-                                                    event.preventDefault();
-                                                    event.stopPropagation();
-                                                    void onToggleStrategyBookmark(
-                                                      item._id,
-                                                    );
-                                                  }}
+                                              <div className="flex shrink-0 items-center">
+                                                <ButtonGroup
+                                                  aria-label={`Bookmark actions for ${item.name || "strategy"}`}
+                                                  className="min-w-0 shrink-0"
                                                 >
-                                                  {updatingStrategyIds.has(
-                                                    item._id,
-                                                  ) ? (
-                                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                                  ) : item.isBookmarked ? (
-                                                    <BookmarkCheck className="h-4 w-4" />
-                                                  ) : (
-                                                    <Bookmark className="h-4 w-4" />
-                                                  )}
-                                                </Button>
-                                                <DropdownMenu>
-                                                  <DropdownMenuTrigger asChild>
-                                                    <Button
-                                                      type="button"
-                                                      size="icon-sm"
-                                                      variant="ghost"
-                                                      className="-ml-px rounded-l-none border-transparent text-muted-foreground shadow-none"
-                                                      aria-label={`More actions for ${item.name || "strategy"}`}
-                                                      onClick={(event) => {
-                                                        event.preventDefault();
-                                                        event.stopPropagation();
-                                                      }}
-                                                    >
-                                                      <MoreHorizontal className="h-4 w-4" />
-                                                    </Button>
-                                                  </DropdownMenuTrigger>
-                                                  <DropdownMenuContent
-                                                    align="end"
-                                                    collisionPadding={16}
-                                                    className="w-44"
-                                                    onClick={(event) =>
-                                                      event.stopPropagation()
-                                                    }
+                                                  <Button
+                                                    type="button"
+                                                    size="icon-sm"
+                                                    variant="ghost"
+                                                    className={cn(
+                                                      "rounded-r-none border-transparent shadow-none",
+                                                      item.isBookmarked
+                                                        ? "text-primary"
+                                                        : "text-muted-foreground",
+                                                    )}
+                                                    disabled={updatingStrategyIds.has(
+                                                      item._id,
+                                                    )}
+                                                    onClick={(event) => {
+                                                      event.preventDefault();
+                                                      event.stopPropagation();
+                                                      void onToggleStrategyBookmark(
+                                                        item._id,
+                                                      );
+                                                    }}
                                                   >
-                                                    <DropdownMenuItem
-                                                      onClick={() =>
-                                                        void onCopyStrategyLink(
-                                                          item._id,
-                                                        )
+                                                    {updatingStrategyIds.has(
+                                                      item._id,
+                                                    ) ? (
+                                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                                    ) : item.isBookmarked ? (
+                                                      <BookmarkCheck className="h-4 w-4" />
+                                                    ) : (
+                                                      <Bookmark className="h-4 w-4" />
+                                                    )}
+                                                  </Button>
+                                                  <DropdownMenu>
+                                                    <DropdownMenuTrigger
+                                                      asChild
+                                                    >
+                                                      <Button
+                                                        type="button"
+                                                        size="icon-sm"
+                                                        variant="ghost"
+                                                        className="-ml-px rounded-l-none border-transparent text-muted-foreground shadow-none"
+                                                        aria-label={`More actions for ${item.name || "strategy"}`}
+                                                        onClick={(event) => {
+                                                          event.preventDefault();
+                                                          event.stopPropagation();
+                                                        }}
+                                                      >
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                      </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent
+                                                      align="end"
+                                                      collisionPadding={16}
+                                                      className="w-44"
+                                                      onClick={(event) =>
+                                                        event.stopPropagation()
                                                       }
                                                     >
-                                                      <Copy className="h-4 w-4" />
-                                                      Copy link
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem
-                                                      disabled={updatingStrategyIds.has(
-                                                        item._id,
-                                                      )}
-                                                      onClick={() => {
-                                                        void onToggleStrategyBookmark(
+                                                      <DropdownMenuItem
+                                                        onClick={() =>
+                                                          void onCopyStrategyLink(
+                                                            item._id,
+                                                          )
+                                                        }
+                                                      >
+                                                        <Copy className="h-4 w-4" />
+                                                        Copy link
+                                                      </DropdownMenuItem>
+                                                      <DropdownMenuSeparator />
+                                                      <DropdownMenuItem
+                                                        disabled={updatingStrategyIds.has(
                                                           item._id,
-                                                        );
-                                                      }}
-                                                    >
-                                                      {item.isBookmarked ? (
-                                                        <>
-                                                          <BookmarkCheck className="h-4 w-4" />
-                                                          Bookmarked
-                                                        </>
-                                                      ) : (
-                                                        <>
-                                                          <Bookmark className="h-4 w-4" />
-                                                          Bookmark
-                                                        </>
-                                                      )}
-                                                    </DropdownMenuItem>
-                                                  </DropdownMenuContent>
-                                                </DropdownMenu>
-                                              </ButtonGroup>
+                                                        )}
+                                                        onClick={() => {
+                                                          void onToggleStrategyBookmark(
+                                                            item._id,
+                                                          );
+                                                        }}
+                                                      >
+                                                        {item.isBookmarked ? (
+                                                          <>
+                                                            <BookmarkCheck className="h-4 w-4" />
+                                                            Bookmarked
+                                                          </>
+                                                        ) : (
+                                                          <>
+                                                            <Bookmark className="h-4 w-4" />
+                                                            Bookmark
+                                                          </>
+                                                        )}
+                                                      </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                  </DropdownMenu>
+                                                </ButtonGroup>
+                                              </div>
                                             </CommandItem>
                                           );
                                         })}
@@ -2367,9 +2500,9 @@ export default function BacktestPage() {
                         </p>
                       </div>
                       {!currentPlanPolicy.canEditCapitalPlan ? (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/80 px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-2.5 py-1 text-[11px] font-medium text-sky-500">
                           <Lock className="h-3.5 w-3.5" />
-                          Locked on Free
+                          Plus
                         </span>
                       ) : null}
                     </div>
@@ -2475,8 +2608,8 @@ export default function BacktestPage() {
                       </div>
 
                       <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0">
-                        <div className="flex flex-wrap items-end justify-between gap-3 border-t border-border/60 pt-3">
-                          <div className="space-y-1">
+                        <div className="flex flex-wrap items-start justify-between gap-3 border-t border-border/60 pt-3">
+                          <div className="min-w-0 flex-1 space-y-1">
                             <div className="flex items-center gap-2">
                               <label className={capitalPlanLabelClass}>
                                 Position mode
@@ -2517,67 +2650,35 @@ export default function BacktestPage() {
                                 </PopoverContent>
                               </Popover>
                             </div>
-                          </div>
-                          <ToggleGroup
-                            type="single"
-                            value={hedgeMode ? "hedge" : "one-way"}
-                            disabled={isRunning}
-                            onValueChange={(value) => {
-                              if (value === "one-way") {
-                                setHedgeMode(false);
-                              } else if (value === "hedge") {
-                                setHedgeMode(true);
-                              }
-                            }}
-                            className={cn(
-                              "inline-flex gap-0 overflow-hidden rounded-md border border-border/70 bg-background",
-                              (isRunning || isLoadingBacktest) &&
-                                "bg-input/50 dark:bg-input/80",
-                            )}
-                          >
-                            <ToggleGroupItem
-                              value="one-way"
-                              variant="outline"
-                              size="sm"
-                              aria-label="One-way mode"
-                              className={cn(
-                                "h-6 rounded-none border-0 border-r border-border/70 bg-transparent px-1.5 text-[10px] data-[state=on]:bg-primary data-[state=on]:text-primary-foreground",
-                                disabledFieldSurfaceClass,
-                              )}
-                            >
-                              <span className="inline-flex items-center gap-1.5">
-                                <ArrowRight className="h-2.5 w-2.5" />
-                                <span>One-way</span>
-                              </span>
-                            </ToggleGroupItem>
-
-                            <ToggleGroupItem
-                              value="hedge"
-                              variant="outline"
-                              size="sm"
-                              aria-label="Hedge mode"
-                              disabled={!currentPlanPolicy.canUseHedgeMode}
-                              className={cn(
-                                "h-6 rounded-none border-0 bg-transparent px-1.5 text-[10px] data-[state=on]:bg-primary data-[state=on]:text-primary-foreground disabled:bg-muted/40 disabled:text-muted-foreground disabled:opacity-100",
-                                disabledFieldSurfaceClass,
-                              )}
-                            >
-                              <span className="inline-flex items-center gap-1.5">
-                                {!currentPlanPolicy.canUseHedgeMode ? (
-                                  <Lock className="h-2.5 w-2.5" />
-                                ) : (
-                                  <ArrowLeftRight className="h-2.5 w-2.5" />
-                                )}
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="inline-flex items-center gap-1.5 text-sm font-medium">
+                                <ArrowLeftRight className="h-3.5 w-3.5" />
                                 <span>Hedge</span>
-                              </span>
-                            </ToggleGroupItem>
-                          </ToggleGroup>
+                              </p>
+                              {!currentPlanPolicy.canUseHedgeMode ? (
+                                <span className="inline-flex items-center gap-1 text-xs font-medium text-sky-500">
+                                  <Lock className="h-3 w-3" />
+                                  <span>Plus</span>
+                                </span>
+                              ) : null}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              {hedgeMode
+                                ? "Allow long and short positions at the same time."
+                                : "Keep a single net position per market."}
+                            </p>
+                          </div>
+                          <Switch
+                            checked={hedgeMode}
+                            disabled={
+                              isRunning ||
+                              isLoadingBacktest ||
+                              !currentPlanPolicy.canUseHedgeMode
+                            }
+                            onCheckedChange={setHedgeMode}
+                            className="mt-6 shrink-0"
+                          />
                         </div>
-                        <p className="text-xs text-muted-foreground">
-                          {currentPlanPolicy.canUseHedgeMode
-                            ? "Hedge mode is available on your plan."
-                            : "Hedge mode unlocks on Plus and Pro."}
-                        </p>
                       </CollapsibleContent>
                     </Collapsible>
                   </CardContent>

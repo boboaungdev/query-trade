@@ -2,6 +2,15 @@ import api from "./axios"
 
 const strategyRequestMap = new Map<string, Promise<unknown>>()
 
+export type StrategyAccessType = "free" | "paid"
+
+export type StrategyAccessState = {
+  visibility: "public" | "private"
+  accessType: StrategyAccessType
+  canUse: boolean
+  requiresUpgrade: boolean
+}
+
 export type StrategyCondition =
   | {
       logic: "and" | "or"
@@ -34,6 +43,7 @@ export type CreateStrategyPayload = {
   name: string
   description: string
   isPublic: boolean
+  accessType: StrategyAccessType
   indicators: Array<{
     indicator: string
     key: string
@@ -46,7 +56,7 @@ export type CreateStrategyPayload = {
   }
 }
 
-export type StrategySource = "all" | "mine" | "bookmarked"
+export type StrategyCategory = "all" | "mine" | "bookmarked" | "paid"
 
 function getFetchStrategiesKey({
   page,
@@ -54,7 +64,7 @@ function getFetchStrategiesKey({
   search,
   sortBy,
   order,
-  source,
+  category,
   isPublic,
 }: {
   page: number
@@ -62,7 +72,7 @@ function getFetchStrategiesKey({
   search: string
   sortBy: string
   order: string
-  source: StrategySource
+  category: StrategyCategory
   isPublic?: boolean
 }) {
   return JSON.stringify({
@@ -71,7 +81,7 @@ function getFetchStrategiesKey({
     search,
     sortBy,
     order,
-    source,
+    category,
     isPublic: isPublic ?? null,
   })
 }
@@ -82,7 +92,7 @@ export async function fetchStrategies({
   search,
   sortBy,
   order,
-  source,
+  category,
   isPublic,
 }: {
   page: number
@@ -90,7 +100,7 @@ export async function fetchStrategies({
   search: string
   sortBy: string
   order: string
-  source: StrategySource
+  category: StrategyCategory
   isPublic?: boolean
 }) {
   const key = getFetchStrategiesKey({
@@ -99,7 +109,7 @@ export async function fetchStrategies({
     search,
     sortBy,
     order,
-    source,
+    category,
     isPublic,
   })
 
@@ -116,7 +126,7 @@ export async function fetchStrategies({
         search,
         sortBy,
         order,
-        source,
+        category,
         isPublic,
       },
     })

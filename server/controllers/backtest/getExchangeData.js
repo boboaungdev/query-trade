@@ -24,8 +24,6 @@ export const getExchangeData = async (req, res, next) => {
       data,
     });
   } catch {
-    next(
-      resError(500, "Unable to load exchange data. Please try again later."),
-    );
+    next(resError(500, "Unable to load market data. Please try again later."));
   }
 };

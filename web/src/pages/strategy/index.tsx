@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useEffectEvent,
   useMemo,
@@ -19,13 +20,13 @@ import {
   CopyPlus,
   Compass,
   Eye,
-  Globe,
   Pencil,
   SquareArrowOutUpRight,
   Loader2,
   Lock,
   ListFilter,
   Plus,
+  BadgeDollarSign,
   Search,
   Settings2,
   Trash2,
@@ -33,6 +34,7 @@ import {
   TrendingDown,
   TrendingUp,
   UserRound,
+  HandCoins,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -44,9 +46,11 @@ import {
   fetchStrategies,
   updateStrategy,
   type CreateStrategyPayload,
+  type StrategyAccessState,
+  type StrategyAccessType,
+  type StrategyCategory,
   type StrategyCondition,
   type StrategyLogicBlock,
-  type StrategySource,
 } from "@/api/strategy";
 import { getApiErrorMessage } from "@/api/axios";
 import { fetchIndicators } from "@/api/indicator";
@@ -131,6 +135,8 @@ type StrategyItem = {
   description?: string;
   isBookmarked?: boolean;
   isPublic?: boolean;
+  accessType?: StrategyAccessType;
+  access?: StrategyAccessState;
   stats?: {
     viewCount?: number;
     bookmarkCount?: number;
@@ -165,6 +171,19 @@ function mergeStrategyPages(prev: StrategyItem[], nextItems: StrategyItem[]) {
   );
 }
 
+function getStrategyPlanTier(membership?: UserMembership) {
+  const rawPlan =
+    membership?.plan ?? membership?.verifiedVariant ?? membership?.badgeVariant;
+  const normalizedPlan = String(rawPlan ?? "free")
+    .trim()
+    .toLowerCase();
+
+  if (normalizedPlan === "pro") return "pro";
+  if (normalizedPlan === "plus") return "plus";
+
+  return "free";
+}
+
 export default function StrategyPage() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -184,7 +203,7 @@ export default function StrategyPage() {
   const [updatingStrategyIds, setUpdatingStrategyIds] = useState<Set<string>>(
     new Set(),
   );
-  const [source, setSource] = useState<StrategySource>("all");
+  const [category, setCategory] = useState<StrategyCategory>("all");
   const [sortBy, setSortBy] = useState<StrategySortBy>("name");
   const [order, setOrder] = useState<"asc" | "desc">("asc");
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
@@ -265,8 +284,8 @@ export default function StrategyPage() {
           search: debouncedSearch,
           sortBy,
           order,
-          source,
-          isPublic: source === "all" ? true : undefined,
+          category,
+          isPublic: category === "all" ? true : undefined,
         })) as StrategyListResponse;
 
         const result = response?.result;
@@ -293,7 +312,7 @@ export default function StrategyPage() {
     };
 
     void loadStrategies();
-  }, [page, debouncedSearch, sortBy, order, source, reloadKey]);
+  }, [page, debouncedSearch, sortBy, order, category, reloadKey]);
 
   useEffect(() => {
     const node = loadMoreRef.current;
@@ -491,6 +510,8 @@ export default function StrategyPage() {
       name: strategy.name,
       description: strategy.description,
       isPublic: strategy.isPublic,
+      accessType: strategy.access?.accessType ?? strategy.accessType ?? "free",
+      access: strategy.access,
       stats: strategy.stats,
       user: strategy.user
         ? {
@@ -625,9 +646,7 @@ export default function StrategyPage() {
               <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/8 px-2.5 py-1 text-[11px] font-medium tracking-[0.16em] text-primary uppercase">
                 Strategy Hub
               </span>
-              <CardTitle>
-                Strategy Library
-              </CardTitle>
+              <CardTitle>Strategy Library</CardTitle>
               <CardDescription className="flex flex-wrap items-center gap-2 text-sm leading-6">
                 Discover strategies by name or creator.
                 <span className="hidden items-center gap-1 rounded-full border bg-muted/30 px-2 py-0.5 text-[11px] font-medium text-foreground md:inline-flex">
@@ -645,9 +664,9 @@ export default function StrategyPage() {
           <div className="grid gap-3">
             <div className="space-y-3">
               <Tabs
-                value={source}
+                value={category === "mine" ? "mine" : "all"}
                 onValueChange={(value) => {
-                  setSource(value as StrategySource);
+                  setCategory(value as StrategyCategory);
                   setPage(1);
                 }}
               >
@@ -705,6 +724,23 @@ export default function StrategyPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-52">
+                            <DropdownMenuLabel>Category</DropdownMenuLabel>
+                            <DropdownMenuRadioGroup
+                              value={category === "paid" ? "paid" : "all"}
+                              onValueChange={(value) => {
+                                setCategory(value as "all" | "paid");
+                                setPage(1);
+                              }}
+                            >
+                              <DropdownMenuRadioItem value="all">
+                                All
+                              </DropdownMenuRadioItem>
+                              <DropdownMenuRadioItem value="paid">
+                                Paid
+                              </DropdownMenuRadioItem>
+                            </DropdownMenuRadioGroup>
+
+                            <DropdownMenuSeparator />
                             <DropdownMenuLabel>Sort by</DropdownMenuLabel>
                             <DropdownMenuRadioGroup
                               value={sortBy}
@@ -796,7 +832,7 @@ export default function StrategyPage() {
           <div className="flex items-center justify-center py-6 text-center text-sm text-muted-foreground">
             {search.trim()
               ? "No strategies matched your search."
-              : source === "mine"
+              : category === "mine"
                 ? "No strategies yet. Create your first one to start building your library."
                 : "No strategies found."}
           </div>
@@ -806,6 +842,9 @@ export default function StrategyPage() {
               const isMine = Boolean(user?._id) && item.user?._id === user?._id;
               const isBookmarked = Boolean(item.isBookmarked);
               const description = item.description?.trim() || "No description";
+              const accessType = item.access?.accessType ?? item.accessType;
+              const isLockedPublicPaidFromOtherUser =
+                !isMine && item.isPublic !== false && accessType === "paid";
 
               return (
                 <Card
@@ -838,7 +877,9 @@ export default function StrategyPage() {
                         <div className="flex min-w-0 items-center gap-2">
                           <Avatar
                             size="sm"
-                            className={getUserAvatarRingClass(item.user?.membership)}
+                            className={getUserAvatarRingClass(
+                              item.user?.membership,
+                            )}
                           >
                             <AvatarImage
                               src={item.user?.avatar}
@@ -869,16 +910,16 @@ export default function StrategyPage() {
                             </span>
                           </span>
                           <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
-                            {item.isPublic ? (
-                              <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+                            {(item.access?.accessType ?? item.accessType) ===
+                            "paid" ? (
+                              <BadgeDollarSign className="h-3.5 w-3.5 text-primary" />
                             ) : (
-                              <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                              <HandCoins className="h-3.5 w-3.5 text-muted-foreground" />
                             )}
-                            {isMine
-                              ? "Mine"
-                              : item.isPublic
-                                ? "Public"
-                                : "Private"}
+                            {(item.access?.accessType ?? item.accessType) ===
+                            "paid"
+                              ? "Paid"
+                              : "Free"}
                           </span>
                           <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
                             <Eye className="h-3.5 w-3.5 text-muted-foreground" />
@@ -952,7 +993,10 @@ export default function StrategyPage() {
                                 Copy link
                               </DropdownMenuItem>
                               <DropdownMenuItem
+                                disabled={isLockedPublicPaidFromOtherUser}
                                 onSelect={() => {
+                                  if (isLockedPublicPaidFromOtherUser) return;
+
                                   navigate("/backtest", {
                                     state: getBacktestStrategyState(item),
                                   });
@@ -960,6 +1004,9 @@ export default function StrategyPage() {
                               >
                                 <CandlestickChart className="h-4 w-4" />
                                 Backtest
+                                {isLockedPublicPaidFromOtherUser ? (
+                                  <Lock className="ml-auto h-3.5 w-3.5" />
+                                ) : null}
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onSelect={() => {
@@ -999,12 +1046,20 @@ export default function StrategyPage() {
                                 <>
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem
+                                    disabled={isLockedPublicPaidFromOtherUser}
                                     onSelect={() => {
+                                      if (isLockedPublicPaidFromOtherUser) {
+                                        return;
+                                      }
+
                                       onCloneStrategy(item);
                                     }}
                                   >
                                     <CopyPlus className="h-4 w-4" />
                                     Clone
+                                    {isLockedPublicPaidFromOtherUser ? (
+                                      <Lock className="ml-auto h-3.5 w-3.5" />
+                                    ) : null}
                                   </DropdownMenuItem>
                                 </>
                               )}
@@ -1327,6 +1382,8 @@ type StrategyDetailItem = {
   name?: string;
   description?: string;
   isPublic?: boolean;
+  accessType?: StrategyAccessType;
+  access?: StrategyAccessState;
   indicators?: Array<{
     key?: string;
     source?: OperandField;
@@ -3504,6 +3561,7 @@ export function StrategyBuilder({
   onEmbeddedControlsChange,
 }: StrategyBuilderProps = {}) {
   const navigate = useNavigate();
+  const user = useAuthStore((state) => state.user);
   const { strategyId: routeStrategyId = "" } = useParams();
   const strategyId = strategyIdProp || routeStrategyId;
   const isEditing = Boolean(strategyId);
@@ -3512,6 +3570,7 @@ export function StrategyBuilder({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [isPublic, setIsPublic] = useState(true);
+  const [accessType, setAccessType] = useState<StrategyAccessType>("free");
   const [indicatorSearch, setIndicatorSearch] = useState("");
   const [debouncedIndicatorSearch, setDebouncedIndicatorSearch] = useState("");
   const [indicatorCategory, setIndicatorCategory] = useState<
@@ -3542,6 +3601,21 @@ export function StrategyBuilder({
   const previousDebouncedIndicatorSearchRef = useRef(
     debouncedIndicatorSearch.trim(),
   );
+  const canManagePaidAccess = getStrategyPlanTier(user?.membership) !== "free";
+
+  const handleVisibilityChange = (nextIsPublic: boolean) => {
+    setIsPublic(nextIsPublic);
+
+    if (!nextIsPublic) {
+      setAccessType("free");
+    }
+  };
+
+  useEffect(() => {
+    if (!canManagePaidAccess && accessType === "paid") {
+      setAccessType("free");
+    }
+  }, [accessType, canManagePaidAccess]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -3657,6 +3731,11 @@ export function StrategyBuilder({
         );
         setDescription(strategy.description ?? "");
         setIsPublic(strategy.isPublic ?? true);
+        setAccessType(
+          strategy.isPublic === false
+            ? "free"
+            : (strategy.accessType ?? strategy.access?.accessType ?? "free"),
+        );
 
         const nextDrafts =
           strategy.indicators?.reduce<IndicatorDraft[]>((drafts, item) => {
@@ -3689,6 +3768,12 @@ export function StrategyBuilder({
                 name: strategy.name?.trim() ?? "",
                 description: strategy.description?.trim() ?? "",
                 isPublic: strategy.isPublic ?? true,
+                accessType:
+                  strategy.isPublic === false
+                    ? "free"
+                    : (strategy.accessType ??
+                      strategy.access?.accessType ??
+                      "free"),
                 indicators: nextDrafts.map((draft) => ({
                   indicator: draft.indicator,
                   key: draft.key.trim(),
@@ -3838,7 +3923,7 @@ export function StrategyBuilder({
     setIndicatorPage(1);
   };
 
-  const serializeParams = (params: ParamDraft[]) => {
+  const serializeParams = useCallback((params: ParamDraft[]) => {
     const output: Record<string, unknown> = {};
 
     for (const param of params) {
@@ -3864,42 +3949,55 @@ export function StrategyBuilder({
     }
 
     return output;
-  };
+  }, []);
 
-  const buildStrategyPayload = (): CreateStrategyPayload => ({
-    name: name.trim(),
-    description: description.trim(),
-    isPublic,
-    indicators: indicatorDrafts.map((draft) => {
-      if (!draft.indicator) {
-        throw new Error("Please select an indicator for every row");
-      }
+  const buildStrategyPayload = useCallback(
+    (): CreateStrategyPayload => ({
+      name: name.trim(),
+      description: description.trim(),
+      isPublic,
+      accessType: isPublic ? accessType : "free",
+      indicators: indicatorDrafts.map((draft) => {
+        if (!draft.indicator) {
+          throw new Error("Please select an indicator for every row");
+        }
 
-      if (!draft.key.trim()) {
-        throw new Error("Every indicator needs a key");
-      }
+        if (!draft.key.trim()) {
+          throw new Error("Every indicator needs a key");
+        }
 
-      return {
-        indicator: draft.indicator,
-        key: draft.key.trim(),
-        source: draft.source,
-        params: serializeParams(draft.params),
-      };
+        return {
+          indicator: draft.indicator,
+          key: draft.key.trim(),
+          source: draft.source,
+          params: serializeParams(draft.params),
+        };
+      }),
+      entry: (() => {
+        const hasBuyRules = buyDraft.conditions.length > 0;
+        const hasSellRules = sellDraft.conditions.length > 0;
+
+        if (!hasBuyRules && !hasSellRules) {
+          throw new Error("Add at least one Buy and Sell rule");
+        }
+
+        return {
+          buy: serializeLogicBlock(buyDraft, "Buy"),
+          sell: serializeLogicBlock(sellDraft, "Sell"),
+        };
+      })(),
     }),
-    entry: (() => {
-      const hasBuyRules = buyDraft.conditions.length > 0;
-      const hasSellRules = sellDraft.conditions.length > 0;
-
-      if (!hasBuyRules && !hasSellRules) {
-        throw new Error("Add at least one Buy and Sell rule");
-      }
-
-      return {
-        buy: serializeLogicBlock(buyDraft, "Buy"),
-        sell: serializeLogicBlock(sellDraft, "Sell"),
-      };
-    })(),
-  });
+    [
+      name,
+      description,
+      isPublic,
+      accessType,
+      indicatorDrafts,
+      buyDraft,
+      sellDraft,
+      serializeParams,
+    ],
+  );
 
   const formValidationError = useMemo(() => {
     const nameError = getStrategyNameError(name);
@@ -3930,7 +4028,13 @@ export function StrategyBuilder({
         ? error.message
         : "Strategy is not valid yet";
     }
-  }, [name, description, isPublic, indicatorDrafts, buyDraft, sellDraft]);
+  }, [
+    name,
+    description,
+    indicatorDrafts,
+    serializeParams,
+    buildStrategyPayload,
+  ]);
 
   const hasChanges = useMemo(() => {
     if (!isEditing || isLoadingStrategy || formValidationError) {
@@ -3947,12 +4051,7 @@ export function StrategyBuilder({
     isLoadingStrategy,
     formValidationError,
     initialPayloadSnapshot,
-    name,
-    description,
-    isPublic,
-    indicatorDrafts,
-    buyDraft,
-    sellDraft,
+    buildStrategyPayload,
   ]);
 
   const handleSubmit = async () => {
@@ -4155,21 +4254,17 @@ export function StrategyBuilder({
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label className="text-muted-foreground">Visibility</Label>
+              <div className="space-y-3">
+                <Label className="text-muted-foreground">
+                  Visibility & Access
+                </Label>
                 <div className="flex items-start justify-between gap-4 py-1">
                   <div className="flex min-w-0 items-start gap-2.5">
                     <div className="pt-0.5">
-                      {isPublic ? (
-                        <Globe className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <Lock className="h-4 w-4 text-muted-foreground" />
-                      )}
+                      <Lock className="h-4 w-4 text-muted-foreground" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-medium">
-                        {isPublic ? "Public" : "Private"}
-                      </p>
+                      <p className="text-sm font-medium">Private</p>
                       <p className="text-xs text-muted-foreground">
                         {isPublic
                           ? "Anyone can discover this strategy."
@@ -4177,8 +4272,59 @@ export function StrategyBuilder({
                       </p>
                     </div>
                   </div>
-                  <Switch checked={isPublic} onCheckedChange={setIsPublic} />
+                  <Switch
+                    checked={!isPublic}
+                    onCheckedChange={(checked) => {
+                      handleVisibilityChange(!checked);
+                    }}
+                  />
                 </div>
+
+                {isPublic ? (
+                  <>
+                    <div className="h-px bg-border/70" />
+
+                    <div className="flex items-start justify-between gap-4 py-1">
+                      <div className="flex min-w-0 items-start gap-2.5">
+                        <div className="pt-0.5">
+                          <BadgeDollarSign className="h-4 w-4 text-primary" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-sm font-medium">Paid</p>
+                            {!canManagePaidAccess ? (
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-primary">
+                                <Lock className="h-3.5 w-3.5" />
+                                Unlock on paid plan
+                              </span>
+                            ) : null}
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {accessType === "paid"
+                              ? "Limit this strategy to users on paid plans."
+                              : "Allow every user to access this strategy."}
+                          </p>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={accessType === "paid"}
+                        disabled={!canManagePaidAccess}
+                        onCheckedChange={(checked) => {
+                          setAccessType(checked ? "paid" : "free");
+                        }}
+                      />
+                    </div>
+                  </>
+                ) : null}
+                {isPublic ? (
+                  <p className="text-xs text-muted-foreground">
+                    {!canManagePaidAccess
+                      ? "Paid strategy access unlocks on paid plans."
+                      : accessType === "paid"
+                        ? "Public paid strategies are available to users on paid plans."
+                        : "Public free strategies are available to everyone."}
+                  </p>
+                ) : null}
               </div>
             </div>
 

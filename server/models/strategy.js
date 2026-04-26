@@ -123,6 +123,13 @@ const strategySchema = new Schema(
       index: true,
     },
 
+    accessType: {
+      type: String,
+      enum: ["free", "paid"],
+      default: "free",
+      index: true,
+    },
+
     user: {
       type: Schema.Types.ObjectId,
       ref: "user",
@@ -148,5 +155,6 @@ const strategySchema = new Schema(
 );
 
 strategySchema.index({ user: 1, isPublic: 1, createdAt: -1 });
+strategySchema.index({ isPublic: 1, accessType: 1, createdAt: -1 });
 
 export const StrategyDB = mongoose.model("strategy", strategySchema);

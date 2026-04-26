@@ -5,8 +5,11 @@ import { FollowDB } from "../../models/follow.js";
 import { SubscriptionModel } from "../../models/subscription.js";
 import {
   buildAccessibleStrategyFilter,
+  getStrategyAccessState,
+  getViewerPlan,
   ensureStrategyAccessible,
 } from "../../services/strategy/access.js";
+import { getEffectiveSubscription } from "../subscription/helpers.js";
 import { serializePublicUser } from "../../services/user/serializePublicUser.js";
 import { resError, resJson } from "../../utils/response.js";
 
@@ -14,6 +17,10 @@ export const getStrategyById = async (req, res, next) => {
   try {
     const user = req.user;
     const { strategyId } = req.params;
+    const viewerSubscription = user?._id
+      ? await getEffectiveSubscription(user._id)
+      : null;
+    const viewerPlan = getViewerPlan(viewerSubscription);
 
     const strategy = await StrategyDB.findById(strategyId)
       .populate([
@@ -30,7 +37,7 @@ export const getStrategyById = async (req, res, next) => {
       throw resError(404, "Strategy not found!");
     }
 
-    ensureStrategyAccessible(strategy, user?._id);
+    ensureStrategyAccessible(strategy, user?._id, viewerPlan);
 
     await StrategyDB.updateOne(
       { _id: strategyId },
@@ -81,6 +88,8 @@ export const getStrategyById = async (req, res, next) => {
       });
     }
 
+    strategy.access = getStrategyAccessState(strategy, user?._id, viewerPlan);
+
     return resJson(res, 200, "Success single strategy fetched by ID.", {
       strategy,
     });
@@ -92,15 +101,19 @@ export const getStrategyById = async (req, res, next) => {
 export const getStrategies = async (req, res, next) => {
   try {
     const user = req.user;
-    const { page, limit, search, sortBy, order, source, isPublic } =
+    const { page, limit, search, sortBy, order, category, isPublic } =
       req.validatedQuery;
+    const viewerSubscription = user?._id
+      ? await getEffectiveSubscription(user._id)
+      : null;
+    const viewerPlan = getViewerPlan(viewerSubscription);
 
     const skip = (page - 1) * limit;
 
     const andConditions = [];
     const accessibleStrategyFilter = buildAccessibleStrategyFilter(user?._id);
 
-    if (source === "bookmarked" && user?._id) {
+    if (category === "bookmarked" && user?._id) {
       const bookmarkedStrategyIds = await BookmarkDB.find({
         user: user._id,
         targetType: "strategy",
@@ -116,9 +129,14 @@ export const getStrategies = async (req, res, next) => {
       andConditions.push(accessibleStrategyFilter);
     }
 
-    if (source === "mine" && user?._id) {
+    if (category === "paid") {
+      andConditions.push({ accessType: "paid" });
+      andConditions.push(accessibleStrategyFilter);
+    }
+
+    if (category === "mine" && user?._id) {
       andConditions.push({ user: user._id });
-    } else if (isPublic === true && source === "all") {
+    } else if (isPublic === true && category === "all") {
       if (user?._id) {
         andConditions.push({ $or: [{ isPublic: true }, { user: user._id }] });
       } else {
@@ -126,7 +144,7 @@ export const getStrategies = async (req, res, next) => {
       }
     } else if (typeof isPublic === "boolean") {
       andConditions.push({ isPublic });
-    } else if (source !== "mine") {
+    } else if (!["mine", "bookmarked", "paid"].includes(category)) {
       andConditions.push(accessibleStrategyFilter);
     }
 
@@ -228,6 +246,7 @@ export const getStrategies = async (req, res, next) => {
 
     const strategiesWithBookmarkState = strategies.map((strategy) => ({
       ...strategy,
+      access: getStrategyAccessState(strategy, user?._id, viewerPlan),
       user: strategy.user
         ? serializePublicUser(strategy.user, {
             subscription: subscriptionMap.get(String(strategy.user._id)),

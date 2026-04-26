@@ -154,7 +154,12 @@ export const getUserStrategies = async (req, res, next) => {
     const { page, limit, search, sortBy, order } = req.validatedQuery;
     const profileUser = await getProfileUserByUsername(username);
     const { skip } = getPagination({ page, limit });
-    const andConditions = [{ user: profileUser._id }, { isPublic: true }];
+    const isOwner = req.user?._id?.toString?.() === profileUser._id.toString();
+    const andConditions = [{ user: profileUser._id }];
+
+    if (!isOwner) {
+      andConditions.push({ isPublic: true });
+    }
 
     if (search) {
       andConditions.push({

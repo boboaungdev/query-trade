@@ -1,10 +1,15 @@
 import { BacktestDB } from "../../models/backtest.js";
 import { StrategyDB } from "../../models/strategy.js";
 import { UserDB } from "../../models/user.js";
-import { ensureStrategyAccessible } from "../../services/strategy/access.js";
+import {
+  ensureStrategyAccessible,
+  getViewerPlan,
+} from "../../services/strategy/access.js";
+import { getEffectiveSubscription } from "../subscription/helpers.js";
 import { resError, resJson } from "../../utils/response.js";
 import { fetchOHLCV } from "../../services/backtest/fetchOHLCV.js";
 import { simulateBacktest } from "../../services/backtest/simulateBacktest.js";
+import { assertBacktestTimeframeAllowed } from "../../services/backtest/planPolicy.js";
 import {
   calculateIndicators,
   calculateRiskIndicators,
@@ -27,6 +32,8 @@ function getInclusiveDateWindowDuration(startDate, endDate) {
 export const createBacktest = async (req, res, next) => {
   try {
     const user = req.user;
+    const viewerSubscription = await getEffectiveSubscription(user._id);
+    const viewerPlan = getViewerPlan(viewerSubscription);
     const {
       exchange,
       symbol,
@@ -49,7 +56,8 @@ export const createBacktest = async (req, res, next) => {
       throw resError(404, "Strategy not found!");
     }
 
-    ensureStrategyAccessible(strategy, user._id);
+    ensureStrategyAccessible(strategy, user._id, viewerPlan);
+    assertBacktestTimeframeAllowed(viewerPlan, timeframe);
 
     const candles = await fetchOHLCV({
       exchange,

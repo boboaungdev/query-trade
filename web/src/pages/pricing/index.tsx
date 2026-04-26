@@ -434,7 +434,7 @@ export default function Pricing() {
                       <div className="min-w-0 flex-1 text-left">
                         <div className="flex items-center gap-2">
                           <Wallet className="size-5 text-muted-foreground" />
-                          <p className="truncate text-2xl font-semibold tracking-tight">
+                          <p className="truncate text-xl font-semibold tracking-tight">
                             {showBalance
                               ? `${formatTokenAmount(tokenBalance)} token`
                               : "**** token"}
@@ -468,6 +468,7 @@ export default function Pricing() {
                       </div>
                       <Button
                         className="shrink-0"
+                        size="sm"
                         onClick={() => setIsDepositDialogOpen(true)}
                       >
                         <ArrowDownLeft className="size-4" />

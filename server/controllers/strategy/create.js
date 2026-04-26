@@ -3,6 +3,12 @@ import { IndicatorDB } from "../../models/indicator.js";
 import { UserDB } from "../../models/user.js";
 import { resError, resJson } from "../../utils/response.js";
 import {
+  canManagePaidStrategyAccess,
+  getViewerPlan,
+  sanitizeStrategyAccessPayload,
+} from "../../services/strategy/access.js";
+import { getEffectiveSubscription } from "../subscription/helpers.js";
+import {
   pruneUnusedIndicators,
   validateIndicatorReferences,
 } from "../../utils/strategyIndicators.js";
@@ -10,9 +16,23 @@ import {
 export const createStrategy = async (req, res, next) => {
   try {
     const user = req.user;
-    const indicators = pruneUnusedIndicators(req.body);
+    const viewerSubscription = await getEffectiveSubscription(user._id);
+    const viewerPlan = getViewerPlan(viewerSubscription);
+    const normalizedPayload = sanitizeStrategyAccessPayload(req.body);
+
+    if (
+      normalizedPayload.accessType === "paid" &&
+      !canManagePaidStrategyAccess(viewerPlan)
+    ) {
+      throw resError(
+        403,
+        "Paid strategy access unlocks on an active Plus or Pro plan.",
+      );
+    }
+
+    const indicators = pruneUnusedIndicators(normalizedPayload);
     const strategyPayload = {
-      ...req.body,
+      ...normalizedPayload,
       indicators,
     };
 
