@@ -1,11 +1,7 @@
 import { BacktestDB } from "../../models/backtest.js";
 import { BookmarkDB } from "../../models/bookmark.js";
 import { StrategyDB } from "../../models/strategy.js";
-import {
-  ensureStrategyAccessible,
-  getViewerPlan,
-} from "../../services/strategy/access.js";
-import { getEffectiveSubscription } from "../subscription/helpers.js";
+import { canViewStrategy } from "../../services/strategy/access.js";
 import { resError, resJson } from "../../utils/response.js";
 
 const getTargetModel = (targetType) => {
@@ -32,7 +28,7 @@ const populateBookmarkTarget = async (bookmark) => {
   if (bookmark?.targetType === "backtest" && bookmark?.target) {
     await BacktestDB.populate(bookmark, {
       path: "target.strategy",
-      select: "name isPublic",
+      select: "name isPublic accessType",
     });
   }
 
@@ -42,21 +38,19 @@ const populateBookmarkTarget = async (bookmark) => {
 export const createBookmark = async (req, res, next) => {
   try {
     const user = req.user;
-    const viewerSubscription = await getEffectiveSubscription(user._id);
-    const viewerPlan = getViewerPlan(viewerSubscription);
     const { targetType, target } = req.body;
 
     const TargetDB = getTargetModel(targetType);
     const targetDoc = await TargetDB.findById(target)
-      .select("_id isPublic user")
+      .select("_id isPublic accessType user")
       .lean();
 
     if (!targetDoc) {
       throw resError(404, `${targetType} not found!`);
     }
 
-    if (targetType === "strategy") {
-      ensureStrategyAccessible(targetDoc, user._id, viewerPlan);
+    if (targetType === "strategy" && !canViewStrategy(targetDoc, user._id)) {
+      throw resError(404, "Strategy not found!");
     }
 
     const existingBookmark = await BookmarkDB.findOne({

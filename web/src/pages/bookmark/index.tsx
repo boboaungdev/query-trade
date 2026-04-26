@@ -1,20 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import {
+  BadgeDollarSign,
   Bookmark,
   BookmarkCheck,
   CandlestickChart,
   Copy,
   Eye,
-  Globe,
+  HandCoins,
   Loader2,
-  Lock,
   ListFilter,
   MoreHorizontal,
   Search,
   SquareArrowOutUpRight,
   Target,
   Trash2,
-  UserRound,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -72,6 +71,10 @@ type BookmarkTarget = {
   name?: string;
   description?: string;
   isPublic?: boolean;
+  accessType?: "free" | "paid";
+  access?: {
+    accessType?: "free" | "paid";
+  };
   user?:
     | string
     | {
@@ -167,7 +170,6 @@ type BookmarkCardRenderProps = {
 
 function renderBookmarkStrategyCard({
   item,
-  userId,
   removingBookmarkIds,
   onOpenBookmark,
   onCopyBookmarkLink,
@@ -176,8 +178,6 @@ function renderBookmarkStrategyCard({
   const target = item.target;
   const targetId = target?._id;
   const targetPath = targetId ? `/strategy/${targetId}` : "";
-  const targetUserId =
-    typeof target?.user === "string" ? target.user : target?.user?._id;
   const targetUserName =
     typeof target?.user === "object" ? target.user?.name?.trim() : "";
   const targetUsername =
@@ -186,7 +186,6 @@ function renderBookmarkStrategyCard({
       : "";
   const targetAvatar =
     typeof target?.user === "object" ? target.user?.avatar : "";
-  const isMine = Boolean(userId) && targetUserId === userId;
 
   return (
     <Card
@@ -340,17 +339,15 @@ function renderBookmarkStrategyCard({
         </p>
 
         <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-          <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
-            <UserRound className="h-3.5 w-3.5 text-muted-foreground" />@
-            <span className="truncate">{targetUsername || "unknown"}</span>
-          </span>
           <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
-            {target?.isPublic ? (
-              <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+            {(target?.access?.accessType ?? target?.accessType) === "paid" ? (
+              <BadgeDollarSign className="h-3.5 w-3.5 text-primary" />
             ) : (
-              <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+              <HandCoins className="h-3.5 w-3.5 text-muted-foreground" />
             )}
-            {isMine ? "Mine" : target?.isPublic ? "Public" : "Private"}
+            {(target?.access?.accessType ?? target?.accessType) === "paid"
+              ? "Paid"
+              : "Free"}
           </span>
           <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
             <Eye className="h-3.5 w-3.5 text-muted-foreground" />
@@ -879,9 +876,7 @@ export default function BookmarkPage() {
               <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/8 px-2.5 py-1 text-[11px] font-medium tracking-[0.16em] text-primary uppercase">
                 Bookmark Hub
               </span>
-              <CardTitle>
-                Bookmarks
-              </CardTitle>
+              <CardTitle>Bookmarks</CardTitle>
               <CardDescription className="flex flex-wrap items-center gap-2 text-sm leading-6">
                 Browse, filter, and manage your bookmarks.
                 <span className="hidden items-center gap-1 rounded-full border bg-muted/30 px-2 py-0.5 text-[11px] font-medium text-foreground md:inline-flex">
@@ -1024,7 +1019,6 @@ export default function BookmarkPage() {
               return item.targetType === "strategy"
                 ? renderBookmarkStrategyCard({
                     item,
-                    userId: user?._id,
                     removingBookmarkIds,
                     onOpenBookmark,
                     onCopyBookmarkLink,

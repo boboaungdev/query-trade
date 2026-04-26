@@ -43,6 +43,7 @@ import { toast } from "sonner";
 
 import { getApiErrorMessage } from "@/api/axios";
 import { createFollow, deleteFollow } from "@/api/follow";
+import { createWalletTransfer } from "@/api/wallet";
 import {
   fetchUserBacktestsByUsername,
   fetchUserFollowsByUsername,
@@ -51,6 +52,7 @@ import {
 } from "@/api/user";
 import { createBookmark, deleteBookmark } from "@/api/bookmark";
 import { useAuthStore } from "@/store/auth";
+import { useWalletStore } from "@/store/wallet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   AlertDialog,
@@ -71,6 +73,14 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -120,6 +130,28 @@ const compactNumber = new Intl.NumberFormat("en", {
   notation: "compact",
   maximumFractionDigits: 1,
 });
+
+function formatFullTokenAmount(amount: number) {
+  return amount.toLocaleString(undefined, {
+    maximumFractionDigits: 0,
+  });
+}
+
+function sanitizeTransferAmountInput(value: string) {
+  const sanitized = value.replace(/[^\d]/g, "");
+
+  if (!sanitized) {
+    return "";
+  }
+
+  const parsedValue = Number(sanitized);
+
+  if (Number.isFinite(parsedValue) && parsedValue > 1000000000) {
+    return "1000000000";
+  }
+
+  return sanitized;
+}
 
 type FormState = {
   name: string;
@@ -328,6 +360,11 @@ export default function Profile() {
   const user = useAuthStore((state) => state.user);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const updateUser = useAuthStore((state) => state.updateUser);
+  const walletTokenBalance = useWalletStore((state) => state.tokenBalance);
+  const fetchWalletSummary = useWalletStore(
+    (state) => state.fetchWalletSummary,
+  );
+  const setWalletSummary = useWalletStore((state) => state.setWalletSummary);
   const [updatingStrategyIds, setUpdatingStrategyIds] = useState<Set<string>>(
     new Set(),
   );
@@ -349,6 +386,11 @@ export default function Profile() {
   const [isFollowStatusLoading, setIsFollowStatusLoading] = useState(false);
   const [isFollowUpdating, setIsFollowUpdating] = useState(false);
   const [isUnfollowDialogOpen, setIsUnfollowDialogOpen] = useState(false);
+  const [isSendTokenDialogOpen, setIsSendTokenDialogOpen] = useState(false);
+  const [isSendTokenConfirmOpen, setIsSendTokenConfirmOpen] = useState(false);
+  const [sendTokenAmount, setSendTokenAmount] = useState("");
+  const [sendTokenNote, setSendTokenNote] = useState("");
+  const [isSendingToken, setIsSendingToken] = useState(false);
   const [pendingFollowListUnfollowUser, setPendingFollowListUnfollowUser] =
     useState<ProfileFollowListItem | null>(null);
   const [followListUpdatingIds, setFollowListUpdatingIds] = useState<
@@ -367,6 +409,7 @@ export default function Profile() {
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const profileListScrollRef = useRef<HTMLDivElement | null>(null);
   const profileListLoadMoreRef = useRef<HTMLDivElement | null>(null);
+  const publicProfileActionsRef = useRef<HTMLDivElement | null>(null);
   const editSheetBodyRef = useRef<HTMLDivElement | null>(null);
   const usernameRequestIdRef = useRef(0);
   const editSheetDragPointerIdRef = useRef<number | null>(null);
@@ -378,6 +421,9 @@ export default function Profile() {
   const isMobile = useIsMobile();
   const [editSheetDragOffset, setEditSheetDragOffset] = useState(0);
   const [isEditSheetDragging, setIsEditSheetDragging] = useState(false);
+  const [publicProfileMenuWidth, setPublicProfileMenuWidth] = useState<
+    number | null
+  >(null);
 
   const [form, setForm] = useState<FormState>({
     name: user?.name || "",
@@ -655,12 +701,60 @@ export default function Profile() {
     };
   }, [profileLists]);
 
+  useEffect(() => {
+    if (!isSendTokenDialogOpen || !isAuthenticated) return;
+
+    void fetchWalletSummary(true).catch((error) => {
+      toast.error(getApiErrorMessage(error, "Failed to load wallet."));
+    });
+  }, [fetchWalletSummary, isAuthenticated, isSendTokenDialogOpen]);
+
+  useEffect(() => {
+    const element = publicProfileActionsRef.current;
+
+    if (!element) return;
+
+    const updateWidth = () => {
+      setPublicProfileMenuWidth(element.offsetWidth || null);
+    };
+
+    updateWidth();
+
+    const observer = new ResizeObserver(() => {
+      updateWidth();
+    });
+
+    observer.observe(element);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [canEditProfile, viewedUser?._id]);
+
   const activeListState = profileLists[activeProfileTab];
   const activeListPage = activeListState.page;
   const activeListSearch = activeListState.debouncedSearch;
   const activeListSortBy = activeListState.sortBy;
   const activeListOrder = activeListState.order;
   const currentUserId = user?._id;
+  const tokenBalance = walletTokenBalance ?? Number(user?.tokenBalance ?? 0);
+  const sendTokenAmountNumber = Number(sendTokenAmount);
+  const showSendTokenAmountError =
+    sendTokenAmount.length > 0 &&
+    (!Number.isFinite(sendTokenAmountNumber) ||
+      sendTokenAmountNumber < 1 ||
+      sendTokenAmountNumber > tokenBalance);
+  const hasInsufficientSendTokenBalance =
+    sendTokenAmount.length > 0 &&
+    Number.isFinite(sendTokenAmountNumber) &&
+    sendTokenAmountNumber > tokenBalance;
+  const isSendTokenFormValid =
+    Boolean(viewedUser?.username) &&
+    sendTokenAmount.length > 0 &&
+    Number.isFinite(sendTokenAmountNumber) &&
+    sendTokenAmountNumber >= 1 &&
+    sendTokenAmountNumber <= tokenBalance &&
+    viewedUser?.username?.toLowerCase() !== user?.username?.toLowerCase();
 
   useEffect(() => {
     if (!routeUsername) return;
@@ -1315,6 +1409,54 @@ export default function Profile() {
     }
   };
 
+  const onSendTokenDialogOpenChange = (open: boolean) => {
+    setIsSendTokenDialogOpen(open);
+
+    if (!open) {
+      setSendTokenAmount("");
+      setSendTokenNote("");
+      setIsSendingToken(false);
+      setIsSendTokenConfirmOpen(false);
+    }
+  };
+
+  const onSendToken = async () => {
+    const username = viewedUser?.username?.trim().toLowerCase();
+
+    if (
+      !username ||
+      !isAuthenticated ||
+      !isSendTokenFormValid ||
+      isSendingToken
+    ) {
+      return;
+    }
+
+    if (sendTokenAmountNumber > tokenBalance) {
+      toast.error("Insufficient token.");
+      return;
+    }
+
+    setIsSendingToken(true);
+
+    try {
+      const data = await createWalletTransfer({
+        username,
+        amount: sendTokenAmountNumber,
+        note: sendTokenNote.trim(),
+      });
+
+      setWalletSummary({ tokenBalance: data.tokenBalance });
+      updateUser({ tokenBalance: data.tokenBalance });
+      onSendTokenDialogOpenChange(false);
+      toast.success(`Sent token to @${data.transfer.recipient.username}.`);
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Failed to send token."));
+    } finally {
+      setIsSendingToken(false);
+    }
+  };
+
   const onToggleProfileStrategyBookmark = async (strategyId: string) => {
     if (!isAuthenticated) {
       toast.error("Please sign in to bookmark strategies.");
@@ -1681,17 +1823,9 @@ export default function Profile() {
     <>
       <div className="mx-auto w-full max-w-5xl">
         <Card className="overflow-hidden border-border/70 bg-card shadow-sm">
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pt-16">
             <div>
               <div className="flex flex-col gap-5">
-                <div className="space-y-1">
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/8 px-2.5 py-1 text-[11px] font-medium tracking-[0.16em] text-primary uppercase">
-                    Profile Hub
-                  </span>
-                  <h1 className="text-xl font-medium tracking-tight text-foreground">
-                    {canEditProfile ? "Your Profile" : "Public Profile"}
-                  </h1>
-                </div>
                 <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                   <div className="flex min-w-0 items-center gap-4 md:items-start">
                     <Avatar
@@ -1798,6 +1932,7 @@ export default function Profile() {
 
                     {!canEditProfile && viewedUser?._id ? (
                       <ButtonGroup
+                        ref={publicProfileActionsRef}
                         aria-label="Follow actions"
                         className="w-full min-w-0 md:w-auto"
                       >
@@ -1840,8 +1975,20 @@ export default function Profile() {
                           <DropdownMenuContent
                             align="end"
                             collisionPadding={16}
-                            className="w-44"
+                            className="w-full md:w-auto"
+                            style={
+                              publicProfileMenuWidth
+                                ? { width: `${publicProfileMenuWidth}px` }
+                                : undefined
+                            }
                           >
+                            <DropdownMenuItem
+                              disabled={!isAuthenticated}
+                              onClick={() => onSendTokenDialogOpenChange(true)}
+                            >
+                              <HandCoins className="h-4 w-4" />
+                              Send token
+                            </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => void onCopyProfileLink()}
                             >
@@ -2926,6 +3073,166 @@ export default function Profile() {
           </CardContent>
         </Card>
       </div>
+      <Dialog
+        open={isSendTokenDialogOpen}
+        onOpenChange={onSendTokenDialogOpenChange}
+      >
+        <DialogContent onOpenAutoFocus={(event) => event.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle>Send token</DialogTitle>
+            <DialogDescription>
+              {viewedUser?.username
+                ? `Send token to @${viewedUser.username}.`
+                : "Send token to this user."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 px-1 py-1">
+              <Avatar
+                className={cn(
+                  "h-12 w-12",
+                  getUserAvatarRingClass(viewedUser?.membership),
+                )}
+              >
+                <AvatarImage
+                  src={viewedUser?.avatar}
+                  alt={viewedUser?.name || viewedUser?.username || "User"}
+                />
+                <AvatarFallback>{initials}</AvatarFallback>
+              </Avatar>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <p className="truncate text-sm font-medium">
+                    {viewedUser?.name || viewedUser?.username || "Unknown"}
+                  </p>
+                  <UserMembershipMark
+                    membership={viewedUser?.membership}
+                    interactive
+                  />
+                </div>
+                <p className="truncate text-xs text-muted-foreground">
+                  @{viewedUser?.username || routeUsername}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="relative">
+                <HandCoins className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  value={sendTokenAmount}
+                  onChange={(event) =>
+                    setSendTokenAmount(
+                      sanitizeTransferAmountInput(event.target.value),
+                    )
+                  }
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && isSendTokenFormValid) {
+                      event.preventDefault();
+                      setIsSendTokenConfirmOpen(true);
+                    }
+                  }}
+                  placeholder="1"
+                  className="pl-9 pr-16"
+                  disabled={isSendingToken}
+                  aria-invalid={showSendTokenAmountError}
+                />
+                <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm text-muted-foreground">
+                  token
+                </span>
+              </div>
+              {showSendTokenAmountError ? (
+                <p className="text-xs text-destructive">
+                  {hasInsufficientSendTokenBalance
+                    ? "Insufficient token."
+                    : "Enter a valid amount up to your available balance."}
+                </p>
+              ) : null}
+              <p className="text-xs text-muted-foreground">
+                Available: {formatFullTokenAmount(tokenBalance)} token
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <div className="relative">
+                <MessageSquareText className="pointer-events-none absolute top-3 left-3 h-4 w-4 text-muted-foreground" />
+                <span className="pointer-events-none absolute top-3 right-3 text-xs text-muted-foreground">
+                  {sendTokenNote.length}/50
+                </span>
+                <Textarea
+                  value={sendTokenNote}
+                  onChange={(event) =>
+                    setSendTokenNote(event.target.value.slice(0, 50))
+                  }
+                  placeholder="Optional note"
+                  className="h-14 resize-none overflow-y-auto whitespace-pre-wrap break-all pl-9 pr-14"
+                  disabled={isSendingToken}
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onSendTokenDialogOpenChange(false)}
+              disabled={isSendingToken}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => setIsSendTokenConfirmOpen(true)}
+              disabled={!isSendTokenFormValid || isSendingToken}
+            >
+              {isSendingToken ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <HandCoins className="h-4 w-4" />
+              )}
+              <span>Send token</span>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <AlertDialog
+        open={isSendTokenConfirmOpen}
+        onOpenChange={setIsSendTokenConfirmOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Send token?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {`You are about to send ${formatFullTokenAmount(sendTokenAmountNumber)} token to @${viewedUser?.username || routeUsername}.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSendingToken}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!isSendTokenFormValid || isSendingToken}
+              onClick={(event) => {
+                event.preventDefault();
+                void onSendToken().finally(() => {
+                  setIsSendTokenConfirmOpen(false);
+                });
+              }}
+            >
+              {isSendingToken ? (
+                <Loader2 className="absolute h-4 w-4 animate-spin" />
+              ) : null}
+              <span className={isSendingToken ? "opacity-0" : undefined}>
+                Send
+              </span>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <AlertDialog
         open={isUnfollowDialogOpen}
         onOpenChange={setIsUnfollowDialogOpen}

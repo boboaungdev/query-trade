@@ -3,11 +3,7 @@ import { BacktestDB } from "../../models/backtest.js";
 import { BookmarkDB } from "../../models/bookmark.js";
 import { StrategyDB } from "../../models/strategy.js";
 import { SubscriptionModel } from "../../models/subscription.js";
-import {
-  getViewerPlan,
-  isStrategyAccessible,
-} from "../../services/strategy/access.js";
-import { getEffectiveSubscription } from "../subscription/helpers.js";
+import { canViewStrategy } from "../../services/strategy/access.js";
 import { serializePublicUser } from "../../services/user/serializePublicUser.js";
 
 const bookmarkTargetMatchesSearch = (bookmark, searchValue) => {
@@ -61,7 +57,7 @@ const populateBookmarkTargets = async (bookmarks) => {
   if (backtestBookmarks.length > 0) {
     await BacktestDB.populate(backtestBookmarks, {
       path: "target.strategy",
-      select: "name isPublic",
+      select: "name isPublic accessType",
     });
   }
 
@@ -110,16 +106,12 @@ const attachBookmarkUserMembership = async (bookmarks) => {
   return bookmarks;
 };
 
-const pruneInaccessibleStrategyBookmarks = async (
-  bookmarks,
-  userId,
-  viewerPlan,
-) => {
+const pruneInaccessibleStrategyBookmarks = async (bookmarks, userId) => {
   const inaccessibleBookmarks = bookmarks.filter(
     (bookmark) =>
       bookmark.targetType === "strategy" &&
       bookmark.target &&
-      !isStrategyAccessible(bookmark.target, userId, viewerPlan),
+      !canViewStrategy(bookmark.target, userId),
   );
 
   if (inaccessibleBookmarks.length === 0) {
@@ -171,8 +163,6 @@ export const getBookmarks = async (req, res, next) => {
     const user = req.user;
     const { page, limit, targetType, sortBy, order, search } =
       req.validatedQuery;
-    const viewerSubscription = await getEffectiveSubscription(user._id);
-    const viewerPlan = getViewerPlan(viewerSubscription);
 
     const filter = {
       user: user._id,
@@ -214,7 +204,6 @@ export const getBookmarks = async (req, res, next) => {
       const visibleBookmarks = await pruneInaccessibleStrategyBookmarks(
         allBookmarks,
         user._id,
-        viewerPlan,
       );
       await attachBookmarkUserMembership(visibleBookmarks);
 
@@ -235,11 +224,7 @@ export const getBookmarks = async (req, res, next) => {
       ]);
 
       await populateBookmarkTargets(bookmarks);
-      bookmarks = await pruneInaccessibleStrategyBookmarks(
-        bookmarks,
-        user._id,
-        viewerPlan,
-      );
+      bookmarks = await pruneInaccessibleStrategyBookmarks(bookmarks, user._id);
       await attachBookmarkUserMembership(bookmarks);
       total = await BookmarkDB.countDocuments(filter);
     }

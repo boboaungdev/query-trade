@@ -4,7 +4,10 @@ import {
   WALLET_TRANSACTION_TYPES,
 } from "../../constants/subscription.js";
 import { PaymentModel } from "../../models/payment.js";
+import { SubscriptionModel } from "../../models/subscription.js";
+import { UserDB } from "../../models/user.js";
 import { WalletTransactionModel } from "../../models/walletTransaction.js";
+import { serializeMembership } from "../../services/subscription/serializeMembership.js";
 import { resError, resJson } from "../../utils/response.js";
 
 export const getWalletSummary = async (req, res, next) => {
@@ -87,7 +90,11 @@ function serializeWalletPaymentActivity(payment) {
   };
 }
 
-function serializeWalletTokenActivity(transaction) {
+function serializeWalletTokenActivity(
+  transaction,
+  userMap = new Map(),
+  subscriptionMap = new Map(),
+) {
   let activityType = transaction.type;
   let description = transaction.description || "Wallet activity";
 
@@ -100,8 +107,14 @@ function serializeWalletTokenActivity(transaction) {
     description = `Subscribed to ${transaction.planKey}`;
   }
 
+  const actorId = String(transaction.user?._id || transaction.user || "");
+  const counterpartyId = String(transaction.metadata?.counterpartyUserId || "");
+  const actorUser = userMap.get(actorId);
+  const counterpartyUser = userMap.get(counterpartyId);
+
   return {
     _id: transaction._id,
+    transactionId: String(transaction._id || ""),
     sourceType: "wallet_transaction",
     activityType,
     status: "completed",
@@ -110,6 +123,33 @@ function serializeWalletTokenActivity(transaction) {
     balanceAfter: Number(transaction.balanceAfter || 0),
     plan: transaction.planKey || null,
     description,
+    note: transaction.metadata?.note || "",
+    actor: actorUser
+      ? {
+          _id: actorUser._id,
+          username: actorUser.username,
+          name: actorUser.name,
+          avatar: actorUser.avatar || "",
+          membership: serializeMembership(subscriptionMap.get(actorId)),
+        }
+      : null,
+    counterparty: counterpartyUser
+      ? {
+          _id: counterpartyUser._id,
+          username: counterpartyUser.username,
+          name: counterpartyUser.name,
+          avatar: counterpartyUser.avatar || "",
+          membership: serializeMembership(subscriptionMap.get(counterpartyId)),
+        }
+      : transaction.metadata?.counterpartyUsername
+        ? {
+            _id: transaction.metadata?.counterpartyUserId || null,
+            username: transaction.metadata.counterpartyUsername,
+            name: "",
+            avatar: "",
+            membership: serializeMembership(null),
+          }
+        : null,
     createdAt: transaction.createdAt,
   };
 }
@@ -149,10 +189,48 @@ export const getWalletActivity = async (req, res, next) => {
       WalletTransactionModel.countDocuments(tokenQuery),
     ]);
 
+    const walletUserIds = Array.from(
+      new Set(
+        walletTransactions.flatMap((transaction) =>
+          [
+            transaction.user,
+            transaction.metadata?.counterpartyUserId,
+          ]
+            .filter(Boolean)
+            .map((value) => String(value)),
+        ),
+      ),
+    );
+
+    const relatedUsers = walletUserIds.length
+      ? await UserDB.find({
+          _id: { $in: walletUserIds },
+        })
+          .select("_id username name avatar")
+          .lean()
+      : [];
+    const relatedSubscriptions = walletUserIds.length
+      ? await SubscriptionModel.find({
+          user: { $in: walletUserIds },
+        }).lean()
+      : [];
+
+    const userMap = new Map(
+      relatedUsers.map((user) => [String(user._id), user]),
+    );
+    const subscriptionMap = new Map(
+      relatedSubscriptions.map((subscription) => [
+        String(subscription.user),
+        subscription,
+      ]),
+    );
+
     const total = paymentsTotal + walletTransactionsTotal;
     const activities = [
       ...payments.map(serializeWalletPaymentActivity),
-      ...walletTransactions.map(serializeWalletTokenActivity),
+      ...walletTransactions.map((transaction) =>
+        serializeWalletTokenActivity(transaction, userMap, subscriptionMap),
+      ),
     ]
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
       .slice(skip, skip + limit);

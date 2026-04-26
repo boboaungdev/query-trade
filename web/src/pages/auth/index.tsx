@@ -199,8 +199,8 @@ export default function Auth() {
         : !/^[A-Za-z0-9 ]+$/.test(trimmedName)
           ? "Name can use letters, numbers, and spaces only"
           : "";
-  const passwordHelperText =
-    signinError || password.length === 0 || validPassword
+  const signupPasswordHelperText =
+    password.length === 0 || validPassword
       ? ""
       : "Password must be between 6 and 50 characters";
   const newPasswordHelperText =
@@ -1181,9 +1181,7 @@ export default function Auth() {
                       }
                       value={password}
                       aria-invalid={
-                        invalidFields.password ||
-                        Boolean(passwordHelperText) ||
-                        Boolean(signinError)
+                        invalidFields.password || Boolean(signinError)
                       }
                       disabled={loading}
                       onChange={(e) => {
@@ -1193,11 +1191,6 @@ export default function Auth() {
                       }}
                       onKeyDown={handleSubmitKeyDown}
                     />
-                    {passwordHelperText ? (
-                      <p className="text-xs text-destructive">
-                        {passwordHelperText}
-                      </p>
-                    ) : null}
                     {signinError ? (
                       <p className="text-xs text-destructive">{signinError}</p>
                     ) : null}
@@ -1463,7 +1456,8 @@ export default function Auth() {
                         }
                         value={password}
                         aria-invalid={
-                          invalidFields.password || Boolean(passwordHelperText)
+                          invalidFields.password ||
+                          Boolean(signupPasswordHelperText)
                         }
                         onChange={(e) => {
                           clearInvalidField("password");
@@ -1472,9 +1466,9 @@ export default function Auth() {
                         disabled={loading || verifyStep}
                         onKeyDown={handleSubmitKeyDown}
                       />
-                      {passwordHelperText ? (
+                      {signupPasswordHelperText ? (
                         <p className="text-xs text-destructive">
-                          {passwordHelperText}
+                          {signupPasswordHelperText}
                         </p>
                       ) : null}
                     </div>

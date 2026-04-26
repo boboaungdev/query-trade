@@ -1,4 +1,5 @@
 import api from "./axios";
+import type { UserMembership } from "@/components/user-membership";
 
 export type PayCurrency = "usdtbsc";
 export type PaymentStatus = "pending" | "confirmed" | "cancelled" | "expired";
@@ -45,6 +46,7 @@ export type WalletTransfer = {
 
 export type WalletActivity = {
   _id: string;
+  transactionId?: string;
   sourceType: "payment" | "wallet_transaction";
   activityType:
     | "deposit"
@@ -65,6 +67,21 @@ export type WalletActivity = {
   balanceAfter?: number;
   plan?: string | null;
   description?: string;
+  note?: string;
+  actor?: {
+    _id?: string | null;
+    username?: string;
+    name?: string;
+    avatar?: string;
+    membership?: UserMembership;
+  } | null;
+  counterparty?: {
+    _id?: string | null;
+    username?: string;
+    name?: string;
+    avatar?: string;
+    membership?: UserMembership;
+  } | null;
   createdAt: string;
   confirmedAt?: string | null;
 };

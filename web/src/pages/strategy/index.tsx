@@ -895,20 +895,17 @@ export default function StrategyPage() {
                             {item.name}
                           </h3>
                         </div>
+                        <div className="inline-flex min-w-0 items-center gap-1 truncate text-xs text-muted-foreground">
+                          <span className="truncate">
+                            @{item.user?.username || "unknown"}
+                          </span>
+                          <UserMembershipMark
+                            membership={item.user?.membership}
+                            className="size-3"
+                          />
+                        </div>
 
                         <div className="mt-4 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-                          <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
-                            <UserRound className="h-3.5 w-3.5 text-muted-foreground" />
-                            <span className="inline-flex min-w-0 items-center gap-1">
-                              <span className="truncate">
-                                @{item.user?.username || "unknown"}
-                              </span>
-                              <UserMembershipMark
-                                membership={item.user?.membership}
-                                className="size-3"
-                              />
-                            </span>
-                          </span>
                           <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
                             {(item.access?.accessType ?? item.accessType) ===
                             "paid" ? (

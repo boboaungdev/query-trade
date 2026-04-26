@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowDownLeft,
+  ArrowRight,
   ArrowUpRight,
   Check,
   CheckCircle2,
@@ -47,6 +48,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -199,6 +201,17 @@ function formatFullTokenAmount(amount: number) {
   return amount.toLocaleString(undefined, {
     maximumFractionDigits: 0,
   });
+}
+
+function getAvatarInitials(name?: string, username?: string) {
+  const source = (name || username || "U").trim();
+  const parts = source.split(/\s+/).filter(Boolean);
+
+  if (parts.length >= 2) {
+    return `${parts[0][0] || ""}${parts[1][0] || ""}`.toUpperCase();
+  }
+
+  return source.slice(0, 2).toUpperCase();
 }
 
 function sanitizeDepositAmountInput(value: string) {
@@ -510,13 +523,21 @@ function getActivityPrimaryAmountTone(activity: WalletActivity) {
   return "text-emerald-600";
 }
 
+function getReceiptTitle(activity: WalletActivity) {
+  return getActivityLabel(activity);
+}
+
+function getReceiptDescription(activity: WalletActivity) {
+  return activity.description || getReceiptTitle(activity);
+}
+
 function getActivitySecondaryText(activity: WalletActivity) {
   if (activity.activityType === "deposit") {
-    return `Deposit amount: ${formatTokenAmount(activity.tokenAmount)} token`;
+    return `Deposit amount: ${formatFullTokenAmount(activity.tokenAmount)} token`;
   }
 
   if (typeof activity.balanceAfter === "number") {
-    return `After balance: ${formatTokenAmount(activity.balanceAfter)} token`;
+    return `After balance: ${formatFullTokenAmount(activity.balanceAfter)} token`;
   }
 
   return activity.description || "";
@@ -601,6 +622,8 @@ export default function WalletPage() {
   const [isStartingQrCamera, setIsStartingQrCamera] = useState(false);
   const [isCancellingPayment, setIsCancellingPayment] = useState(false);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+  const [selectedReceiptActivity, setSelectedReceiptActivity] =
+    useState<WalletActivity | null>(null);
   const [isUsernameCopied, setIsUsernameCopied] = useState(false);
   const [qrScanError, setQrScanError] = useState("");
   const [activityPage, setActivityPage] = useState(1);
@@ -815,6 +838,18 @@ export default function WalletPage() {
     receiveAmountNumber > 0
       ? receiveAmountNumber
       : undefined;
+  const receiptSender =
+    selectedReceiptActivity?.activityType === "receive"
+      ? selectedReceiptActivity.counterparty
+      : selectedReceiptActivity?.activityType === "send"
+        ? selectedReceiptActivity.actor
+        : null;
+  const receiptReceiver =
+    selectedReceiptActivity?.activityType === "receive"
+      ? selectedReceiptActivity.actor
+      : selectedReceiptActivity?.activityType === "send"
+        ? selectedReceiptActivity.counterparty
+        : null;
 
   const refreshActivity = () => {
     setActivityPage(1);
@@ -1563,7 +1598,16 @@ export default function WalletPage() {
                 {activities.map((activity) => (
                   <div
                     key={`${activity.sourceType}-${activity._id}`}
-                    className="rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted/60"
+                    className="cursor-pointer rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted/60"
+                    onClick={() => setSelectedReceiptActivity(activity)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        setSelectedReceiptActivity(activity);
+                      }
+                    }}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1 space-y-1">
@@ -1610,7 +1654,11 @@ export default function WalletPage() {
                     {activity.sourceType === "payment" &&
                     activity.status === "pending" ? (
                       <div className="mt-2 flex justify-start">
-                        <Button asChild size="sm">
+                        <Button
+                          asChild
+                          size="sm"
+                          onClick={(event) => event.stopPropagation()}
+                        >
                           <Link to={`/payment/${activity._id}`}>Verify</Link>
                         </Button>
                       </div>
@@ -1687,6 +1735,233 @@ export default function WalletPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog
+        open={Boolean(selectedReceiptActivity)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedReceiptActivity(null);
+          }
+        }}
+      >
+        <DialogContent onOpenAutoFocus={(event) => event.preventDefault()}>
+          {selectedReceiptActivity ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>Transaction Receipt</DialogTitle>
+                <DialogDescription>
+                  Transaction details.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4">
+                {(selectedReceiptActivity.activityType === "send" ||
+                  selectedReceiptActivity.activityType === "receive") &&
+                (receiptSender || receiptReceiver) ? (
+                  <div className="py-2">
+                    <div className="flex items-center justify-center gap-3">
+                      {receiptSender ? (
+                        <div className="flex min-w-0 items-center gap-2">
+                          <Avatar
+                            className={cn(
+                              "h-10 w-10",
+                              getUserAvatarRingClass(receiptSender.membership),
+                            )}
+                          >
+                            <AvatarImage
+                              src={receiptSender.avatar || undefined}
+                              alt={
+                                receiptSender.name ||
+                                receiptSender.username ||
+                                "Sender"
+                              }
+                            />
+                            <AvatarFallback>
+                              {getAvatarInitials(
+                                receiptSender.name,
+                                receiptSender.username,
+                              )}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0">
+                            <p className="flex items-center gap-1 truncate text-sm font-medium">
+                              {receiptSender.name || receiptSender.username}
+                              <UserMembershipMark
+                                membership={receiptSender.membership}
+                              />
+                            </p>
+                            <p className="truncate text-xs text-muted-foreground">
+                              @{receiptSender.username}
+                            </p>
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {receiptSender && receiptReceiver ? (
+                        <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      ) : null}
+
+                      {receiptReceiver ? (
+                        <div className="flex min-w-0 items-center gap-2">
+                          <Avatar
+                            className={cn(
+                              "h-10 w-10",
+                              getUserAvatarRingClass(receiptReceiver.membership),
+                            )}
+                          >
+                            <AvatarImage
+                              src={receiptReceiver.avatar || undefined}
+                              alt={
+                                receiptReceiver.name ||
+                                receiptReceiver.username ||
+                                "Recipient"
+                              }
+                            />
+                            <AvatarFallback>
+                              {getAvatarInitials(
+                                receiptReceiver.name,
+                                receiptReceiver.username,
+                              )}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0">
+                            <p className="flex items-center gap-1 truncate text-sm font-medium">
+                              {receiptReceiver.name || receiptReceiver.username}
+                              <UserMembershipMark
+                                membership={receiptReceiver.membership}
+                              />
+                            </p>
+                            <p className="truncate text-xs text-muted-foreground">
+                              @{receiptReceiver.username}
+                            </p>
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
+
+                {selectedReceiptActivity.activityType === "send" ||
+                selectedReceiptActivity.activityType === "receive" ? null : (
+                  <div className="min-w-0 space-y-1">
+                    <p className="font-medium">
+                      {getReceiptTitle(selectedReceiptActivity)}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {getReceiptDescription(selectedReceiptActivity)}
+                    </p>
+                  </div>
+                )}
+
+                <div className="space-y-2 text-sm">
+                  {selectedReceiptActivity.confirmedAt ? (
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-muted-foreground">Confirmed</span>
+                      <span className="text-right">
+                        {formatDateTime(selectedReceiptActivity.confirmedAt)}
+                      </span>
+                    </div>
+                  ) : null}
+
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-muted-foreground">Created</span>
+                    <span className="text-right">
+                      {formatDateTime(selectedReceiptActivity.createdAt)}
+                    </span>
+                  </div>
+
+                  {selectedReceiptActivity.payCurrency ? (
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-muted-foreground">Currency</span>
+                      <span className="text-right uppercase">
+                        {selectedReceiptActivity.payCurrency}
+                      </span>
+                    </div>
+                  ) : null}
+
+                  {selectedReceiptActivity.plan ? (
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-muted-foreground">Plan</span>
+                      <span className="text-right">
+                        {selectedReceiptActivity.plan}
+                      </span>
+                    </div>
+                  ) : null}
+
+                  {typeof selectedReceiptActivity.rateSnapshot === "number" ? (
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-muted-foreground">Rate</span>
+                      <span className="text-right">
+                        {formatFullTokenAmount(
+                          selectedReceiptActivity.rateSnapshot,
+                        )}{" "}
+                        token / USD
+                      </span>
+                    </div>
+                  ) : null}
+
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-muted-foreground">Source</span>
+                    <span className="text-right capitalize">
+                      {selectedReceiptActivity.sourceType.replace("_", " ")}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-muted-foreground">Status</span>
+                    <span
+                      className={cn(
+                        "text-right capitalize text-muted-foreground",
+                        getStatusTone(selectedReceiptActivity.status),
+                      )}
+                    >
+                      {selectedReceiptActivity.status}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-muted-foreground">Token amount</span>
+                    <span className="text-right">
+                      {formatFullTokenAmount(
+                        selectedReceiptActivity.tokenAmount,
+                      )}{" "}
+                      token
+                    </span>
+                  </div>
+
+                  {selectedReceiptActivity.txHash ? (
+                    <div className="space-y-1">
+                      <span className="text-muted-foreground">
+                        Transaction hash
+                      </span>
+                      <p className="break-all text-right text-xs">
+                        {selectedReceiptActivity.txHash}
+                      </p>
+                    </div>
+                  ) : null}
+
+                  <div className="flex items-start justify-between gap-4">
+                    <span className="text-muted-foreground">Transaction ID</span>
+                    <p className="max-w-[16rem] break-all text-right text-xs">
+                      {selectedReceiptActivity.transactionId ||
+                        selectedReceiptActivity._id}
+                    </p>
+                  </div>
+
+                  {typeof selectedReceiptActivity.amountUsd === "number" ? (
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-muted-foreground">USD amount</span>
+                      <span className="text-right">
+                        {formatUsdAmount(selectedReceiptActivity.amountUsd)} USD
+                      </span>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={isDepositDialogOpen}
