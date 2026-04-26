@@ -613,7 +613,7 @@ export default function WalletPage() {
   const updateUser = useAuthStore((state) => state.updateUser);
   const navigate = useNavigate();
   const [tokenBalance, setTokenBalance] = useState(userTokenBalance);
-  const [tokenPerUsdt, setTokenPerUsdt] = useState(1000);
+  const [tokenPerUsd, setTokenPerUsd] = useState(1000);
   const [latestPayment, setLatestPayment] = useState<Payment | null>(null);
   const [activities, setActivities] = useState<WalletActivity[]>([]);
   const [showBalance, setShowBalance] = useState(!hideWalletBalancePreference);
@@ -671,6 +671,7 @@ export default function WalletPage() {
     Number.isFinite(depositAmountNumber) &&
     depositAmountNumber >= 1 &&
     depositAmountNumber <= 1000000;
+  const depositRateLabel = `1 USD = ${formatTokenAmount(tokenPerUsd)} token`;
   const trimmedSendUsername = sendUsername.trim().toLowerCase();
   const showSendAmountError =
     sendAmount.length > 0 &&
@@ -724,7 +725,7 @@ export default function WalletPage() {
           const nextTokenBalance = Number(walletData.tokenBalance ?? 0);
           setTokenBalance(nextTokenBalance);
           updateUser({ tokenBalance: nextTokenBalance });
-          setTokenPerUsdt(walletData.tokenPerUsdt ?? 1000);
+          setTokenPerUsd(walletData.tokenPerUsd ?? 1000);
           setLatestPayment(walletData.latestPayment ?? null);
           setActivities(activityData.activities ?? []);
           setTotalActivityPages(Math.max(1, activityData.totalPage ?? 1));
@@ -850,7 +851,7 @@ export default function WalletPage() {
 
   const activityPageItems = buildPageItems(activityPage, totalActivityPages);
   const walletBalanceUsdText = showBalance
-    ? `~ ${formatUsdAmount(tokenBalance / tokenPerUsdt)} USD`
+    ? `~ ${formatUsdAmount(tokenBalance / tokenPerUsd)} USD`
     : "~ hidden USD";
   const walletBalanceTokenText = showBalance
     ? `${formatFullTokenAmount(tokenBalance)} token`
@@ -1458,7 +1459,7 @@ export default function WalletPage() {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-0">
             <div className="flex flex-nowrap items-center justify-between gap-3">
               <div className="flex min-w-0 flex-1 items-center gap-2">
                 <Wallet className="size-5 text-muted-foreground" />
@@ -1477,7 +1478,7 @@ export default function WalletPage() {
             <p className="hidden text-sm text-muted-foreground">
               {walletBalanceUsdText}
             </p>
-            <p className="text-sm text-muted-foreground">
+            <p className="ml-7 pb-4 text-sm text-muted-foreground">
               {walletBalanceTokenText}
             </p>
             <div className="grid grid-cols-3 gap-3">
@@ -1513,13 +1514,12 @@ export default function WalletPage() {
           <CardContent className="space-y-4">
             {isLoading ? (
               <>
-                <div className="space-y-2">
-                  <Skeleton className="h-8 w-32" />
-                  <Skeleton className="h-4 w-24" />
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <Skeleton className="h-4 w-12" />
-                  <Skeleton className="h-4 w-20" />
+                <div className="relative pr-24">
+                  <div className="space-y-2">
+                    <Skeleton className="h-8 w-32" />
+                    <Skeleton className="h-4 w-24" />
+                  </div>
+                  <Skeleton className="absolute top-0 right-0 h-5 w-20 rounded-md" />
                 </div>
                 <div className="grid gap-2 sm:grid-cols-2">
                   <Button
@@ -1539,23 +1539,21 @@ export default function WalletPage() {
               </>
             ) : latestPayment ? (
               <>
-                <div>
-                  <p className="text-2xl font-semibold tracking-tight">
-                    {formatUsdAmount(
-                      latestPayment.payCurrencyAmount ??
-                        latestPayment.requestedAmountUsdt,
-                    )}{" "}
-                    USD
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {formatTokenAmount(latestPayment.tokenAmount)} token
-                  </p>
-                </div>
-
-                <div className="flex items-center justify-between gap-3 text-sm">
-                  <span className="text-muted-foreground">Status</span>
+                <div className="relative pr-24">
+                  <div>
+                    <p className="text-2xl font-semibold tracking-tight">
+                      {formatUsdAmount(
+                        latestPayment.payCurrencyAmount ??
+                          latestPayment.requestedAmountUsdt,
+                      )}{" "}
+                      USD
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {formatTokenAmount(latestPayment.tokenAmount)} token
+                    </p>
+                  </div>
                   <span
-                    className={`font-medium capitalize ${getStatusTone(
+                    className={`absolute top-0 right-0 rounded-md bg-muted px-2 py-0.5 text-xs font-medium capitalize ${getStatusTone(
                       latestPayment.status,
                     )}`}
                   >
@@ -1804,7 +1802,11 @@ export default function WalletPage() {
               ) : null}
               {!showDepositAmountError && depositAmountNumber >= 1 ? (
                 <p className="text-sm text-muted-foreground">
-                  {`You will get ${formatTokenAmount(depositAmountNumber * tokenPerUsdt)} token for ${depositAmount} USD.`}
+                  {`You will get ${formatTokenAmount(depositAmountNumber * tokenPerUsd)} token for ${depositAmount} USD.`}
+                </p>
+              ) : !depositAmount.length ? (
+                <p className="text-sm text-muted-foreground">
+                  {depositRateLabel}
                 </p>
               ) : null}
             </div>

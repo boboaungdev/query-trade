@@ -19,8 +19,9 @@ export const USDT_RECEIVE_ADDRESS =
   "0xB34ed75732392F9Fd49D24d3e6F957Db80860FB9";
 
 // Token
-export const TOKEN_PER_USDT =
-  parseInt(process.env.TOKEN_PER_USDT || "1000", 10) || 1000;
+export const TOKEN_PER_USD =
+  parseInt(process.env.TOKEN_PER_USD || process.env.TOKEN_PER_USD || "100", 10) ||
+  1000;
 
 // Required env
 export const APP_URL = process.env.APP_URL;

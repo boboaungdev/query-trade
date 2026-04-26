@@ -16,8 +16,6 @@ import { toast } from "sonner";
 
 import {
   createSubscriptionCheckout,
-  getMySubscription,
-  getSubscriptionPlans,
   type Subscription,
   type SubscriptionPlan,
 } from "@/api/subscription";
@@ -51,15 +49,10 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/store/auth";
+import { useMySubscriptionStore } from "@/store/my-subscription";
+import { useSubscriptionStore } from "@/store/subscription";
 import { formatCompactTokenAmount } from "@/lib/formatTokenAmount";
 import { cn } from "@/lib/utils";
-
-let pricingPlansRequest: Promise<
-  Awaited<ReturnType<typeof getSubscriptionPlans>>
-> | null = null;
-let pricingSubscriptionRequest: Promise<
-  Awaited<ReturnType<typeof getMySubscription>>
-> | null = null;
 
 function formatTokenAmount(amount: number) {
   return formatCompactTokenAmount(amount);
@@ -92,30 +85,6 @@ function sanitizeDepositAmountInput(value: string) {
   return nextValue;
 }
 
-async function loadPricingPlansOnce() {
-  if (pricingPlansRequest) {
-    return pricingPlansRequest;
-  }
-
-  pricingPlansRequest = getSubscriptionPlans().finally(() => {
-    pricingPlansRequest = null;
-  });
-
-  return pricingPlansRequest;
-}
-
-async function loadMySubscriptionOnce() {
-  if (pricingSubscriptionRequest) {
-    return pricingSubscriptionRequest;
-  }
-
-  pricingSubscriptionRequest = getMySubscription().finally(() => {
-    pricingSubscriptionRequest = null;
-  });
-
-  return pricingSubscriptionRequest;
-}
-
 function formatExpiry(subscription?: Subscription | null) {
   if (!subscription?.currentPeriodEnd) return null;
 
@@ -145,14 +114,22 @@ export default function Pricing() {
     return false;
   });
   const updateUser = useAuthStore((state) => state.updateUser);
+  const plans = useSubscriptionStore((state) => state.plans);
+  const fetchPlans = useSubscriptionStore((state) => state.fetchPlans);
+  const subscription = useMySubscriptionStore((state) => state.subscription);
+  const fetchMySubscription = useMySubscriptionStore(
+    (state) => state.fetchMySubscription,
+  );
+  const setMySubscription = useMySubscriptionStore(
+    (state) => state.setSubscription,
+  );
+  const clearMySubscription = useMySubscriptionStore(
+    (state) => state.clearMySubscription,
+  );
   const navigate = useNavigate();
-  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
-  const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [tokenBalance, setTokenBalance] = useState(userTokenBalance);
-  const [tokenPerUsdt, setTokenPerUsdt] = useState(1000);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [confirmPlan, setConfirmPlan] = useState<SubscriptionPlan | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [showBalance, setShowBalance] = useState(!hideWalletBalancePreference);
   const [depositAmount, setDepositAmount] = useState("");
   const [isDepositDialogOpen, setIsDepositDialogOpen] = useState(false);
@@ -162,29 +139,22 @@ export default function Pricing() {
     let ignore = false;
 
     async function loadPricing() {
-      setIsLoading(true);
-
       try {
-        const [planData, subscriptionData] = await Promise.all([
-          loadPricingPlansOnce(),
-          isAuthenticated ? loadMySubscriptionOnce() : Promise.resolve(null),
+        await Promise.all([
+          fetchPlans(true),
+          isAuthenticated ? fetchMySubscription(true) : Promise.resolve(),
         ]);
 
         if (ignore) return;
-
-        setPlans(planData.plans);
-        setTokenPerUsdt(planData.tokenPerUsdt);
-        setSubscription(subscriptionData?.subscription ?? null);
-        setTokenBalance(subscriptionData?.tokenBalance ?? 0);
       } catch (error) {
         if (!ignore) {
           toast.error(getApiErrorMessage(error, "Failed to load pricing."));
         }
-      } finally {
-        if (!ignore) {
-          setIsLoading(false);
-        }
       }
+    }
+
+    if (!isAuthenticated) {
+      clearMySubscription();
     }
 
     void loadPricing();
@@ -192,7 +162,7 @@ export default function Pricing() {
     return () => {
       ignore = true;
     };
-  }, [isAuthenticated]);
+  }, [clearMySubscription, fetchMySubscription, fetchPlans, isAuthenticated]);
 
   useEffect(() => {
     setShowBalance(!hideWalletBalancePreference);
@@ -251,7 +221,7 @@ export default function Pricing() {
         plan: plan.id,
       });
 
-      setSubscription(checkout.subscription);
+      setMySubscription(checkout.subscription);
       setTokenBalance(checkout.tokenBalance);
       updateUser({
         tokenBalance: checkout.tokenBalance,
@@ -419,8 +389,8 @@ export default function Pricing() {
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
         <Card className="min-w-0 border-border/70">
           <CardHeader>
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="space-y-1">
+            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+              <div className="min-w-0 flex-1 space-y-1">
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/8 px-2.5 py-1 text-[11px] font-medium tracking-[0.16em] text-primary uppercase">
                   Access Plans
                 </span>
@@ -428,19 +398,48 @@ export default function Pricing() {
                 <CardDescription className="max-w-2xl text-sm leading-6">
                   {headerDescription}
                 </CardDescription>
-                <p className="text-sm text-muted-foreground">
-                  Rate: 1 USD = {formatTokenAmount(tokenPerUsdt)} token
-                </p>
-                {isAuthenticated ? (
-                  <div className="mt-3 space-y-1">
-                    <div className="flex flex-nowrap items-center justify-between gap-3">
-                      <div className="flex min-w-0 flex-1 items-center gap-2">
-                        <Wallet className="size-5 text-muted-foreground" />
-                        <p className="truncate text-2xl font-semibold tracking-tight">
-                          {showBalance
-                            ? `${formatTokenAmount(tokenBalance)} token`
-                            : "**** token"}
-                        </p>
+              </div>
+              {isAuthenticated ? (
+                <div className="flex flex-col gap-1 md:items-end">
+                  <p className="text-left text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
+                    Balance
+                  </p>
+                  <div className="space-y-1">
+                    <div className="flex flex-nowrap items-start gap-3">
+                      <div className="min-w-0 flex-1 text-left">
+                        <div className="flex items-center gap-2">
+                          <Wallet className="size-5 text-muted-foreground" />
+                          <p className="truncate text-2xl font-semibold tracking-tight">
+                            {showBalance
+                              ? `${formatTokenAmount(tokenBalance)} token`
+                              : "**** token"}
+                          </p>
+                        </div>
+                        <div className="ml-7 flex items-center gap-1">
+                          <p className="text-sm text-muted-foreground">
+                            {showBalance
+                              ? `${formatFullTokenAmount(tokenBalance)} token`
+                              : "**** token"}
+                          </p>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="size-6"
+                            onClick={() =>
+                              setShowBalance((current) => !current)
+                            }
+                            aria-label={
+                              showBalance ? "Hide balance" : "Show balance"
+                            }
+                          >
+                            {showBalance ? (
+                              <EyeOff className="size-3.5" />
+                            ) : (
+                              <Eye className="size-3.5" />
+                            )}
+                          </Button>
+                        </div>
                       </div>
                       <Button
                         className="shrink-0"
@@ -450,171 +449,129 @@ export default function Pricing() {
                         Deposit
                       </Button>
                     </div>
-                    {showBalance ? (
-                      <div className="flex items-center gap-1">
-                        <p className="text-sm text-muted-foreground">
-                          {formatFullTokenAmount(tokenBalance)} token
-                        </p>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="size-6"
-                          onClick={() => setShowBalance((current) => !current)}
-                          aria-label={
-                            showBalance ? "Hide balance" : "Show balance"
-                          }
-                        >
-                          <EyeOff className="size-3.5" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-1">
-                        <p className="text-sm text-muted-foreground">
-                          **** token
-                        </p>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="size-6"
-                          onClick={() => setShowBalance((current) => !current)}
-                          aria-label="Show balance"
-                        >
-                          <Eye className="size-3.5" />
-                        </Button>
-                      </div>
-                    )}
                   </div>
-                ) : null}
-              </div>
+                </div>
+              ) : null}
             </div>
           </CardHeader>
         </Card>
 
-        {isLoading ? (
-          <div className="flex min-h-24 items-center justify-center">
-            <Loader2 className="size-4 animate-spin text-muted-foreground" />
-          </div>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {sortedPlans.map((plan) => {
-              const isPaid = plan.id !== "free";
-              const isActive = activePlan === plan.id;
-              const action = getPlanAction(plan);
-              const hasEnoughToken = tokenBalance >= plan.amountToken;
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {sortedPlans.map((plan) => {
+            const isPaid = plan.id !== "free";
+            const isActive = activePlan === plan.id;
+            const action = getPlanAction(plan);
+            const hasEnoughToken = tokenBalance >= plan.amountToken;
 
-              return (
-                <Card
-                  key={plan.id}
-                  className={cn(
-                    "rounded-lg",
-                    isActive && "border border-primary",
-                  )}
-                >
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      {plan.id === "pro" ? <Crown className="size-4" /> : null}
-                      {plan.name}
-                    </CardTitle>
-                    <CardDescription>
-                      {plan.amountToken === 0
-                        ? "Starter access"
-                        : `${plan.durationDays} days of access`}
-                    </CardDescription>
-                    <CardAction>
-                      {isActive ? (
-                        <span className="rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
-                          Active
-                        </span>
-                      ) : null}
-                    </CardAction>
-                  </CardHeader>
+            return (
+              <Card
+                key={plan.id}
+                className={cn(
+                  "rounded-lg",
+                  isActive && "border border-primary",
+                )}
+              >
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    {plan.id === "pro" ? <Crown className="size-4" /> : null}
+                    {plan.name}
+                  </CardTitle>
+                  <CardDescription>
+                    {plan.amountToken === 0
+                      ? "Starter access"
+                      : `${plan.durationDays} days of access`}
+                  </CardDescription>
+                  <CardAction>
+                    {isActive ? (
+                      <span className="rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
+                        Active
+                      </span>
+                    ) : null}
+                  </CardAction>
+                </CardHeader>
 
-                  <CardContent className="flex flex-1 flex-col gap-5">
-                    <div>
-                      {plan.hasDiscount ? (
-                        <p className="text-sm text-muted-foreground line-through">
-                          {formatTokenAmount(plan.originalAmountToken)} token
-                        </p>
-                      ) : null}
-                      <div className="text-2xl font-bold">
-                        {formatTokenAmount(plan.amountToken)} token
+                <CardContent className="flex flex-1 flex-col gap-5">
+                  <div>
+                    {plan.hasDiscount ? (
+                      <p className="text-sm text-muted-foreground line-through">
+                        {formatTokenAmount(plan.originalAmountToken)} token
+                      </p>
+                    ) : null}
+                    <div className="text-2xl font-bold">
+                      {formatTokenAmount(plan.amountToken)} token
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {isPaid ? `${plan.durationDays} days` : "Forever"}
+                    </p>
+                    {plan.hasDiscount ? (
+                      <p className="mt-1 text-sm font-medium text-primary">
+                        {plan.discount?.label ||
+                          `${formatTokenAmount(plan.discountAmountToken)} token off`}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div className="space-y-3">
+                    {plan.features.map((feature) => (
+                      <div key={feature} className="flex items-start gap-2">
+                        <Check className="mt-0.5 size-4 shrink-0 text-primary" />
+                        <span className="text-sm">{feature}</span>
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        {isPaid ? `${plan.durationDays} days` : "Forever"}
-                      </p>
-                      {plan.hasDiscount ? (
-                        <p className="mt-1 text-sm font-medium text-primary">
-                          {plan.discount?.label ||
-                            `${formatTokenAmount(plan.discountAmountToken)} token off`}
-                        </p>
-                      ) : null}
-                    </div>
+                    ))}
+                  </div>
 
-                    <div className="space-y-3">
-                      {plan.features.map((feature) => (
-                        <div key={feature} className="flex items-start gap-2">
-                          <Check className="mt-0.5 size-4 shrink-0 text-primary" />
-                          <span className="text-sm">{feature}</span>
-                        </div>
-                      ))}
-                    </div>
+                  {isActive && expiryDate && isPaid ? (
+                    <p className="text-sm text-muted-foreground">
+                      Active until {expiryDate}
+                    </p>
+                  ) : null}
 
-                    {isActive && expiryDate && isPaid ? (
-                      <p className="text-sm text-muted-foreground">
-                        Active until {expiryDate}
-                      </p>
-                    ) : null}
+                  {!hasEnoughToken && isPaid ? (
+                    <p className="text-sm text-muted-foreground">
+                      Need {formatTokenAmount(plan.amountToken - tokenBalance)}{" "}
+                      more token.
+                    </p>
+                  ) : null}
 
-                    {!hasEnoughToken && isPaid ? (
-                      <p className="text-sm text-muted-foreground">
-                        Need{" "}
-                        {formatTokenAmount(plan.amountToken - tokenBalance)}{" "}
-                        more token.
-                      </p>
-                    ) : null}
+                  {action.note ? (
+                    <p className="text-sm text-muted-foreground">
+                      {action.note}
+                    </p>
+                  ) : null}
 
-                    {action.note ? (
-                      <p className="text-sm text-muted-foreground">
-                        {action.note}
-                      </p>
-                    ) : null}
-
-                    <Button
-                      className="mt-auto w-full"
-                      variant={action.variant}
-                      onClick={() => {
-                        if (!isAuthenticated && !isPaid) {
-                          navigate("/auth");
-                          return;
-                        }
-
-                        setConfirmPlan(plan);
-                      }}
-                      disabled={
-                        loadingPlan === plan.id ||
-                        action.disabled ||
-                        (!isAuthenticated && isPaid) ||
-                        (isAuthenticated && isPaid && !hasEnoughToken)
+                  <Button
+                    className="mt-auto w-full"
+                    variant={action.variant}
+                    onClick={() => {
+                      if (!isAuthenticated && !isPaid) {
+                        navigate("/auth");
+                        return;
                       }
-                    >
-                      {loadingPlan === plan.id ? (
-                        <Loader2 className="size-4 animate-spin" />
-                      ) : !isAuthenticated && isPaid ? (
-                        "Sign up first"
-                      ) : !hasEnoughToken && isPaid ? (
-                        "Deposit token first"
-                      ) : (
-                        action.label
-                      )}
-                    </Button>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        )}
+
+                      setConfirmPlan(plan);
+                    }}
+                    disabled={
+                      loadingPlan === plan.id ||
+                      action.disabled ||
+                      (!isAuthenticated && isPaid) ||
+                      (isAuthenticated && isPaid && !hasEnoughToken)
+                    }
+                  >
+                    {loadingPlan === plan.id ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : !isAuthenticated && isPaid ? (
+                      "Sign up first"
+                    ) : !hasEnoughToken && isPaid ? (
+                      "Deposit token first"
+                    ) : (
+                      action.label
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       </div>
 
       <AlertDialog
@@ -724,11 +681,6 @@ export default function Pricing() {
               {showDepositAmountError ? (
                 <p className="text-sm text-destructive">
                   Invalid input. Use 1.00 to 1000000 for deposit.
-                </p>
-              ) : null}
-              {!showDepositAmountError && depositAmountNumber >= 1 ? (
-                <p className="text-sm text-muted-foreground">
-                  {`You will get ${formatTokenAmount(depositAmountNumber * tokenPerUsdt)} token for ${depositAmount} USD.`}
                 </p>
               ) : null}
             </div>

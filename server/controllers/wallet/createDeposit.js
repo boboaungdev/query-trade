@@ -7,7 +7,7 @@ import {
   isMockPaymentMode,
   WALLET_TRANSACTION_TYPES,
 } from "../../constants/subscription.js";
-import { TOKEN_PER_USDT } from "../../constants/index.js";
+import { TOKEN_PER_USD } from "../../constants/index.js";
 import { PaymentModel } from "../../models/payment.js";
 import { getReceiveAddress } from "../../services/payment/bscUsdt.js";
 import { resJson } from "../../utils/response.js";
@@ -36,8 +36,8 @@ export const createDeposit = async (req, res, next) => {
       user: user._id,
       purpose: PAYMENT_PURPOSES.tokenTopup,
       requestedAmountUsdt: amountUsdt,
-      tokenAmount: amountUsdt * TOKEN_PER_USDT,
-      rateSnapshot: TOKEN_PER_USDT,
+      tokenAmount: amountUsdt * TOKEN_PER_USD,
+      rateSnapshot: TOKEN_PER_USD,
       status: PAYMENT_STATUSES.pending,
       provider: DEPOSIT_PROVIDER,
       orderId: `qt_${user._id}_${Date.now()}_${crypto

@@ -1,5 +1,3 @@
-import { TOKEN_PER_USDT } from "../../constants/index.js";
-import { PAYMENT_CURRENCIES } from "../../constants/subscription.js";
 import { SubscriptionPlanModel } from "../../models/subscriptionPlan.js";
 import { serializePlan } from "../../services/subscription/calculatePlanPricing.js";
 import { resJson } from "../../utils/response.js";
@@ -13,8 +11,6 @@ export const getPlans = async (req, res, next) => {
 
     return resJson(res, 200, "Subscription plans.", {
       plans: plans.map(serializePlan),
-      currencies: Object.values(PAYMENT_CURRENCIES),
-      tokenPerUsdt: TOKEN_PER_USDT,
     });
   } catch (error) {
     next(error);
@@ -28,7 +24,6 @@ export const getMySubscription = async (req, res, next) => {
 
     return resJson(res, 200, "Current subscription.", {
       subscription,
-      tokenBalance: Number(user.tokenBalance || 0),
     });
   } catch (error) {
     next(error);

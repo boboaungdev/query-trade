@@ -1,4 +1,4 @@
-import { TOKEN_PER_USDT } from "../../constants/index.js";
+import { TOKEN_PER_USD } from "../../constants/index.js";
 
 const isDiscountInWindow = (discount) => {
   if (!discount?.isActive || !discount.value) {
@@ -21,7 +21,7 @@ const isDiscountInWindow = (discount) => {
 export const calculatePlanPricing = (plan) => {
   const originalAmountToken = Number(
     plan.amountToken ??
-      Number(Number(plan.amountUsd || 0) * TOKEN_PER_USDT).toFixed(8),
+      Number(Number(plan.amountUsd || 0) * TOKEN_PER_USD).toFixed(8),
   );
   const discount = plan.discount || {};
   let discountAmountToken = 0;

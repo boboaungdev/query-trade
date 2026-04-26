@@ -33,13 +33,6 @@ export type SubscriptionPlan = {
   sortOrder: number;
 };
 
-export type PaymentCurrencyOption = {
-  id: "usdtbsc";
-  label: string;
-  network: string;
-  description: string;
-};
-
 export type Subscription = {
   plan: PlanId;
   status: SubscriptionStatus;
@@ -61,8 +54,6 @@ export async function getSubscriptionPlans() {
   const { data } = await api.get<{
     result: {
       plans: SubscriptionPlan[];
-      currencies: PaymentCurrencyOption[];
-      tokenPerUsdt: number;
     };
   }>("/subscription/plans");
 
@@ -73,7 +64,6 @@ export async function getMySubscription() {
   const { data } = await api.get<{
     result: {
       subscription: Subscription;
-      tokenBalance: number;
     };
   }>("/subscription/me");
 

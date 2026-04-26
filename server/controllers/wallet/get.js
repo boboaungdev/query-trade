@@ -1,4 +1,4 @@
-import { TOKEN_PER_USDT } from "../../constants/index.js";
+import { TOKEN_PER_USD } from "../../constants/index.js";
 import {
   PAYMENT_PURPOSES,
   WALLET_TRANSACTION_TYPES,
@@ -20,7 +20,7 @@ export const getWalletSummary = async (req, res, next) => {
     return resJson(res, 200, "Wallet summary.", {
       latestPayment,
       tokenBalance: Number(user.tokenBalance || 0),
-      tokenPerUsdt: TOKEN_PER_USDT,
+      tokenPerUsd: TOKEN_PER_USD,
     });
   } catch (error) {
     next(error);
@@ -69,7 +69,7 @@ function serializeWalletPaymentActivity(payment) {
     status: payment.status,
     amountUsd: Number(payment.requestedAmountUsdt || 0),
     tokenAmount: Number(payment.tokenAmount || 0),
-    rateSnapshot: Number(payment.rateSnapshot || TOKEN_PER_USDT),
+    rateSnapshot: Number(payment.rateSnapshot || TOKEN_PER_USD),
     payCurrency: payment.payCurrency,
     txHash: payment.txHash || null,
     description:

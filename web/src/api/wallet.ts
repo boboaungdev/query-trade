@@ -74,7 +74,7 @@ export async function getWalletSummary() {
     result: {
       latestPayment?: Payment | null;
       tokenBalance: number;
-      tokenPerUsdt: number;
+      tokenPerUsd: number;
     };
   }>("/wallet/summary");
 
