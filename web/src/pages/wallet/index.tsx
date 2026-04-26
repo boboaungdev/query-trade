@@ -33,8 +33,6 @@ import {
   cancelWalletPayment,
   createTokenDeposit,
   createWalletTransfer,
-  getWalletSummary,
-  getWalletActivity,
   type Payment,
   type WalletActivity,
 } from "@/api/wallet";
@@ -79,11 +77,12 @@ import {
   UserMembershipMark,
   type UserMembership,
 } from "@/components/user-membership";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { formatCompactTokenAmount } from "@/lib/formatTokenAmount";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth";
+import { useWalletActivityStore } from "@/store/wallet-activity";
+import { useWalletStore } from "@/store/wallet";
 
 const USERNAME_REGEX = /^[a-z0-9]{6,20}$/;
 const WALLET_QR_APP_PREFIX = APP_NAME.trim().toLowerCase().replace(/\s+/g, "-");
@@ -91,15 +90,6 @@ const WALLET_QR_RECEIVE_TITLE = "Receive Token";
 const WALLET_QR_SCAN_LABEL = "Scan with";
 const WALLET_QR_USAGE_NOTE = "Only use this QR inside the app";
 const WALLET_QR_SECURITY_NOTE = "Protected by wallet";
-const walletSummaryRequestCache = new Map<
-  string,
-  Promise<Awaited<ReturnType<typeof getWalletSummary>>>
->();
-const walletActivityRequestCache = new Map<
-  string,
-  Promise<Awaited<ReturnType<typeof getWalletActivity>>>
->();
-
 type SendUsernameStatus =
   | "idle"
   | "invalid"
@@ -262,44 +252,6 @@ function sanitizeReceiveAmountInput(value: string) {
   }
 
   return sanitized;
-}
-
-async function loadWalletSummaryOnce(cacheKey: string) {
-  const existingRequest = walletSummaryRequestCache.get(cacheKey);
-
-  if (existingRequest) {
-    return existingRequest;
-  }
-
-  const request = getWalletSummary().finally(() => {
-    walletSummaryRequestCache.delete(cacheKey);
-  });
-
-  walletSummaryRequestCache.set(cacheKey, request);
-  return request;
-}
-
-async function loadWalletActivityOnce({
-  page,
-  limit,
-  cacheKey,
-}: {
-  page: number;
-  limit: number;
-  cacheKey: string;
-}) {
-  const existingRequest = walletActivityRequestCache.get(cacheKey);
-
-  if (existingRequest) {
-    return existingRequest;
-  }
-
-  const request = getWalletActivity({ page, limit }).finally(() => {
-    walletActivityRequestCache.delete(cacheKey);
-  });
-
-  walletActivityRequestCache.set(cacheKey, request);
-  return request;
 }
 
 function buildWalletQrValue({
@@ -611,11 +563,17 @@ export default function WalletPage() {
     return false;
   });
   const updateUser = useAuthStore((state) => state.updateUser);
+  const walletTokenBalance = useWalletStore((state) => state.tokenBalance);
+  const tokenPerUsdValue = useWalletStore((state) => state.tokenPerUsd);
+  const latestPayment = useWalletStore((state) => state.latestPayment);
+  const fetchWalletSummary = useWalletStore(
+    (state) => state.fetchWalletSummary,
+  );
+  const setWalletSummary = useWalletStore((state) => state.setWalletSummary);
+  const fetchActivityPage = useWalletActivityStore(
+    (state) => state.fetchActivityPage,
+  );
   const navigate = useNavigate();
-  const [tokenBalance, setTokenBalance] = useState(userTokenBalance);
-  const [tokenPerUsd, setTokenPerUsd] = useState(1000);
-  const [latestPayment, setLatestPayment] = useState<Payment | null>(null);
-  const [activities, setActivities] = useState<WalletActivity[]>([]);
   const [showBalance, setShowBalance] = useState(!hideWalletBalancePreference);
   const [depositAmount, setDepositAmount] = useState("");
   const [sendUsername, setSendUsername] = useState("");
@@ -637,7 +595,6 @@ export default function WalletPage() {
   const [isSendConfirmDialogOpen, setIsSendConfirmDialogOpen] = useState(false);
   const [isReceiveDialogOpen, setIsReceiveDialogOpen] = useState(false);
   const [isScanQrDialogOpen, setIsScanQrDialogOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [isCreatingDeposit, setIsCreatingDeposit] = useState(false);
   const [isSendingTransfer, setIsSendingTransfer] = useState(false);
   const [isScanningQr, setIsScanningQr] = useState(false);
@@ -647,7 +604,6 @@ export default function WalletPage() {
   const [isUsernameCopied, setIsUsernameCopied] = useState(false);
   const [qrScanError, setQrScanError] = useState("");
   const [activityPage, setActivityPage] = useState(1);
-  const [totalActivityPages, setTotalActivityPages] = useState(1);
   const [activityReloadKey, setActivityReloadKey] = useState(0);
   const sendUsernameRequestIdRef = useRef(0);
   const skipNextSendUsernameValidationRef = useRef(false);
@@ -658,6 +614,14 @@ export default function WalletPage() {
   const qrStreamRef = useRef<MediaStream | null>(null);
   const qrScanFrameRef = useRef<number | null>(null);
   const qrScanLockRef = useRef(false);
+  const activityCacheKey = `activity:${activityPage}:10`;
+  const cachedActivityPage = useWalletActivityStore(
+    (state) => state.pages[activityCacheKey],
+  );
+  const tokenBalance = walletTokenBalance ?? userTokenBalance;
+  const tokenPerUsd = tokenPerUsdValue ?? 1000;
+  const activities = cachedActivityPage?.activities ?? [];
+  const totalActivityPages = Math.max(1, cachedActivityPage?.totalPage ?? 1);
   const depositAmountNumber = Number(depositAmount);
   const sendAmountNumber = Number(sendAmount);
   const receiveAmountNumber = Number(receiveAmount);
@@ -707,36 +671,23 @@ export default function WalletPage() {
     let ignore = false;
 
     async function loadWallet() {
-      setIsLoading(true);
-
       try {
-        const summaryCacheKey = `summary:${activityReloadKey}`;
-        const activityCacheKey = `activity:${activityPage}:10:${activityReloadKey}`;
-        const [walletData, activityData] = await Promise.all([
-          loadWalletSummaryOnce(summaryCacheKey),
-          loadWalletActivityOnce({
+        const [walletData] = await Promise.all([
+          fetchWalletSummary(true),
+          fetchActivityPage({
             page: activityPage,
             limit: 10,
-            cacheKey: activityCacheKey,
+            force: true,
           }),
         ]);
 
         if (!ignore) {
           const nextTokenBalance = Number(walletData.tokenBalance ?? 0);
-          setTokenBalance(nextTokenBalance);
           updateUser({ tokenBalance: nextTokenBalance });
-          setTokenPerUsd(walletData.tokenPerUsd ?? 1000);
-          setLatestPayment(walletData.latestPayment ?? null);
-          setActivities(activityData.activities ?? []);
-          setTotalActivityPages(Math.max(1, activityData.totalPage ?? 1));
         }
       } catch (error) {
         if (!ignore) {
           toast.error(getApiErrorMessage(error, "Failed to load wallet."));
-        }
-      } finally {
-        if (!ignore) {
-          setIsLoading(false);
         }
       }
     }
@@ -746,7 +697,13 @@ export default function WalletPage() {
     return () => {
       ignore = true;
     };
-  }, [activityPage, activityReloadKey, updateUser]);
+  }, [
+    activityPage,
+    activityReloadKey,
+    fetchActivityPage,
+    fetchWalletSummary,
+    updateUser,
+  ]);
 
   useEffect(() => {
     setShowBalance(!hideWalletBalancePreference);
@@ -798,10 +755,6 @@ export default function WalletPage() {
       window.clearTimeout(timeout);
     };
   }, [sendUsername, username]);
-
-  useEffect(() => {
-    setTokenBalance(userTokenBalance);
-  }, [userTokenBalance]);
 
   useEffect(() => {
     if (!debouncedSendUsername) {
@@ -940,11 +893,14 @@ export default function WalletPage() {
         payCurrency: "usdtbsc",
       });
 
-      setLatestPayment(data.payment);
+      setWalletSummary({ latestPayment: data.payment });
 
       if (data.payment.status === "confirmed") {
         const nextBalance = tokenBalance + data.payment.tokenAmount;
-        setTokenBalance(nextBalance);
+        setWalletSummary({
+          latestPayment: data.payment,
+          tokenBalance: nextBalance,
+        });
         updateUser({ tokenBalance: nextBalance });
         setDepositAmount("");
         setIsDepositDialogOpen(false);
@@ -977,7 +933,7 @@ export default function WalletPage() {
 
     try {
       const data = await cancelWalletPayment(latestPayment._id);
-      setLatestPayment(data.payment);
+      setWalletSummary({ latestPayment: data.payment });
       setIsCancelDialogOpen(false);
       refreshActivity();
       toast.success("Deposit cancelled.");
@@ -1408,7 +1364,7 @@ export default function WalletPage() {
         note: sendNote.trim(),
       });
 
-      setTokenBalance(data.tokenBalance);
+      setWalletSummary({ tokenBalance: data.tokenBalance });
       updateUser({ tokenBalance: data.tokenBalance });
       handleSendDialogOpenChange(false);
       refreshActivity();
@@ -1512,32 +1468,7 @@ export default function WalletPage() {
             <CardDescription>Your most recent deposit request.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {isLoading ? (
-              <>
-                <div className="relative pr-24">
-                  <div className="space-y-2">
-                    <Skeleton className="h-8 w-32" />
-                    <Skeleton className="h-4 w-24" />
-                  </div>
-                  <Skeleton className="absolute top-0 right-0 h-5 w-20 rounded-md" />
-                </div>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <Button
-                    className="w-full animate-pulse bg-muted text-transparent shadow-none hover:bg-muted"
-                    disabled
-                  >
-                    <span className="invisible">Verify deposit</span>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full animate-pulse border-0 bg-muted text-transparent shadow-none hover:bg-muted"
-                    disabled
-                  >
-                    <span className="invisible">Cancel</span>
-                  </Button>
-                </div>
-              </>
-            ) : latestPayment ? (
+            {latestPayment ? (
               <>
                 <div className="relative pr-24">
                   <div>
@@ -1626,11 +1557,7 @@ export default function WalletPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div className="flex min-h-24 items-center justify-center">
-              <Loader2 className="size-4 animate-spin text-muted-foreground" />
-            </div>
-          ) : activities.length ? (
+          {activities.length ? (
             <>
               <div className="space-y-1.5">
                 {activities.map((activity) => (

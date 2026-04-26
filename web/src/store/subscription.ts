@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 import {
   getSubscriptionPlans,
@@ -15,50 +16,59 @@ type SubscriptionStoreState = {
 
 let subscriptionPlansRequest: Promise<void> | null = null;
 
-export const useSubscriptionStore = create<SubscriptionStoreState>(
-  (set, get) => ({
-    plans: [],
-    isLoading: false,
-    lastFetchedAt: null,
+export const useSubscriptionStore = create<SubscriptionStoreState>()(
+  persist(
+    (set, get) => ({
+      plans: [],
+      isLoading: false,
+      lastFetchedAt: null,
 
-    fetchPlans: async (force = false) => {
-      const { plans, isLoading } = get();
+      fetchPlans: async (force = false) => {
+        const { plans, isLoading } = get();
 
-      if (!force && plans.length > 0) {
-        return;
-      }
+        if (!force && plans.length > 0) {
+          return;
+        }
 
-      if (isLoading && subscriptionPlansRequest) {
-        return subscriptionPlansRequest;
-      }
+        if (isLoading && subscriptionPlansRequest) {
+          return subscriptionPlansRequest;
+        }
 
-      set({ isLoading: true });
+        set({ isLoading: true });
 
-      subscriptionPlansRequest = getSubscriptionPlans()
-        .then((data) => {
-          set({
-            plans: data.plans,
-            isLoading: false,
-            lastFetchedAt: Date.now(),
+        subscriptionPlansRequest = getSubscriptionPlans()
+          .then((data) => {
+            set({
+              plans: data.plans,
+              isLoading: false,
+              lastFetchedAt: Date.now(),
+            });
+          })
+          .catch((error) => {
+            set({ isLoading: false });
+            throw error;
+          })
+          .finally(() => {
+            subscriptionPlansRequest = null;
           });
-        })
-        .catch((error) => {
-          set({ isLoading: false });
-          throw error;
-        })
-        .finally(() => {
-          subscriptionPlansRequest = null;
+
+        return subscriptionPlansRequest;
+      },
+
+      clearPlansCache: () => {
+        set({
+          plans: [],
+          isLoading: false,
+          lastFetchedAt: null,
         });
-
-      return subscriptionPlansRequest;
+      },
+    }),
+    {
+      name: "subscription-plans-store",
+      partialize: (state) => ({
+        plans: state.plans,
+        lastFetchedAt: state.lastFetchedAt,
+      }),
     },
-
-    clearPlansCache: () => {
-      set({
-        plans: [],
-        isLoading: false,
-        lastFetchedAt: null,
-      });
-    },
-  }),
+  ),
 );

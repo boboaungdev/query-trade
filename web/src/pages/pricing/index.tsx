@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowDownLeft,
+  BadgeCheck,
   Check,
-  Crown,
   CreditCard,
   DollarSign,
   Eye,
@@ -51,6 +51,7 @@ import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/store/auth";
 import { useMySubscriptionStore } from "@/store/my-subscription";
 import { useSubscriptionStore } from "@/store/subscription";
+import { useWalletStore } from "@/store/wallet";
 import { formatCompactTokenAmount } from "@/lib/formatTokenAmount";
 import { cn } from "@/lib/utils";
 
@@ -95,6 +96,18 @@ function formatExpiry(subscription?: Subscription | null) {
   }).format(new Date(subscription.currentPeriodEnd));
 }
 
+function getPlanBadgeIcon(planId: string) {
+  if (planId === "pro") {
+    return <BadgeCheck className="size-4 fill-amber-500 text-white" />;
+  }
+
+  if (planId === "plus") {
+    return <BadgeCheck className="size-4 fill-sky-500 text-white" />;
+  }
+
+  return null;
+}
+
 export default function Pricing() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const userTokenBalance = useAuthStore(
@@ -114,9 +127,14 @@ export default function Pricing() {
     return false;
   });
   const updateUser = useAuthStore((state) => state.updateUser);
+  const walletTokenBalance = useWalletStore((state) => state.tokenBalance);
+  const setWalletSummary = useWalletStore((state) => state.setWalletSummary);
   const plans = useSubscriptionStore((state) => state.plans);
   const fetchPlans = useSubscriptionStore((state) => state.fetchPlans);
   const subscription = useMySubscriptionStore((state) => state.subscription);
+  const isMySubscriptionLoading = useMySubscriptionStore(
+    (state) => state.isLoading,
+  );
   const fetchMySubscription = useMySubscriptionStore(
     (state) => state.fetchMySubscription,
   );
@@ -127,7 +145,7 @@ export default function Pricing() {
     (state) => state.clearMySubscription,
   );
   const navigate = useNavigate();
-  const [tokenBalance, setTokenBalance] = useState(userTokenBalance);
+  const tokenBalance = walletTokenBalance ?? userTokenBalance;
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [confirmPlan, setConfirmPlan] = useState<SubscriptionPlan | null>(null);
   const [showBalance, setShowBalance] = useState(!hideWalletBalancePreference);
@@ -167,10 +185,6 @@ export default function Pricing() {
   useEffect(() => {
     setShowBalance(!hideWalletBalancePreference);
   }, [hideWalletBalancePreference]);
-
-  useEffect(() => {
-    setTokenBalance(userTokenBalance);
-  }, [userTokenBalance]);
 
   const depositAmountNumber = Number(depositAmount);
   const showDepositAmountError =
@@ -222,7 +236,7 @@ export default function Pricing() {
       });
 
       setMySubscription(checkout.subscription);
-      setTokenBalance(checkout.tokenBalance);
+      setWalletSummary({ tokenBalance: checkout.tokenBalance });
       updateUser({
         tokenBalance: checkout.tokenBalance,
         ...(checkout.membership ? { membership: checkout.membership } : {}),
@@ -236,17 +250,34 @@ export default function Pricing() {
     }
   };
 
-  const activePlan = subscription?.plan ?? "free";
+  const hasResolvedSubscription =
+    !isAuthenticated || subscription !== null || !isMySubscriptionLoading;
+  const activePlan = hasResolvedSubscription
+    ? (subscription?.plan ?? "free")
+    : null;
   const expiryDate = formatExpiry(subscription);
   const hasActivePaidPlan =
-    subscription?.status === "active" && activePlan !== "free";
+    hasResolvedSubscription &&
+    subscription?.status === "active" &&
+    activePlan !== "free";
+  const activePlanRank =
+    typeof activePlan === "string" ? (planRanks[activePlan] ?? 0) : 0;
 
   const getPlanAction = (plan: SubscriptionPlan) => {
     if (plan.id === "free") {
       return {
         disabled: isAuthenticated,
-        label: isAuthenticated ? "Included" : "Choose plan",
+        label: isAuthenticated ? "Included" : "Free",
         variant: isAuthenticated ? ("outline" as const) : ("default" as const),
+        note: null,
+      };
+    }
+
+    if (isAuthenticated && !hasResolvedSubscription) {
+      return {
+        disabled: true,
+        label: "Loading plan...",
+        variant: "outline" as const,
         note: null,
       };
     }
@@ -262,8 +293,7 @@ export default function Pricing() {
 
     if (
       hasActivePaidPlan &&
-      (planRanks[plan.id] ?? Number.MAX_SAFE_INTEGER) <
-        (planRanks[activePlan] ?? 0)
+      (planRanks[plan.id] ?? Number.MAX_SAFE_INTEGER) < activePlanRank
     ) {
       return {
         disabled: true,
@@ -282,10 +312,7 @@ export default function Pricing() {
       };
     }
 
-    if (
-      hasActivePaidPlan &&
-      (planRanks[plan.id] ?? 0) > (planRanks[activePlan] ?? 0)
-    ) {
+    if (hasActivePaidPlan && (planRanks[plan.id] ?? 0) > activePlanRank) {
       return {
         disabled: false,
         label: `Upgrade to ${plan.name}`,
@@ -307,10 +334,7 @@ export default function Pricing() {
       return `Extend ${plan.name}?`;
     }
 
-    if (
-      hasActivePaidPlan &&
-      (planRanks[plan.id] ?? 0) > (planRanks[activePlan] ?? 0)
-    ) {
+    if (hasActivePaidPlan && (planRanks[plan.id] ?? 0) > activePlanRank) {
       return `Upgrade to ${plan.name}?`;
     }
 
@@ -322,10 +346,7 @@ export default function Pricing() {
       return `Spend ${formatTokenAmount(plan.amountToken)} token to extend ${plan.name} for ${plan.durationDays} days.`;
     }
 
-    if (
-      hasActivePaidPlan &&
-      (planRanks[plan.id] ?? 0) > (planRanks[activePlan] ?? 0)
-    ) {
+    if (hasActivePaidPlan && (planRanks[plan.id] ?? 0) > activePlanRank) {
       return `Spend ${formatTokenAmount(plan.amountToken)} token to start a fresh ${plan.durationDays}-day ${plan.name} plan.`;
     }
 
@@ -366,12 +387,16 @@ export default function Pricing() {
 
       if (data.payment.status === "confirmed") {
         const nextBalance = tokenBalance + data.payment.tokenAmount;
-        setTokenBalance(nextBalance);
+        setWalletSummary({
+          latestPayment: data.payment,
+          tokenBalance: nextBalance,
+        });
         updateUser({ tokenBalance: nextBalance });
         setDepositAmount("");
         setIsDepositDialogOpen(false);
         toast.success("Deposit confirmed.");
       } else {
+        setWalletSummary({ latestPayment: data.payment });
         setDepositAmount("");
         setIsDepositDialogOpen(false);
         toast.success("Deposit request created.");
@@ -459,7 +484,7 @@ export default function Pricing() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {sortedPlans.map((plan) => {
             const isPaid = plan.id !== "free";
-            const isActive = activePlan === plan.id;
+            const isActive = hasResolvedSubscription && activePlan === plan.id;
             const action = getPlanAction(plan);
             const hasEnoughToken = tokenBalance >= plan.amountToken;
 
@@ -473,8 +498,8 @@ export default function Pricing() {
               >
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    {plan.id === "pro" ? <Crown className="size-4" /> : null}
                     {plan.name}
+                    {getPlanBadgeIcon(plan.id)}
                   </CardTitle>
                   <CardDescription>
                     {plan.amountToken === 0
@@ -490,7 +515,7 @@ export default function Pricing() {
                   </CardAction>
                 </CardHeader>
 
-                <CardContent className="flex flex-1 flex-col gap-5">
+                <CardContent className="flex flex-1 flex-col gap-4">
                   <div>
                     {plan.hasDiscount ? (
                       <p className="text-sm text-muted-foreground line-through">
@@ -526,16 +551,16 @@ export default function Pricing() {
                     </p>
                   ) : null}
 
+                  {action.note ? (
+                    <p className="text-sm text-muted-foreground">
+                      {action.note}
+                    </p>
+                  ) : null}
+
                   {!hasEnoughToken && isPaid ? (
                     <p className="text-sm text-muted-foreground">
                       Need {formatTokenAmount(plan.amountToken - tokenBalance)}{" "}
                       more token.
-                    </p>
-                  ) : null}
-
-                  {action.note ? (
-                    <p className="text-sm text-muted-foreground">
-                      {action.note}
                     </p>
                   ) : null}
 
@@ -562,7 +587,7 @@ export default function Pricing() {
                     ) : !isAuthenticated && isPaid ? (
                       "Sign up first"
                     ) : !hasEnoughToken && isPaid ? (
-                      "Deposit token first"
+                      "Insufficient balance"
                     ) : (
                       action.label
                     )}

@@ -1,6 +1,10 @@
 import { create } from "zustand";
 
 import type { UserMembership } from "@/components/user-membership";
+import { useMySubscriptionStore } from "@/store/my-subscription";
+import { useSubscriptionStore } from "@/store/subscription";
+import { useWalletActivityStore } from "@/store/wallet-activity";
+import { useWalletStore } from "@/store/wallet";
 
 export type AuthProvider = {
   provider: "google" | "server";
@@ -86,6 +90,18 @@ export const useAuthStore = create<AuthState>((set) => ({
   logout: () => {
     localStorage.removeItem("user");
     localStorage.removeItem("accessToken");
+
+    useSubscriptionStore.getState().clearPlansCache();
+    useSubscriptionStore.persist.clearStorage();
+
+    useMySubscriptionStore.getState().clearMySubscription();
+    useMySubscriptionStore.persist.clearStorage();
+
+    useWalletStore.getState().clearWallet();
+    useWalletStore.persist.clearStorage();
+
+    useWalletActivityStore.getState().clearActivityCache();
+    useWalletActivityStore.persist.clearStorage();
 
     set({
       user: null,

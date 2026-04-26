@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 import { getMySubscription, type Subscription } from "@/api/subscription";
 
@@ -13,57 +14,66 @@ type MySubscriptionStoreState = {
 
 let mySubscriptionRequest: Promise<void> | null = null;
 
-export const useMySubscriptionStore = create<MySubscriptionStoreState>(
-  (set, get) => ({
-    subscription: null,
-    isLoading: false,
-    lastFetchedAt: null,
+export const useMySubscriptionStore = create<MySubscriptionStoreState>()(
+  persist(
+    (set, get) => ({
+      subscription: null,
+      isLoading: false,
+      lastFetchedAt: null,
 
-    fetchMySubscription: async (force = false) => {
-      const { subscription, isLoading } = get();
+      fetchMySubscription: async (force = false) => {
+        const { subscription, isLoading } = get();
 
-      if (!force && subscription) {
-        return;
-      }
+        if (!force && subscription) {
+          return;
+        }
 
-      if (isLoading && mySubscriptionRequest) {
-        return mySubscriptionRequest;
-      }
+        if (isLoading && mySubscriptionRequest) {
+          return mySubscriptionRequest;
+        }
 
-      set({ isLoading: true });
+        set({ isLoading: true });
 
-      mySubscriptionRequest = getMySubscription()
-        .then((data) => {
-          set({
-            subscription: data.subscription,
-            isLoading: false,
-            lastFetchedAt: Date.now(),
+        mySubscriptionRequest = getMySubscription()
+          .then((data) => {
+            set({
+              subscription: data.subscription,
+              isLoading: false,
+              lastFetchedAt: Date.now(),
+            });
+          })
+          .catch((error) => {
+            set({ isLoading: false });
+            throw error;
+          })
+          .finally(() => {
+            mySubscriptionRequest = null;
           });
-        })
-        .catch((error) => {
-          set({ isLoading: false });
-          throw error;
-        })
-        .finally(() => {
-          mySubscriptionRequest = null;
+
+        return mySubscriptionRequest;
+      },
+
+      setSubscription: (subscription) => {
+        set({
+          subscription,
+          lastFetchedAt: subscription ? Date.now() : null,
         });
+      },
 
-      return mySubscriptionRequest;
+      clearMySubscription: () => {
+        set({
+          subscription: null,
+          isLoading: false,
+          lastFetchedAt: null,
+        });
+      },
+    }),
+    {
+      name: "my-subscription-store",
+      partialize: (state) => ({
+        subscription: state.subscription,
+        lastFetchedAt: state.lastFetchedAt,
+      }),
     },
-
-    setSubscription: (subscription) => {
-      set({
-        subscription,
-        lastFetchedAt: subscription ? Date.now() : null,
-      });
-    },
-
-    clearMySubscription: () => {
-      set({
-        subscription: null,
-        isLoading: false,
-        lastFetchedAt: null,
-      });
-    },
-  }),
+  ),
 );
