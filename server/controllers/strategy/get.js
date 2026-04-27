@@ -101,7 +101,7 @@ export const getStrategyById = async (req, res, next) => {
 export const getStrategies = async (req, res, next) => {
   try {
     const user = req.user;
-    const { page, limit, search, sortBy, order, category, isPublic } =
+    const { page, limit, search, sortBy, order, category, type, isPublic } =
       req.validatedQuery;
     const viewerSubscription = user?._id
       ? await getEffectiveSubscription(user._id)
@@ -129,9 +129,11 @@ export const getStrategies = async (req, res, next) => {
       andConditions.push(accessibleStrategyFilter);
     }
 
-    if (category === "paid") {
-      andConditions.push({ accessType: "paid" });
-      andConditions.push(accessibleStrategyFilter);
+    const requestedAccessType =
+      type && type !== "all" ? type : category === "paid" ? "paid" : null;
+
+    if (requestedAccessType) {
+      andConditions.push({ accessType: requestedAccessType });
     }
 
     if (category === "mine" && user?._id) {
@@ -145,6 +147,8 @@ export const getStrategies = async (req, res, next) => {
     } else if (typeof isPublic === "boolean") {
       andConditions.push({ isPublic });
     } else if (!["mine", "bookmarked", "paid"].includes(category)) {
+      andConditions.push(accessibleStrategyFilter);
+    } else if (category === "paid") {
       andConditions.push(accessibleStrategyFilter);
     }
 

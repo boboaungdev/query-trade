@@ -49,6 +49,7 @@ import {
   type StrategyAccessState,
   type StrategyAccessType,
   type StrategyCategory,
+  type StrategyFilterType,
   type StrategyCondition,
   type StrategyLogicBlock,
 } from "@/api/strategy";
@@ -204,6 +205,7 @@ export default function StrategyPage() {
     new Set(),
   );
   const [category, setCategory] = useState<StrategyCategory>("all");
+  const [typeFilter, setTypeFilter] = useState<StrategyFilterType>("all");
   const [sortBy, setSortBy] = useState<StrategySortBy>("name");
   const [order, setOrder] = useState<"asc" | "desc">("asc");
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
@@ -285,6 +287,7 @@ export default function StrategyPage() {
           sortBy,
           order,
           category,
+          type: typeFilter,
           isPublic: category === "all" ? true : undefined,
         })) as StrategyListResponse;
 
@@ -312,7 +315,7 @@ export default function StrategyPage() {
     };
 
     void loadStrategies();
-  }, [page, debouncedSearch, sortBy, order, category, reloadKey]);
+  }, [page, debouncedSearch, sortBy, order, category, typeFilter, reloadKey]);
 
   useEffect(() => {
     const node = loadMoreRef.current;
@@ -724,16 +727,19 @@ export default function StrategyPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-52">
-                            <DropdownMenuLabel>Category</DropdownMenuLabel>
+                            <DropdownMenuLabel>Type</DropdownMenuLabel>
                             <DropdownMenuRadioGroup
-                              value={category === "paid" ? "paid" : "all"}
+                              value={typeFilter}
                               onValueChange={(value) => {
-                                setCategory(value as "all" | "paid");
+                                setTypeFilter(value as StrategyFilterType);
                                 setPage(1);
                               }}
                             >
                               <DropdownMenuRadioItem value="all">
                                 All
+                              </DropdownMenuRadioItem>
+                              <DropdownMenuRadioItem value="free">
+                                Free
                               </DropdownMenuRadioItem>
                               <DropdownMenuRadioItem value="paid">
                                 Paid

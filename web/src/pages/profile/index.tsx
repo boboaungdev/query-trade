@@ -66,7 +66,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import {
   Command,
   CommandGroup,
@@ -1823,9 +1823,12 @@ export default function Profile() {
     <>
       <div className="mx-auto w-full max-w-5xl">
         <Card className="overflow-hidden border-border/70 bg-card shadow-sm">
-          <CardContent className="space-y-4 pt-16">
+          <CardContent className="space-y-4">
             <div>
-              <div className="flex flex-col gap-5">
+              <CardTitle className="mb-10 text-base md:text-lg">
+                {canEditProfile ? "Your Profile" : "Public Profile"}
+              </CardTitle>
+              <div className="flex flex-col gap-10">
                 <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                   <div className="flex min-w-0 items-center gap-4 md:items-start">
                     <Avatar

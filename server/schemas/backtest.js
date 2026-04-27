@@ -57,6 +57,25 @@ export const BacktestSchema = {
       duration: Joi.string()
         .valid("all", "7d", "1m", "3m", "6m", "1y")
         .default("all"),
+      timeframe: Joi.string()
+        .valid(
+          "all",
+          "1m",
+          "3m",
+          "5m",
+          "15m",
+          "30m",
+          "1h",
+          "2h",
+          "4h",
+          "6h",
+          "8h",
+          "12h",
+          "1d",
+          "1w",
+          "1M",
+        )
+        .default("all"),
       sortBy: Joi.string()
         .valid(
           "roi",

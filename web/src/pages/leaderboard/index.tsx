@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import {
   Bookmark,
   BookmarkCheck,
+  ChevronsUpDown,
   Copy,
   Compass,
   ListFilter,
@@ -50,6 +51,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   getUserAvatarRingClass,
@@ -68,6 +70,22 @@ type BacktestSortBy =
   | "profitFactor";
 
 type BacktestDurationFilter = "all" | "7d" | "1m" | "3m" | "6m" | "1y";
+type LeaderboardTimeframeFilter =
+  | "all"
+  | "1m"
+  | "3m"
+  | "5m"
+  | "15m"
+  | "30m"
+  | "1h"
+  | "2h"
+  | "4h"
+  | "6h"
+  | "8h"
+  | "12h"
+  | "1d"
+  | "1w"
+  | "1M";
 
 const durationFilterOptions: Array<{
   value: BacktestDurationFilter;
@@ -79,6 +97,27 @@ const durationFilterOptions: Array<{
   { value: "3m", label: "3M" },
   { value: "6m", label: "6M" },
   { value: "1y", label: "1Y" },
+];
+
+const timeframeFilterOptions: Array<{
+  value: LeaderboardTimeframeFilter;
+  label: string;
+}> = [
+  { value: "all", label: "All TF" },
+  { value: "1m", label: "1m" },
+  { value: "3m", label: "3m" },
+  { value: "5m", label: "5m" },
+  { value: "15m", label: "15m" },
+  { value: "30m", label: "30m" },
+  { value: "1h", label: "1h" },
+  { value: "2h", label: "2h" },
+  { value: "4h", label: "4h" },
+  { value: "6h", label: "6h" },
+  { value: "8h", label: "8h" },
+  { value: "12h", label: "12h" },
+  { value: "1d", label: "1d" },
+  { value: "1w", label: "1w" },
+  { value: "1M", label: "1M" },
 ];
 
 type LeaderboardBacktest = {
@@ -164,6 +203,7 @@ export default function LeaderboardPage() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [source, setSource] = useState<"all" | "me">("all");
   const [duration, setDuration] = useState<BacktestDurationFilter>("all");
+  const [timeframe, setTimeframe] = useState<LeaderboardTimeframeFilter>("all");
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [hasNextPage, setHasNextPage] = useState(false);
@@ -210,6 +250,7 @@ export default function LeaderboardPage() {
           search: debouncedSearch,
           source,
           duration,
+          timeframe,
           sortBy,
           order,
         })) as LeaderboardResponse;
@@ -248,7 +289,7 @@ export default function LeaderboardPage() {
     };
 
     void loadLeaderboard();
-  }, [page, debouncedSearch, source, duration, sortBy, order]);
+  }, [page, debouncedSearch, source, duration, timeframe, sortBy, order]);
 
   useEffect(() => {
     const node = loadMoreRef.current;
@@ -458,86 +499,130 @@ export default function LeaderboardPage() {
                 </TabsTrigger>
               </TabsList>
 
-              <div className="relative min-w-0 w-full md:max-w-[320px] md:flex-1">
-                <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  value={search}
-                  onChange={(event) => {
-                    setSearch(event.target.value);
-                    setPage(1);
-                  }}
-                  placeholder="Search"
-                  className="rounded-md border-0 border-b-2 border-foreground/15 bg-muted/60 pr-10 pl-9 focus-visible:border-primary focus-visible:ring-0 dark:bg-input/30"
-                />
-                <div className="absolute top-1/2 right-1.5 flex -translate-y-1/2 items-center gap-1">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        className="h-7 w-7"
-                      >
-                        <ListFilter className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56">
-                      <DropdownMenuLabel>Sort by</DropdownMenuLabel>
-                      <DropdownMenuRadioGroup
-                        value={sortBy}
-                        onValueChange={(value) => {
-                          const nextSortBy = value as BacktestSortBy;
-                          setSortBy(nextSortBy);
-                          setOrder(
-                            nextSortBy === "roi" ||
-                              nextSortBy === "winRate" ||
-                              nextSortBy === "profitFactor" ||
-                              nextSortBy === "createdAt" ||
-                              nextSortBy === "updatedAt"
-                              ? "desc"
-                              : "asc",
-                          );
-                          setPage(1);
-                        }}
-                      >
-                        <DropdownMenuRadioItem value="maxDrawdownPercent">
-                          Max Drawdown
-                        </DropdownMenuRadioItem>
-                        <DropdownMenuRadioItem value="updatedAt">
-                          Last Updated
-                        </DropdownMenuRadioItem>
-                        <DropdownMenuRadioItem value="createdAt">
-                          Newest
-                        </DropdownMenuRadioItem>
-                        <DropdownMenuRadioItem value="profitFactor">
-                          Profit Factor
-                        </DropdownMenuRadioItem>
-                        <DropdownMenuRadioItem value="roi">
-                          ROI
-                        </DropdownMenuRadioItem>
-                        <DropdownMenuRadioItem value="winRate">
-                          Win Rate
-                        </DropdownMenuRadioItem>
-                      </DropdownMenuRadioGroup>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuLabel>Order</DropdownMenuLabel>
-                      <DropdownMenuRadioGroup
-                        value={order}
-                        onValueChange={(value) => {
-                          setOrder(value as "asc" | "desc");
-                          setPage(1);
-                        }}
-                      >
-                        <DropdownMenuRadioItem value="asc">
-                          Asc
-                        </DropdownMenuRadioItem>
-                        <DropdownMenuRadioItem value="desc">
-                          Desc
-                        </DropdownMenuRadioItem>
-                      </DropdownMenuRadioGroup>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+              <div className="flex w-full min-w-0 flex-col gap-2 md:max-w-[500px] md:flex-1 md:flex-row">
+                <div className="relative min-w-0 flex-1">
+                  <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={search}
+                    onChange={(event) => {
+                      setSearch(event.target.value);
+                      setPage(1);
+                    }}
+                    placeholder="Search"
+                    className="rounded-md border-0 border-b-2 border-foreground/15 bg-muted/60 pr-10 pl-9 focus-visible:border-primary focus-visible:ring-0 dark:bg-input/30"
+                  />
+                  <div className="absolute top-1/2 right-1.5 flex -translate-y-1/2 items-center gap-1">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          className="h-7 w-7"
+                        >
+                          <ListFilter className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56">
+                        <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+                        <DropdownMenuRadioGroup
+                          value={sortBy}
+                          onValueChange={(value) => {
+                            const nextSortBy = value as BacktestSortBy;
+                            setSortBy(nextSortBy);
+                            setOrder(
+                              nextSortBy === "roi" ||
+                                nextSortBy === "winRate" ||
+                                nextSortBy === "profitFactor" ||
+                                nextSortBy === "createdAt" ||
+                                nextSortBy === "updatedAt"
+                                ? "desc"
+                                : "asc",
+                            );
+                            setPage(1);
+                          }}
+                        >
+                          <DropdownMenuRadioItem value="maxDrawdownPercent">
+                            Max Drawdown
+                          </DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="updatedAt">
+                            Last Updated
+                          </DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="createdAt">
+                            Newest
+                          </DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="profitFactor">
+                            Profit Factor
+                          </DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="roi">
+                            ROI
+                          </DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="winRate">
+                            Win Rate
+                          </DropdownMenuRadioItem>
+                        </DropdownMenuRadioGroup>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuLabel>Order</DropdownMenuLabel>
+                        <DropdownMenuRadioGroup
+                          value={order}
+                          onValueChange={(value) => {
+                            setOrder(value as "asc" | "desc");
+                            setPage(1);
+                          }}
+                        >
+                          <DropdownMenuRadioItem value="asc">
+                            Asc
+                          </DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="desc">
+                            Desc
+                          </DropdownMenuRadioItem>
+                        </DropdownMenuRadioGroup>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full justify-between gap-2 md:w-[170px]"
+                    >
+                      <span className="truncate">
+                        {timeframeFilterOptions.find(
+                          (option) => option.value === timeframe,
+                        )?.label ?? "All TF"}
+                      </span>
+                      <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 opacity-60" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    className="w-[var(--radix-dropdown-menu-trigger-width)] p-0"
+                  >
+                    <DropdownMenuLabel>Timeframe</DropdownMenuLabel>
+                    <ScrollArea className="h-[156px]">
+                      <DropdownMenuRadioGroup
+                        value={timeframe}
+                        onValueChange={(value) => {
+                          setTimeframe(value as LeaderboardTimeframeFilter);
+                          setPage(1);
+                        }}
+                      >
+                        {timeframeFilterOptions.map((option) => (
+                          <DropdownMenuRadioItem
+                            key={option.value}
+                            value={option.value}
+                            className="min-h-8 py-0.5 pl-2.5"
+                          >
+                            {option.label}
+                          </DropdownMenuRadioItem>
+                        ))}
+                      </DropdownMenuRadioGroup>
+                    </ScrollArea>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           </Tabs>

@@ -130,6 +130,7 @@ export const StrategySchema = {
       category: Joi.string()
         .valid("all", "mine", "bookmarked", "paid")
         .default("all"),
+      type: Joi.string().valid("all", "free", "paid").default("all"),
       sortBy: Joi.string()
         .valid("name", "createdAt", "updatedAt", "popular")
         .default("name"),

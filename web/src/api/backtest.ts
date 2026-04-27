@@ -10,6 +10,7 @@ type FetchBacktestLeaderboardParams = {
   search: string
   source: "all" | "me"
   duration: "all" | "7d" | "1m" | "3m" | "6m" | "1y"
+  timeframe?: string
   sortBy: string
   order: string
 }
@@ -20,6 +21,7 @@ function getFetchBacktestLeaderboardKey({
   search,
   source,
   duration,
+  timeframe,
   sortBy,
   order,
 }: FetchBacktestLeaderboardParams) {
@@ -29,6 +31,7 @@ function getFetchBacktestLeaderboardKey({
     search,
     source,
     duration,
+    timeframe: timeframe ?? null,
     sortBy,
     order,
   })
@@ -109,6 +112,7 @@ export async function fetchBacktestLeaderboard({
   search,
   source,
   duration,
+  timeframe,
   sortBy,
   order,
 }: FetchBacktestLeaderboardParams) {
@@ -118,6 +122,7 @@ export async function fetchBacktestLeaderboard({
     search,
     source,
     duration,
+    timeframe,
     sortBy,
     order,
   })
@@ -135,6 +140,7 @@ export async function fetchBacktestLeaderboard({
         search,
         source,
         duration,
+        timeframe,
         sortBy,
         order,
       },

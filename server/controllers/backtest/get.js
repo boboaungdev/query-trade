@@ -113,7 +113,7 @@ const backtestDurationRangeMap = {
 export const getBacktests = async (req, res, next) => {
   try {
     const user = req.user;
-    const { page, limit, search, source, duration, sortBy, order } =
+    const { page, limit, search, source, duration, timeframe, sortBy, order } =
       req.validatedQuery;
     const skip = (page - 1) * limit;
     const sortOrder = order === "desc" ? -1 : 1;
@@ -195,6 +195,14 @@ export const getBacktests = async (req, res, next) => {
       pipeline.push({
         $match: {
           "result.duration": durationRange,
+        },
+      });
+    }
+
+    if (timeframe && timeframe !== "all") {
+      pipeline.push({
+        $match: {
+          timeframe,
         },
       });
     }

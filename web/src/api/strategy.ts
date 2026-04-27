@@ -3,6 +3,7 @@ import api from "./axios"
 const strategyRequestMap = new Map<string, Promise<unknown>>()
 
 export type StrategyAccessType = "free" | "paid"
+export type StrategyFilterType = "all" | StrategyAccessType
 
 export type StrategyAccessState = {
   visibility: "public" | "private"
@@ -65,6 +66,7 @@ function getFetchStrategiesKey({
   sortBy,
   order,
   category,
+  type,
   isPublic,
 }: {
   page: number
@@ -73,6 +75,7 @@ function getFetchStrategiesKey({
   sortBy: string
   order: string
   category: StrategyCategory
+  type?: StrategyFilterType
   isPublic?: boolean
 }) {
   return JSON.stringify({
@@ -82,6 +85,7 @@ function getFetchStrategiesKey({
     sortBy,
     order,
     category,
+    type: type ?? null,
     isPublic: isPublic ?? null,
   })
 }
@@ -93,6 +97,7 @@ export async function fetchStrategies({
   sortBy,
   order,
   category,
+  type,
   isPublic,
 }: {
   page: number
@@ -101,6 +106,7 @@ export async function fetchStrategies({
   sortBy: string
   order: string
   category: StrategyCategory
+  type?: StrategyFilterType
   isPublic?: boolean
 }) {
   const key = getFetchStrategiesKey({
@@ -110,6 +116,7 @@ export async function fetchStrategies({
     sortBy,
     order,
     category,
+    type,
     isPublic,
   })
 
@@ -127,6 +134,7 @@ export async function fetchStrategies({
         sortBy,
         order,
         category,
+        type,
         isPublic,
       },
     })
