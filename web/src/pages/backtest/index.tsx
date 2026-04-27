@@ -2308,13 +2308,13 @@ export default function BacktestPage() {
                                                     "block w-full truncate text-xs",
                                                     isDisabledStrategy &&
                                                       isPaidStrategy
-                                                      ? "font-medium text-primary"
+                                                      ? "font-medium text-muted-foreground"
                                                       : "text-muted-foreground",
                                                   )}
                                                 >
                                                   {isDisabledStrategy &&
                                                   isPaidStrategy
-                                                    ? "Upgrade to a paid plan to use this strategy."
+                                                    ? "Description hidden - upgrade plan"
                                                     : item.description?.trim() ||
                                                       "No description provided."}
                                                 </p>

@@ -170,6 +170,7 @@ type BookmarkCardRenderProps = {
 
 function renderBookmarkStrategyCard({
   item,
+  userId,
   removingBookmarkIds,
   onOpenBookmark,
   onCopyBookmarkLink,
@@ -178,6 +179,12 @@ function renderBookmarkStrategyCard({
   const target = item.target;
   const targetId = target?._id;
   const targetPath = targetId ? `/strategy/${targetId}` : "";
+  const isMine =
+    Boolean(userId) &&
+    (typeof target?.user === "object" ? target.user?._id === userId : false);
+  const accessType = target?.access?.accessType ?? target?.accessType;
+  const isLockedPublicPaidFromOtherUser =
+    !isMine && target?.isPublic !== false && accessType === "paid";
   const targetUserName =
     typeof target?.user === "object" ? target.user?.name?.trim() : "";
   const targetUsername =
@@ -261,7 +268,8 @@ function renderBookmarkStrategyCard({
 
             <div className="mt-4 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
               <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
-                {(target?.access?.accessType ?? target?.accessType) === "paid" ? (
+                {(target?.access?.accessType ?? target?.accessType) ===
+                "paid" ? (
                   <BadgeDollarSign className="h-3.5 w-3.5 text-primary" />
                 ) : (
                   <HandCoins className="h-3.5 w-3.5 text-muted-foreground" />
@@ -353,12 +361,18 @@ function renderBookmarkStrategyCard({
         </div>
 
         <div className="min-w-0 flex-1">
-          <p
-            className="truncate text-sm text-muted-foreground"
-            title={target?.description?.trim() || "No description"}
-          >
-            {target?.description?.trim() || "No description"}
-          </p>
+          {isLockedPublicPaidFromOtherUser ? (
+            <p className="text-sm text-muted-foreground">
+              Description hidden - upgrade plan
+            </p>
+          ) : (
+            <p
+              className="truncate text-sm text-muted-foreground"
+              title={target?.description?.trim() || "No description"}
+            >
+              {target?.description?.trim() || "No description"}
+            </p>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -1021,6 +1035,7 @@ export default function BookmarkPage() {
               return item.targetType === "strategy"
                 ? renderBookmarkStrategyCard({
                     item,
+                    userId: user?._id,
                     removingBookmarkIds,
                     onOpenBookmark,
                     onCopyBookmarkLink,

@@ -2747,8 +2747,14 @@ export default function Profile() {
                                                     {item.name || "Strategy"}
                                                   </p>
                                                   <p className="block w-full truncate text-xs text-muted-foreground">
-                                                    {item.description ||
-                                                      "No description provided."}
+                                                    {!canEditProfile &&
+                                                    item.isPublic !== false &&
+                                                    (item.access?.accessType ??
+                                                      item.accessType) ===
+                                                      "paid"
+                                                      ? "Description hidden - upgrade plan"
+                                                      : item.description ||
+                                                        "No description provided."}
                                                   </p>
                                                   <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
                                                     <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">

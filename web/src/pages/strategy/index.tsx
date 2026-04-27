@@ -1067,12 +1067,18 @@ export default function StrategyPage() {
                     </div>
 
                     <div className="min-w-0 flex-1">
-                      <p
-                        className="truncate text-sm text-muted-foreground"
-                        title={description}
-                      >
-                        {description}
-                      </p>
+                      {isLockedPublicPaidFromOtherUser ? (
+                        <p className="text-sm text-muted-foreground">
+                          Description hidden - upgrade plan
+                        </p>
+                      ) : (
+                        <p
+                          className="truncate text-sm text-muted-foreground"
+                          title={description}
+                        >
+                          {description}
+                        </p>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
