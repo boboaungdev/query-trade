@@ -47,6 +47,18 @@ export function getViewerPlan(viewerSubscription) {
   return viewerSubscription?.plan ?? "free";
 }
 
+export function getStrategyIndicatorLimit(viewerPlan = "free") {
+  if (viewerPlan === "pro") {
+    return 10;
+  }
+
+  if (viewerPlan === "plus") {
+    return 5;
+  }
+
+  return 2;
+}
+
 export function canManagePaidStrategyAccess(viewerPlan = "free") {
   return PAID_ELIGIBLE_PLANS.has(viewerPlan);
 }

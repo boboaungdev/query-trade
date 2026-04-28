@@ -3,6 +3,7 @@ import { IndicatorDB } from "../../models/indicator.js";
 import { resError, resJson } from "../../utils/response.js";
 import {
   canManagePaidStrategyAccess,
+  getStrategyIndicatorLimit,
   getViewerPlan,
   sanitizeStrategyAccessPayload,
 } from "../../services/strategy/access.js";
@@ -18,6 +19,7 @@ export const updateStrategy = async (req, res, next) => {
     const { strategyId } = req.params;
     const viewerSubscription = await getEffectiveSubscription(user._id);
     const viewerPlan = getViewerPlan(viewerSubscription);
+    const maxIndicators = getStrategyIndicatorLimit(viewerPlan);
 
     if (!req.body || Object.keys(req.body).length === 0) {
       throw resError(400, "Need something to update!");
@@ -67,6 +69,20 @@ export const updateStrategy = async (req, res, next) => {
     };
 
     const cleanedIndicators = pruneUnusedIndicators(nextStrategy);
+
+    if (cleanedIndicators.length > maxIndicators) {
+      throw resError(
+        403,
+        `${
+          viewerPlan === "pro"
+            ? "Pro"
+            : viewerPlan === "plus"
+              ? "Plus"
+              : "Free"
+        } plan allows up to ${maxIndicators} indicators.`,
+      );
+    }
+
     const strategyUpdate = {
       ...req.body,
       ...normalizedAccessFields,

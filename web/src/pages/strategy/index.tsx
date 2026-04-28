@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   Bookmark,
   BookmarkCheck,
@@ -20,6 +20,7 @@ import {
   CopyPlus,
   Compass,
   Eye,
+  Globe,
   Pencil,
   SquareArrowOutUpRight,
   Loader2,
@@ -183,6 +184,12 @@ function getStrategyPlanTier(membership?: UserMembership) {
   if (normalizedPlan === "plus") return "plus";
 
   return "free";
+}
+
+function getStrategyIndicatorLimit(planTier: "free" | "plus" | "pro") {
+  if (planTier === "pro") return 10;
+  if (planTier === "plus") return 5;
+  return 2;
 }
 
 export default function StrategyPage() {
@@ -912,7 +919,13 @@ export default function StrategyPage() {
                         </div>
 
                         <div className="mt-4 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-                          <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                          <span
+                            className={cn(
+                              "inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5",
+                              (item.access?.accessType ?? item.accessType) ===
+                                "paid" && "text-primary",
+                            )}
+                          >
                             {(item.access?.accessType ?? item.accessType) ===
                             "paid" ? (
                               <BadgeDollarSign className="h-3.5 w-3.5 text-primary" />
@@ -923,6 +936,18 @@ export default function StrategyPage() {
                             "paid"
                               ? "Paid"
                               : "Free"}
+                          </span>
+                          <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                            {item.isPublic !== false ? (
+                              <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+                            ) : (
+                              <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                            )}
+                            {isMine
+                              ? "Mine"
+                              : item.isPublic !== false
+                                ? "Public"
+                                : "Private"}
                           </span>
                           <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
                             <Eye className="h-3.5 w-3.5 text-muted-foreground" />
@@ -1075,7 +1100,10 @@ export default function StrategyPage() {
                     <div className="min-w-0 flex-1">
                       {isLockedPublicPaidFromOtherUser ? (
                         <p className="text-sm text-muted-foreground">
-                          Description hidden - upgrade plan
+                          Description hidden -{" "}
+                          <span className="font-medium text-primary">
+                            unlock on paid plan
+                          </span>
                         </p>
                       ) : (
                         <p
@@ -3610,7 +3638,23 @@ export function StrategyBuilder({
   const previousDebouncedIndicatorSearchRef = useRef(
     debouncedIndicatorSearch.trim(),
   );
-  const canManagePaidAccess = getStrategyPlanTier(user?.membership) !== "free";
+  const strategyPlanTier = getStrategyPlanTier(user?.membership);
+  const canManagePaidAccess = strategyPlanTier !== "free";
+  const maxIndicators = getStrategyIndicatorLimit(strategyPlanTier);
+  const hasReachedIndicatorLimit = indicatorDrafts.length >= maxIndicators;
+  const indicatorLimitLabel =
+    strategyPlanTier === "pro"
+      ? "Pro plan up to 10 indicators."
+      : strategyPlanTier === "plus"
+        ? "Plus plan up to 5 indicators."
+        : "Free plan up to 2 indicators.";
+  const indicatorLimitMessage = `${
+    strategyPlanTier === "pro"
+      ? "Pro"
+      : strategyPlanTier === "plus"
+        ? "Plus"
+        : "Free"
+  } plan allows up to ${maxIndicators} indicators.`;
 
   const handleVisibilityChange = (nextIsPublic: boolean) => {
     setIsPublic(nextIsPublic);
@@ -3914,6 +3958,11 @@ export function StrategyBuilder({
     const selected = indicatorMap.get(indicatorId);
     if (!selected) return;
 
+    if (indicatorDrafts.length >= maxIndicators) {
+      toast.error(indicatorLimitMessage);
+      return;
+    }
+
     const nextParams = createParamDrafts(selected.params, selected.name);
     setIndicatorDrafts((prev) => [
       ...prev,
@@ -4016,6 +4065,10 @@ export function StrategyBuilder({
       return `Max ${STRATEGY_DESCRIPTION_MAX_LENGTH} characters`;
     }
 
+    if (indicatorDrafts.length > maxIndicators) {
+      return indicatorLimitMessage;
+    }
+
     try {
       indicatorDrafts.forEach((draft) => {
         if (!draft.indicator) {
@@ -4041,6 +4094,8 @@ export function StrategyBuilder({
     name,
     description,
     indicatorDrafts,
+    maxIndicators,
+    indicatorLimitMessage,
     serializeParams,
     buildStrategyPayload,
   ]);
@@ -4275,9 +4330,7 @@ export function StrategyBuilder({
                     <div className="min-w-0">
                       <p className="text-sm font-medium">Private</p>
                       <p className="text-xs text-muted-foreground">
-                        {isPublic
-                          ? "Anyone can discover this strategy."
-                          : "Only you can access this strategy."}
+                        Build your own private strategy.
                       </p>
                     </div>
                   </div>
@@ -4302,16 +4355,17 @@ export function StrategyBuilder({
                           <div className="flex flex-wrap items-center gap-2">
                             <p className="text-sm font-medium">Paid</p>
                             {!canManagePaidAccess ? (
-                              <span className="inline-flex items-center gap-1 text-xs font-medium text-primary">
+                              <Link
+                                to="/pricing"
+                                className="inline-flex items-center gap-1 text-xs font-medium text-primary transition-colors hover:text-primary/80"
+                              >
                                 <Lock className="h-3.5 w-3.5" />
                                 Unlock on paid plan
-                              </span>
+                              </Link>
                             ) : null}
                           </div>
                           <p className="text-xs text-muted-foreground">
-                            {accessType === "paid"
-                              ? "Limit this strategy to users on paid plans."
-                              : "Allow every user to access this strategy."}
+                            Earn tokens when users backtest with your strategy.
                           </p>
                         </div>
                       </div>
@@ -4340,9 +4394,36 @@ export function StrategyBuilder({
             <div className="min-w-0 space-y-4">
               <h3 className="text-base font-semibold">Indicators</h3>
               <div className="min-w-0 space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                  <p className="flex flex-wrap items-center gap-1.5">
+                    <span>{indicatorLimitLabel}</span>
+                    {strategyPlanTier === "free" ? (
+                      <Link
+                        to="/pricing"
+                        className="font-medium text-sky-500 transition-colors hover:text-sky-400"
+                      >
+                        Upgrade to Plus for more
+                      </Link>
+                    ) : strategyPlanTier === "plus" ? (
+                      <Link
+                        to="/pricing"
+                        className="font-medium text-amber-500 transition-colors hover:text-amber-400"
+                      >
+                        Upgrade to Pro for more
+                      </Link>
+                    ) : null}
+                  </p>
+                  <span className="font-medium">
+                    {indicatorDrafts.length}/{maxIndicators}
+                  </span>
+                </div>
                 <Dialog
                   open={isIndicatorMenuOpen}
                   onOpenChange={(open) => {
+                    if (open && hasReachedIndicatorLimit) {
+                      toast.error(indicatorLimitMessage);
+                      return;
+                    }
                     setIsIndicatorMenuOpen(open);
                     if (open) {
                       setIndicatorPage(1);
@@ -4361,6 +4442,7 @@ export function StrategyBuilder({
                     <Button
                       type="button"
                       variant="outline"
+                      disabled={hasReachedIndicatorLimit}
                       className="h-auto w-full min-w-0 justify-between rounded-lg border-border/70 bg-background px-3 py-2.5 text-left whitespace-normal hover:bg-muted/30"
                     >
                       <span className="flex min-w-0 items-center gap-3">
@@ -4372,7 +4454,9 @@ export function StrategyBuilder({
                             Add indicator
                           </span>
                           <span className="block break-words text-xs text-muted-foreground">
-                            Search and configure an indicator
+                            {hasReachedIndicatorLimit
+                              ? indicatorLimitMessage
+                              : "Search and configure an indicator"}
                           </span>
                         </span>
                       </span>

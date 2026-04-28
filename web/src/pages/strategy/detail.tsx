@@ -982,7 +982,13 @@ export default function StrategyDetailPage() {
                             : "Private"}
                       </span>
                     </span>
-                    <span className="inline-flex min-w-0 items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                    <span
+                      className={cn(
+                        "inline-flex min-w-0 items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5",
+                        (strategy.access?.accessType ?? strategy.accessType) ===
+                          "paid" && "text-primary",
+                      )}
+                    >
                       {(strategy.access?.accessType ?? strategy.accessType) ===
                       "paid" ? (
                         <BadgeDollarSign className="h-3.5 w-3.5 shrink-0 text-primary" />

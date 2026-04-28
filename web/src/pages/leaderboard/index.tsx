@@ -587,7 +587,7 @@ export default function LeaderboardPage() {
                     <Button
                       type="button"
                       variant="outline"
-                      className="w-full justify-between gap-2 md:w-[170px]"
+                      className="w-full justify-between gap-2 md:w-[132px]"
                     >
                       <span className="truncate">
                         {timeframeFilterOptions.find(

@@ -16,9 +16,11 @@ import {
   ChevronDown,
   Copy,
   Gauge,
+  Globe,
   HandCoins,
   ImagePlus,
   ListFilter,
+  Lock,
   Loader2,
   MoreHorizontal,
   MessageSquareText,
@@ -2754,10 +2756,17 @@ export default function Profile() {
                                                     item.isPublic !== false &&
                                                     (item.access?.accessType ??
                                                       item.accessType) ===
-                                                      "paid"
-                                                      ? "Description hidden - upgrade plan"
-                                                      : item.description ||
-                                                        "No description provided."}
+                                                      "paid" ? (
+                                                      <>
+                                                        Description hidden -{" "}
+                                                        <span className="text-primary">
+                                                          unlock on paid plan
+                                                        </span>
+                                                      </>
+                                                    ) : (
+                                                      item.description ||
+                                                      "No description provided."
+                                                    )}
                                                   </p>
                                                   <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
                                                     <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
@@ -2768,7 +2777,16 @@ export default function Profile() {
                                                           "unknown"}
                                                       </span>
                                                     </span>
-                                                    <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                                                    <span
+                                                      className={cn(
+                                                        "inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5",
+                                                        (item.access
+                                                          ?.accessType ??
+                                                          item.accessType) ===
+                                                          "paid" &&
+                                                          "text-primary",
+                                                      )}
+                                                    >
                                                       {(item.access
                                                         ?.accessType ??
                                                         item.accessType) ===
@@ -2783,6 +2801,20 @@ export default function Profile() {
                                                       "paid"
                                                         ? "Paid"
                                                         : "Free"}
+                                                    </span>
+                                                    <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                                                      {item.isPublic !==
+                                                      false ? (
+                                                        <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+                                                      ) : (
+                                                        <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                                                      )}
+                                                      {canEditProfile
+                                                        ? "Mine"
+                                                        : item.isPublic !==
+                                                            false
+                                                          ? "Public"
+                                                          : "Private"}
                                                     </span>
                                                     <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
                                                       <Eye className="h-3.5 w-3.5" />

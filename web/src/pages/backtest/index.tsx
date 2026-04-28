@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
 import axios from "axios";
 import type { DateRange } from "react-day-picker";
@@ -14,6 +14,7 @@ import {
   Clock3,
   CircleHelp,
   Eye,
+  Globe,
   HandCoins,
   Loader2,
   MoreHorizontal,
@@ -859,6 +860,13 @@ export default function BacktestPage() {
     () => getBacktestPlanMembershipMark(currentPlanPolicy.tier),
     [currentPlanPolicy.tier],
   );
+  const isOwnStrategy = useCallback(
+    (item?: StrategyItem | null) =>
+      Boolean(user?._id) &&
+      Boolean(item?.user?._id) &&
+      item?.user?._id === user?._id,
+    [user?._id],
+  );
 
   useEffect(() => {
     strategyIdRef.current = strategyId;
@@ -1145,9 +1153,11 @@ export default function BacktestPage() {
   const visibleStrategies = useMemo(
     () =>
       currentPlanPolicy.requiresPublicStrategiesOnly
-        ? strategies.filter((item) => item.isPublic !== false)
+        ? strategies.filter(
+            (item) => item.isPublic !== false || isOwnStrategy(item),
+          )
         : strategies,
-    [currentPlanPolicy.requiresPublicStrategiesOnly, strategies],
+    [currentPlanPolicy.requiresPublicStrategiesOnly, strategies, isOwnStrategy],
   );
 
   const visibleSymbols = useMemo(() => {
@@ -1201,7 +1211,8 @@ export default function BacktestPage() {
   const canSelectStrategy = (item: StrategyItem) => {
     if (
       currentPlanPolicy.requiresPublicStrategiesOnly &&
-      item.isPublic === false
+      item.isPublic === false &&
+      !isOwnStrategy(item)
     ) {
       return false;
     }
@@ -1302,7 +1313,8 @@ export default function BacktestPage() {
     const activeStrategy = strategies.find((item) => item._id === strategyId);
     const isUnavailablePrivate =
       currentPlanPolicy.requiresPublicStrategiesOnly &&
-      activeStrategy?.isPublic === false;
+      activeStrategy?.isPublic === false &&
+      !isOwnStrategy(activeStrategy);
     const isUnavailablePaid =
       currentPlanPolicy.tier === "free" &&
       activeStrategy &&
@@ -1473,7 +1485,8 @@ export default function BacktestPage() {
   const selectStrategy = (item: StrategyItem) => {
     if (
       currentPlanPolicy.requiresPublicStrategiesOnly &&
-      item.isPublic === false
+      item.isPublic === false &&
+      !isOwnStrategy(item)
     ) {
       return;
     }
@@ -2274,6 +2287,9 @@ export default function BacktestPage() {
                                             getStrategyAccessType(item);
                                           const isPaidStrategy =
                                             accessType === "paid";
+                                          const isMine =
+                                            Boolean(user?._id) &&
+                                            item.user?._id === user?._id;
                                           const isDisabledStrategy =
                                             !canSelectStrategy(item);
 
@@ -2313,10 +2329,17 @@ export default function BacktestPage() {
                                                   )}
                                                 >
                                                   {isDisabledStrategy &&
-                                                  isPaidStrategy
-                                                    ? "Description hidden - upgrade plan"
-                                                    : item.description?.trim() ||
-                                                      "No description provided."}
+                                                  isPaidStrategy ? (
+                                                    <>
+                                                      Description hidden -{" "}
+                                                      <span className="text-primary">
+                                                        unlock on paid plan
+                                                      </span>
+                                                    </>
+                                                  ) : (
+                                                    item.description?.trim() ||
+                                                    "No description provided."
+                                                  )}
                                                 </p>
                                                 <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
                                                   <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
@@ -2335,7 +2358,13 @@ export default function BacktestPage() {
                                                       />
                                                     </span>
                                                   </span>
-                                                  <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                                                  <span
+                                                    className={cn(
+                                                      "inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5",
+                                                      isPaidStrategy &&
+                                                        "text-primary",
+                                                    )}
+                                                  >
                                                     {isPaidStrategy ? (
                                                       <BadgeDollarSign className="h-3.5 w-3.5 text-primary" />
                                                     ) : (
@@ -2344,6 +2373,18 @@ export default function BacktestPage() {
                                                     {isPaidStrategy
                                                       ? "Paid"
                                                       : "Free"}
+                                                  </span>
+                                                  <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                                                    {item.isPublic !== false ? (
+                                                      <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+                                                    ) : (
+                                                      <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                                                    )}
+                                                    {isMine
+                                                      ? "Mine"
+                                                      : item.isPublic !== false
+                                                        ? "Public"
+                                                        : "Private"}
                                                   </span>
                                                   <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
                                                     <Eye className="h-3.5 w-3.5" />

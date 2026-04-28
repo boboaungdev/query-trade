@@ -6,8 +6,6 @@ import {
   Check,
   CreditCard,
   DollarSign,
-  Eye,
-  EyeOff,
   Loader2,
   Smartphone,
   Wallet,
@@ -434,36 +432,36 @@ export default function Pricing() {
                       <div className="min-w-0 flex-1 text-left">
                         <div className="flex items-center gap-2">
                           <Wallet className="size-5 text-muted-foreground" />
-                          <p className="truncate text-xl font-semibold tracking-tight">
-                            {showBalance
-                              ? `${formatTokenAmount(tokenBalance)} token`
-                              : "**** token"}
-                          </p>
-                        </div>
-                        <div className="ml-7 flex items-center gap-1">
-                          <p className="text-sm text-muted-foreground">
-                            {showBalance
-                              ? `${formatFullTokenAmount(tokenBalance)} token`
-                              : "**** token"}
-                          </p>
-                          <Button
+                          <button
                             type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="size-6"
                             onClick={() =>
                               setShowBalance((current) => !current)
                             }
                             aria-label={
                               showBalance ? "Hide balance" : "Show balance"
                             }
+                            className="truncate text-left text-xl font-semibold tracking-tight transition-colors hover:text-foreground/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                           >
-                            {showBalance ? (
-                              <EyeOff className="size-3.5" />
-                            ) : (
-                              <Eye className="size-3.5" />
-                            )}
-                          </Button>
+                            {showBalance
+                              ? `${formatTokenAmount(tokenBalance)} token`
+                              : "**** token"}
+                          </button>
+                        </div>
+                        <div className="ml-7">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setShowBalance((current) => !current)
+                            }
+                            aria-label={
+                              showBalance ? "Hide balance" : "Show balance"
+                            }
+                            className="text-left text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                          >
+                            {showBalance
+                              ? `${formatFullTokenAmount(tokenBalance)} token`
+                              : "**** token"}
+                          </button>
                         </div>
                       </div>
                       <Button

@@ -4,6 +4,7 @@ import { UserDB } from "../../models/user.js";
 import { resError, resJson } from "../../utils/response.js";
 import {
   canManagePaidStrategyAccess,
+  getStrategyIndicatorLimit,
   getViewerPlan,
   sanitizeStrategyAccessPayload,
 } from "../../services/strategy/access.js";
@@ -18,6 +19,7 @@ export const createStrategy = async (req, res, next) => {
     const user = req.user;
     const viewerSubscription = await getEffectiveSubscription(user._id);
     const viewerPlan = getViewerPlan(viewerSubscription);
+    const maxIndicators = getStrategyIndicatorLimit(viewerPlan);
     const normalizedPayload = sanitizeStrategyAccessPayload(req.body);
 
     if (
@@ -31,6 +33,20 @@ export const createStrategy = async (req, res, next) => {
     }
 
     const indicators = pruneUnusedIndicators(normalizedPayload);
+
+    if (indicators.length > maxIndicators) {
+      throw resError(
+        403,
+        `${
+          viewerPlan === "pro"
+            ? "Pro"
+            : viewerPlan === "plus"
+              ? "Plus"
+              : "Free"
+        } plan allows up to ${maxIndicators} indicators.`,
+      );
+    }
+
     const strategyPayload = {
       ...normalizedPayload,
       indicators,

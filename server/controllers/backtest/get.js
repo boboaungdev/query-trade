@@ -15,7 +15,7 @@ export const getBacktestById = async (req, res, next) => {
     const backtest = await BacktestDB.findById(backtestId)
       .populate({
         path: "strategy",
-        select: "name isPublic stats user",
+        select: "name isPublic accessType stats user",
         populate: {
           path: "user",
           select: "username",

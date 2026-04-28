@@ -172,6 +172,10 @@ type BacktestDetail = {
     name?: string;
     description?: string;
     isPublic?: boolean;
+    accessType?: "free" | "paid";
+    access?: {
+      accessType?: "free" | "paid";
+    };
     stats?: {
       viewCount?: number;
       bookmarkCount?: number;
@@ -199,6 +203,26 @@ type BacktestDetail = {
   };
   result: BacktestResult;
 };
+
+type BacktestPlanTier = "free" | "plus" | "pro";
+
+function getBacktestPlanTier(membership?: UserMembership): BacktestPlanTier {
+  const rawPlan =
+    membership?.plan ?? membership?.verifiedVariant ?? membership?.badgeVariant;
+  const normalizedPlan = String(rawPlan ?? "free")
+    .trim()
+    .toLowerCase();
+
+  if (normalizedPlan === "pro") {
+    return "pro";
+  }
+
+  if (normalizedPlan === "plus") {
+    return "plus";
+  }
+
+  return "free";
+}
 
 let backtestBookmarkLoadPromise: Promise<void> | null = null;
 
@@ -1202,6 +1226,10 @@ export default function BacktestResultPage() {
     radarViewOptions[0];
   const strategyName = backtest.strategy?.name?.trim() || "Strategy";
   const strategyIsPublic = backtest.strategy?.isPublic ?? false;
+  const strategyAccessType =
+    backtest.strategy?.access?.accessType ??
+    backtest.strategy?.accessType ??
+    "free";
   const strategyCreatorUsername =
     backtest.strategy?.user?.username?.trim().replace(/^@/, "") || "unknown";
   const backtesterName =
@@ -1221,12 +1249,26 @@ export default function BacktestResultPage() {
   const isStrategyBookmarkUpdating = Boolean(
     backtest.strategy?._id && updatingStrategyIds.has(backtest.strategy._id),
   );
+  const currentPlanTier = getBacktestPlanTier(user?.membership);
+  const canAccessPaidStrategy =
+    strategyAccessType !== "paid" ||
+    isStrategyOwner ||
+    currentPlanTier === "plus" ||
+    currentPlanTier === "pro";
   const canOpenCreatorProfile =
     !isStrategyOwner && strategyCreatorUsername !== "unknown";
   const canOpenBacktesterProfile =
     !isBacktestOwner && backtesterUsername !== "unknown";
   const canOpenStrategy =
-    Boolean(backtest.strategy?._id) && (strategyIsPublic || isStrategyOwner);
+    Boolean(backtest.strategy?._id) &&
+    (strategyIsPublic || isStrategyOwner) &&
+    canAccessPaidStrategy;
+  const showCreatorProfilePrimaryAction =
+    !canOpenStrategy && canOpenCreatorProfile;
+  const showStrategyActions = Boolean(
+    backtest.strategy?._id &&
+      (canOpenStrategy || canOpenCreatorProfile || isStrategyOwner),
+  );
   const tradesPerPage = 10;
   const totalTradesPages = Math.max(
     1,
@@ -2288,6 +2330,20 @@ export default function BacktestResultPage() {
                         />
                       </span>
                     </span>
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5",
+                        strategyAccessType === "paid" && "text-primary",
+                      )}
+                    >
+                      <CircleDollarSign
+                        className={cn(
+                          "h-3.5 w-3.5 text-muted-foreground",
+                          strategyAccessType === "paid" && "text-primary",
+                        )}
+                      />
+                      <span>{strategyAccessType === "paid" ? "Paid" : "Free"}</span>
+                    </span>
                     <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
                       {strategyIsPublic ? (
                         <Globe className="h-3.5 w-3.5 text-muted-foreground" />
@@ -2317,22 +2373,39 @@ export default function BacktestResultPage() {
               </div>
 
               <div className="flex w-full min-w-0 flex-col gap-2 md:w-auto md:flex-row md:flex-wrap md:items-center">
-                {canOpenStrategy && backtest.strategy?._id ? (
-                  <ButtonGroup className="w-full min-w-0 md:w-auto">
-                    <Button
-                      type="button"
-                      size="sm"
-                      className="min-w-0 flex-1 rounded-r-none"
-                      asChild
-                    >
-                      <Link
-                        to={`/strategy/${backtest.strategy._id}`}
-                        className="inline-flex min-w-0 items-center justify-center gap-1.5"
+                {showStrategyActions ? (
+                  <ButtonGroup className="w-full min-w-0 md:w-44">
+                    {canOpenStrategy ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="min-w-0 flex-1 rounded-r-none"
+                        asChild
                       >
-                        <SquareArrowOutUpRight className="h-4 w-4" />
-                        <span className="truncate">Open Strategy</span>
-                      </Link>
-                    </Button>
+                        <Link
+                          to={`/strategy/${backtest.strategy?._id}`}
+                          className="inline-flex min-w-0 items-center justify-center gap-1.5"
+                        >
+                          <SquareArrowOutUpRight className="h-4 w-4" />
+                          <span className="truncate">Open Strategy</span>
+                        </Link>
+                      </Button>
+                    ) : showCreatorProfilePrimaryAction ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="min-w-0 flex-1 rounded-r-none"
+                        asChild
+                      >
+                        <Link
+                          to={`/${strategyCreatorUsername}`}
+                          className="inline-flex min-w-0 items-center justify-center gap-1.5"
+                        >
+                          <UserRound className="h-4 w-4" />
+                          <span className="truncate">Creator Profile</span>
+                        </Link>
+                      </Button>
+                    ) : null}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
@@ -2361,15 +2434,26 @@ export default function BacktestResultPage() {
                             </Link>
                           </DropdownMenuItem>
                         ) : null}
-                        <DropdownMenuItem asChild>
-                          <Link
-                            to={`/strategy/${backtest.strategy._id}`}
-                            className="flex items-center gap-2"
-                          >
+                        {canOpenStrategy ? (
+                          <DropdownMenuItem asChild>
+                            <Link
+                              to={`/strategy/${backtest.strategy?._id}`}
+                              className="flex items-center gap-2"
+                            >
+                              <SquareArrowOutUpRight className="h-4 w-4" />
+                              Open strategy
+                            </Link>
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem disabled>
                             <SquareArrowOutUpRight className="h-4 w-4" />
-                            Open strategy
-                          </Link>
-                        </DropdownMenuItem>
+                            <span>Open strategy</span>
+                            <span className="ml-auto inline-flex items-center gap-1 text-sky-500">
+                              <Lock className="h-3.5 w-3.5" />
+                              <span>Plus</span>
+                            </span>
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem
                           onSelect={() => {
                             void onToggleStrategyBookmark();

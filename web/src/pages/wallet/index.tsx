@@ -11,8 +11,6 @@ import {
   CreditCard,
   DollarSign,
   Download,
-  Eye,
-  EyeOff,
   MessageSquareText,
   Loader2,
   ScanLine,
@@ -1455,20 +1453,6 @@ export default function WalletPage() {
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <CardDescription>Your available wallet token.</CardDescription>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="size-8 shrink-0"
-                  onClick={toggleShowBalance}
-                  aria-label={showBalance ? "Hide balance" : "Show balance"}
-                >
-                  {showBalance ? (
-                    <EyeOff className="size-4" />
-                  ) : (
-                    <Eye className="size-4" />
-                  )}
-                </Button>
               </div>
               <div className="flex items-center gap-1">
                 <Button
@@ -1489,9 +1473,14 @@ export default function WalletPage() {
             <div className="flex flex-nowrap items-center justify-between gap-3">
               <div className="flex min-w-0 flex-1 items-center gap-2">
                 <Wallet className="size-5 text-muted-foreground" />
-                <p className="truncate text-2xl font-semibold tracking-tight">
+                <button
+                  type="button"
+                  onClick={toggleShowBalance}
+                  aria-label={showBalance ? "Hide balance" : "Show balance"}
+                  className="truncate text-left text-2xl font-semibold tracking-tight transition-colors hover:text-foreground/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
                   {showBalance ? formatTokenAmount(tokenBalance) : "****"} token
-                </p>
+                </button>
               </div>
               <Button
                 className="shrink-0"
@@ -1504,9 +1493,14 @@ export default function WalletPage() {
             <p className="hidden text-sm text-muted-foreground">
               {walletBalanceUsdText}
             </p>
-            <p className="ml-7 pb-4 text-sm text-muted-foreground">
+            <button
+              type="button"
+              onClick={toggleShowBalance}
+              aria-label={showBalance ? "Hide balance" : "Show balance"}
+              className="ml-7 pb-4 text-left text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
               {walletBalanceTokenText}
-            </p>
+            </button>
             <div className="grid grid-cols-3 gap-3">
               <Button
                 className="justify-center"

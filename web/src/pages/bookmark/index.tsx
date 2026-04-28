@@ -6,7 +6,9 @@ import {
   CandlestickChart,
   Copy,
   Eye,
+  Globe,
   HandCoins,
+  Lock,
   Loader2,
   ListFilter,
   MoreHorizontal,
@@ -267,7 +269,13 @@ function renderBookmarkStrategyCard({
             </div>
 
             <div className="mt-4 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-              <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5",
+                  (target?.access?.accessType ?? target?.accessType) ===
+                    "paid" && "text-primary",
+                )}
+              >
                 {(target?.access?.accessType ?? target?.accessType) ===
                 "paid" ? (
                   <BadgeDollarSign className="h-3.5 w-3.5 text-primary" />
@@ -277,6 +285,18 @@ function renderBookmarkStrategyCard({
                 {(target?.access?.accessType ?? target?.accessType) === "paid"
                   ? "Paid"
                   : "Free"}
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
+                {target?.isPublic !== false ? (
+                  <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+                ) : (
+                  <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                )}
+                {isMine
+                  ? "Mine"
+                  : target?.isPublic !== false
+                    ? "Public"
+                    : "Private"}
               </span>
               <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5">
                 <Eye className="h-3.5 w-3.5 text-muted-foreground" />
@@ -363,7 +383,10 @@ function renderBookmarkStrategyCard({
         <div className="min-w-0 flex-1">
           {isLockedPublicPaidFromOtherUser ? (
             <p className="text-sm text-muted-foreground">
-              Description hidden - upgrade plan
+              Description hidden -{" "}
+              <span className="font-medium text-primary">
+                unlock on paid plan
+              </span>
             </p>
           ) : (
             <p
