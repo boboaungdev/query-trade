@@ -192,6 +192,18 @@ function getStrategyIndicatorLimit(planTier: "free" | "plus" | "pro") {
   return 2;
 }
 
+function getStrategyRuleLimit(planTier: "free" | "plus" | "pro") {
+  if (planTier === "pro") return 10;
+  if (planTier === "plus") return 5;
+  return 2;
+}
+
+function getStrategyPlanLabel(planTier: "free" | "plus" | "pro") {
+  if (planTier === "pro") return "Pro";
+  if (planTier === "plus") return "Plus";
+  return "Free";
+}
+
 export default function StrategyPage() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -2283,16 +2295,20 @@ function formatDraftOperand(operand: OperandDraft) {
   return value;
 }
 
-function summarizeStopLossDraft(stopLoss: StopLossDraft) {
+function summarizeStopLossDraft(
+  stopLoss: StopLossDraft,
+  side: "buy" | "sell",
+) {
   switch (stopLoss.type) {
     case "candle": {
       const previousCandles = Number(stopLoss.previousCandles || "0");
+      const priceField = side === "buy" ? "low" : "high";
       const candleLabel =
         previousCandles === 0
           ? "Current candle"
           : `Previous ${previousCandles} candle${previousCandles === 1 ? "" : "s"}`;
 
-      return `${candleLabel} (${stopLoss.candleAggregation})`;
+      return `${candleLabel} (${stopLoss.candleAggregation}, ${priceField})`;
     }
     case "indicator":
       return stopLoss.indicator.trim()
@@ -2322,7 +2338,7 @@ function DraftLogicWord({ logic }: { logic: "and" | "or" }) {
   return (
     <span
       className={cn(
-        "mx-1 inline-flex items-center justify-center px-1 text-[10px] font-medium tracking-[0.12em] text-muted-foreground uppercase",
+        "mx-1 inline-flex text-[10px] font-semibold uppercase",
       )}
     >
       {logic}
@@ -2340,19 +2356,15 @@ function DraftRuleToken({
   return (
     <span
       className={cn(
-        "inline-flex flex-wrap items-center rounded-2xl border px-2 py-1 text-xs leading-5 font-medium text-foreground",
-        tone === "buy"
-          ? "border-success/15 bg-success/5"
-          : "border-warning/15 bg-warning/5",
+        "inline-flex flex-wrap items-center rounded-2xl px-2 py-1 text-xs leading-5 font-medium",
+        tone === "buy" ? "bg-success/18" : "bg-destructive/16",
       )}
     >
       <span className="break-all">{formatDraftOperand(node.left)}</span>
       <span
         className={cn(
-          "mx-1 inline-flex min-w-[1.25rem] items-center justify-center rounded-full px-1 py-0.5 text-center text-[10px] leading-none font-semibold",
-          tone === "buy"
-            ? "bg-success/12 text-success"
-            : "bg-warning/12 text-warning",
+          "mx-1 inline-flex min-w-[1.25rem] items-center justify-center px-1 py-0.5 text-center text-[10px] leading-none font-semibold",
+          tone === "buy" ? "text-success" : "text-destructive",
         )}
       >
         {node.operator}
@@ -2374,9 +2386,7 @@ function DraftRuleExpression({
       <span
         className={cn(
           "inline-flex flex-wrap items-center rounded-2xl border px-2 py-1",
-          tone === "buy"
-            ? "border-success/15 bg-success/5"
-            : "border-warning/15 bg-warning/5",
+          tone === "buy" ? "border-success/18" : "border-destructive/16",
         )}
       >
         {node.conditions.map((child, index) => (
@@ -2418,7 +2428,7 @@ function DraftRuleSequence({
   tone: "buy" | "sell";
 }) {
   return (
-    <div className="text-left leading-7">
+    <div className="text-left leading-9">
       {nodes.map((node, index) => (
         <span
           key={`${formatDraftConditionNodeSummary(node)}-${index}`}
@@ -2441,22 +2451,29 @@ function DraftRiskTile({
   value: string;
   editContent?: ReactNode;
 }) {
+  const isStopLoss = label === "Stop Loss";
+
   return (
     <div
       className={cn(
-        "w-full rounded-xl px-2.5 py-2",
-        label === "Stop Loss" ? "bg-destructive/8" : "bg-info/8",
+        "flex items-start justify-between gap-3 rounded-xl border px-3 py-3",
+        isStopLoss
+          ? "border-destructive/15 bg-destructive/5"
+          : "border-success/15 bg-success/5",
       )}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-medium tracking-[0.16em] text-muted-foreground uppercase">
-            {label}
-          </p>
-          <p className="mt-1 text-sm leading-5 font-medium break-words text-foreground [overflow-wrap:anywhere]">
-            {value}
-          </p>
-        </div>
+      <p className="shrink-0 pt-0.5 text-[11px] font-medium tracking-[0.16em] text-muted-foreground uppercase">
+        {label}
+      </p>
+      <div className="min-w-0 flex flex-1 items-start justify-end gap-3">
+        <p
+          className={cn(
+            "text-right text-sm leading-5 font-medium break-words [overflow-wrap:anywhere]",
+            isStopLoss ? "text-destructive" : "text-success",
+          )}
+        >
+          {value}
+        </p>
         {editContent ? <div className="shrink-0">{editContent}</div> : null}
       </div>
     </div>
@@ -2643,6 +2660,8 @@ function ConditionEditor({
   title,
   candleOptions,
   indicatorFieldOptions,
+  canAddMoreRules,
+  ruleLimitMessage,
   onChange,
   onRemove,
 }: {
@@ -2650,6 +2669,8 @@ function ConditionEditor({
   title: string;
   candleOptions: DropdownOption<string>[];
   indicatorFieldOptions: DropdownOption<string>[];
+  canAddMoreRules: boolean;
+  ruleLimitMessage: string;
   onChange: (next: ConditionNode) => void;
   onRemove: () => void;
 }) {
@@ -2704,6 +2725,8 @@ function ConditionEditor({
                 title={`Rule ${index + 1}`}
                 candleOptions={candleOptions}
                 indicatorFieldOptions={indicatorFieldOptions}
+                canAddMoreRules={canAddMoreRules}
+                ruleLimitMessage={ruleLimitMessage}
                 onChange={(next) =>
                   onChange({
                     ...node,
@@ -2712,12 +2735,17 @@ function ConditionEditor({
                     ),
                   })
                 }
-                onRemove={() =>
+                onRemove={() => {
+                  if (node.conditions.length === 1) {
+                    onRemove();
+                    return;
+                  }
+
                   onChange({
                     ...node,
                     conditions: removeConditionTree(node.conditions, child.id),
-                  })
-                }
+                  });
+                }}
               />
             </div>
           ))}
@@ -2727,6 +2755,8 @@ function ConditionEditor({
           <Button
             type="button"
             variant="outline"
+            disabled={!canAddMoreRules}
+            title={!canAddMoreRules ? ruleLimitMessage : "Add rule"}
             onClick={() =>
               onChange({
                 ...node,
@@ -2740,6 +2770,8 @@ function ConditionEditor({
           <Button
             type="button"
             variant="outline"
+            disabled={!canAddMoreRules}
+            title={!canAddMoreRules ? ruleLimitMessage : "Add group"}
             onClick={() =>
               onChange({
                 ...node,
@@ -2930,6 +2962,21 @@ function StopLossEditor({
               ? "Buy stop loss uses candle lows as the reference."
               : "Sell stop loss uses candle highs as the reference."}
           </p>
+          <div className="rounded-xl border border-border/60 bg-muted/25 px-3 py-2">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-[11px] font-medium tracking-[0.16em] text-muted-foreground uppercase">
+                Price Reference
+              </p>
+              <p
+                className={cn(
+                  "text-sm font-medium",
+                  side === "buy" ? "text-success" : "text-destructive",
+                )}
+              >
+                {side === "buy" ? "Low" : "High"}
+              </p>
+            </div>
+          </div>
           <div className="grid gap-3 md:grid-cols-2">
             <div className="space-y-2">
               <div className="flex items-center gap-1.5">
@@ -3203,6 +3250,9 @@ function LogicBlockEditor({
   candleOptions,
   indicatorFieldOptions,
   indicatorKeys,
+  maxRules,
+  ruleLimitMessage,
+  upgradeCtaLabel,
   onChange,
 }: {
   title: string;
@@ -3211,6 +3261,9 @@ function LogicBlockEditor({
   candleOptions: DropdownOption<string>[];
   indicatorFieldOptions: DropdownOption<string>[];
   indicatorKeys: string[];
+  maxRules: number;
+  ruleLimitMessage: string;
+  upgradeCtaLabel: string | null;
   onChange: (next: LogicBlockDraft) => void;
 }) {
   const ruleCount = countConditionNodes(draft.conditions);
@@ -3219,45 +3272,44 @@ function LogicBlockEditor({
   const isBuy = tone === "buy";
   const shouldScrollEntryEditor = draft.conditions.length > 1;
   const entrySummary = summarizeRuleCount(ruleCount);
+  const canAddMoreRules = ruleCount < maxRules;
+  const ruleUsageLabel = `${ruleCount}/${maxRules} rules`;
 
   return (
-    <section
+    <Card
       className={cn(
-        "relative overflow-hidden rounded-xl p-4 md:p-5",
-        isBuy ? "theme-rule-panel-buy" : "theme-rule-panel-sell",
+        "min-w-0 overflow-hidden border-border/70",
+        isBuy ? "bg-success/5" : "bg-destructive/5",
       )}
     >
-      <div className="theme-hero-sheen absolute inset-x-0 top-0 h-px" />
-      <div className="relative space-y-4">
+      <CardContent className="space-y-4 md:px-5">
         <div className="space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium tracking-[0.16em] uppercase",
-                isBuy
-                  ? "border-success/20 bg-success/10 text-success"
-                  : "border-warning/20 bg-warning/10 text-warning",
-              )}
-            >
-              {isBuy ? (
-                <TrendingUp className="h-3 w-3" />
-              ) : (
-                <TrendingDown className="h-3 w-3" />
-              )}
-              {title}
-            </span>
-            <span className="rounded-full border border-border/70 bg-background/80 px-2.5 py-1 text-[11px] font-medium tracking-[0.16em] text-muted-foreground uppercase">
-              {entrySummary}
-            </span>
-          </div>
-          <p className="text-sm text-muted-foreground">{description}</p>
+          <CardTitle className="flex items-center gap-2">
+            {isBuy ? (
+              <TrendingUp className="h-4 w-4 text-success" />
+            ) : (
+              <TrendingDown className="h-4 w-4 text-destructive" />
+            )}
+            {title}
+          </CardTitle>
+          <CardDescription className="text-sm leading-6">
+            {description}
+          </CardDescription>
         </div>
 
-        <div className="rounded-xl border border-border/40 bg-muted/15 px-3 py-3">
+        <div className="space-y-2">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
-              Rules
-            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
+                Rules
+              </p>
+              <span className="text-[11px] text-muted-foreground">
+                {entrySummary}
+              </span>
+              <span className="text-[11px] text-muted-foreground">
+                {ruleUsageLabel}
+              </span>
+            </div>
             <Dialog>
               <DialogTrigger asChild>
                 <Button
@@ -3315,6 +3367,8 @@ function LogicBlockEditor({
                               title={`Rule ${index + 1}`}
                               candleOptions={candleOptions}
                               indicatorFieldOptions={indicatorFieldOptions}
+                              canAddMoreRules={canAddMoreRules}
+                              ruleLimitMessage={ruleLimitMessage}
                               onChange={(next) =>
                                 onChange({
                                   ...draft,
@@ -3341,6 +3395,8 @@ function LogicBlockEditor({
                         <Button
                           type="button"
                           variant="outline"
+                          disabled={!canAddMoreRules}
+                          title={!canAddMoreRules ? ruleLimitMessage : "Add rule"}
                           onClick={() =>
                             onChange({
                               ...draft,
@@ -3357,6 +3413,8 @@ function LogicBlockEditor({
                         <Button
                           type="button"
                           variant="outline"
+                          disabled={!canAddMoreRules}
+                          title={!canAddMoreRules ? ruleLimitMessage : "Add group"}
                           onClick={() =>
                             onChange({
                               ...draft,
@@ -3370,6 +3428,11 @@ function LogicBlockEditor({
                           <CirclePlus className="h-4 w-4" />
                           Add Group
                         </Button>
+                        {!canAddMoreRules && upgradeCtaLabel ? (
+                          <Button type="button" asChild>
+                            <Link to="/pricing">{upgradeCtaLabel}</Link>
+                          </Button>
+                        ) : null}
                       </div>
                     </div>
                   </ScrollArea>
@@ -3403,6 +3466,8 @@ function LogicBlockEditor({
                             title={`Rule ${index + 1}`}
                             candleOptions={candleOptions}
                             indicatorFieldOptions={indicatorFieldOptions}
+                            canAddMoreRules={canAddMoreRules}
+                            ruleLimitMessage={ruleLimitMessage}
                             onChange={(next) =>
                               onChange({
                                 ...draft,
@@ -3429,6 +3494,8 @@ function LogicBlockEditor({
                       <Button
                         type="button"
                         variant="outline"
+                        disabled={!canAddMoreRules}
+                        title={!canAddMoreRules ? ruleLimitMessage : "Add rule"}
                         onClick={() =>
                           onChange({
                             ...draft,
@@ -3445,6 +3512,8 @@ function LogicBlockEditor({
                       <Button
                         type="button"
                         variant="outline"
+                        disabled={!canAddMoreRules}
+                        title={!canAddMoreRules ? ruleLimitMessage : "Add group"}
                         onClick={() =>
                           onChange({
                             ...draft,
@@ -3458,25 +3527,39 @@ function LogicBlockEditor({
                         <CirclePlus className="h-4 w-4" />
                         Add Group
                       </Button>
+                      {!canAddMoreRules && upgradeCtaLabel ? (
+                        <Button type="button" asChild>
+                          <Link to="/pricing">{upgradeCtaLabel}</Link>
+                        </Button>
+                      ) : null}
                     </div>
                   </div>
                 )}
               </DialogContent>
             </Dialog>
           </div>
-          <div className="mt-2.5">
+          <div className="text-left leading-9">
             <DraftRuleSequence
               nodes={draft.conditions}
               logic={draft.logic}
               tone={tone}
             />
           </div>
+          {!canAddMoreRules ? (
+            <p className="text-xs text-muted-foreground">{ruleLimitMessage}</p>
+          ) : null}
         </div>
 
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="space-y-2">
+          <p className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
+            Risk Setup
+          </p>
+        </div>
+
+        <div className="space-y-2.5">
           <DraftRiskTile
             label="Stop Loss"
-            value={summarizeStopLossDraft(draft.riskManagement.stopLoss)}
+            value={summarizeStopLossDraft(draft.riskManagement.stopLoss, tone)}
             editContent={
               <Dialog>
                 <DialogTrigger asChild>
@@ -3566,8 +3649,8 @@ function LogicBlockEditor({
             }
           />
         </div>
-      </div>
-    </section>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -3641,20 +3724,39 @@ export function StrategyBuilder({
   const strategyPlanTier = getStrategyPlanTier(user?.membership);
   const canManagePaidAccess = strategyPlanTier !== "free";
   const maxIndicators = getStrategyIndicatorLimit(strategyPlanTier);
+  const maxRulesPerEntry = getStrategyRuleLimit(strategyPlanTier);
   const hasReachedIndicatorLimit = indicatorDrafts.length >= maxIndicators;
+  const showIndicatorUpgradeMessage =
+    strategyPlanTier === "free"
+      ? true
+      : strategyPlanTier === "plus"
+        ? hasReachedIndicatorLimit
+        : false;
   const indicatorLimitLabel =
     strategyPlanTier === "pro"
       ? "Pro plan up to 10 indicators."
       : strategyPlanTier === "plus"
         ? "Plus plan up to 5 indicators."
         : "Free plan up to 2 indicators.";
-  const indicatorLimitMessage = `${
-    strategyPlanTier === "pro"
-      ? "Pro"
+  const indicatorLimitMessage = `${getStrategyPlanLabel(strategyPlanTier)} plan allows up to ${maxIndicators} indicators.`;
+  const ruleLimitLabel = `${getStrategyPlanLabel(strategyPlanTier)} plan up to ${maxRulesPerEntry} rules per entry.`;
+  const ruleLimitMessage = `${getStrategyPlanLabel(strategyPlanTier)} plan allows up to ${maxRulesPerEntry} rules per entry.`;
+  const ruleUpgradeCtaLabel =
+    strategyPlanTier === "free"
+      ? "Upgrade to Plus"
       : strategyPlanTier === "plus"
-        ? "Plus"
-        : "Free"
-  } plan allows up to ${maxIndicators} indicators.`;
+        ? "Upgrade to Pro"
+        : null;
+  const buyRuleCount = countConditionNodes(buyDraft.conditions);
+  const sellRuleCount = countConditionNodes(sellDraft.conditions);
+  const hasReachedRuleLimit =
+    buyRuleCount >= maxRulesPerEntry || sellRuleCount >= maxRulesPerEntry;
+  const showRuleUpgradeMessage =
+    strategyPlanTier === "free"
+      ? true
+      : strategyPlanTier === "plus"
+        ? hasReachedRuleLimit
+        : false;
 
   const handleVisibilityChange = (nextIsPublic: boolean) => {
     setIsPublic(nextIsPublic);
@@ -4069,6 +4171,14 @@ export function StrategyBuilder({
       return indicatorLimitMessage;
     }
 
+    if (buyRuleCount > maxRulesPerEntry) {
+      return `${ruleLimitMessage} Buy Entry has ${buyRuleCount}.`;
+    }
+
+    if (sellRuleCount > maxRulesPerEntry) {
+      return `${ruleLimitMessage} Sell Entry has ${sellRuleCount}.`;
+    }
+
     try {
       indicatorDrafts.forEach((draft) => {
         if (!draft.indicator) {
@@ -4095,7 +4205,11 @@ export function StrategyBuilder({
     description,
     indicatorDrafts,
     maxIndicators,
+    buyRuleCount,
+    sellRuleCount,
+    maxRulesPerEntry,
     indicatorLimitMessage,
+    ruleLimitMessage,
     serializeParams,
     buildStrategyPayload,
   ]);
@@ -4397,14 +4511,16 @@ export function StrategyBuilder({
                 <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
                   <p className="flex flex-wrap items-center gap-1.5">
                     <span>{indicatorLimitLabel}</span>
-                    {strategyPlanTier === "free" ? (
+                    {showIndicatorUpgradeMessage &&
+                    strategyPlanTier === "free" ? (
                       <Link
                         to="/pricing"
                         className="font-medium text-sky-500 transition-colors hover:text-sky-400"
                       >
                         Upgrade to Plus for more
                       </Link>
-                    ) : strategyPlanTier === "plus" ? (
+                    ) : showIndicatorUpgradeMessage &&
+                      strategyPlanTier === "plus" ? (
                       <Link
                         to="/pricing"
                         className="font-medium text-amber-500 transition-colors hover:text-amber-400"
@@ -5014,6 +5130,26 @@ export function StrategyBuilder({
           </div>
 
           <div className="min-w-0 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+              <p className="flex flex-wrap items-center gap-1.5">
+                <span>{ruleLimitLabel}</span>
+                {showRuleUpgradeMessage && strategyPlanTier === "free" ? (
+                  <Link
+                    to="/pricing"
+                    className="font-medium text-sky-500 transition-colors hover:text-sky-400"
+                  >
+                    Upgrade to Plus for more
+                  </Link>
+                ) : showRuleUpgradeMessage && strategyPlanTier === "plus" ? (
+                  <Link
+                    to="/pricing"
+                    className="font-medium text-amber-500 transition-colors hover:text-amber-400"
+                  >
+                    Upgrade to Pro for more
+                  </Link>
+                ) : null}
+              </p>
+            </div>
             <LogicBlockEditor
               title="Buy Entry"
               description="Set the buy-side root logic, nested conditions, and risk management."
@@ -5021,6 +5157,9 @@ export function StrategyBuilder({
               candleOptions={candleOptions}
               indicatorFieldOptions={indicatorFieldOptions}
               indicatorKeys={indicatorKeys}
+              maxRules={maxRulesPerEntry}
+              ruleLimitMessage={ruleLimitMessage}
+              upgradeCtaLabel={ruleUpgradeCtaLabel}
               onChange={setBuyDraft}
             />
 
@@ -5031,6 +5170,9 @@ export function StrategyBuilder({
               candleOptions={candleOptions}
               indicatorFieldOptions={indicatorFieldOptions}
               indicatorKeys={indicatorKeys}
+              maxRules={maxRulesPerEntry}
+              ruleLimitMessage={ruleLimitMessage}
+              upgradeCtaLabel={ruleUpgradeCtaLabel}
               onChange={setSellDraft}
             />
           </div>

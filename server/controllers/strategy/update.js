@@ -3,6 +3,7 @@ import { IndicatorDB } from "../../models/indicator.js";
 import { resError, resJson } from "../../utils/response.js";
 import {
   canManagePaidStrategyAccess,
+  ensureStrategyRuleLimit,
   getStrategyIndicatorLimit,
   getViewerPlan,
   sanitizeStrategyAccessPayload,
@@ -104,6 +105,8 @@ export const updateStrategy = async (req, res, next) => {
         `Missing indicator definitions for: ${missingIndicatorKeys.join(", ")}`,
       );
     }
+
+    ensureStrategyRuleLimit(strategyForValidation, viewerPlan);
 
     if (strategyUpdate.indicators) {
       const indicatorIds = strategyUpdate.indicators.map(

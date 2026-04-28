@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
 import axios from "axios";
 import type { DateRange } from "react-day-picker";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeftRight,
   BadgeDollarSign,
@@ -1329,6 +1329,7 @@ export default function BacktestPage() {
   }, [
     currentPlanPolicy.requiresPublicStrategiesOnly,
     currentPlanPolicy.tier,
+    isOwnStrategy,
     strategies,
     strategyId,
   ]);
@@ -2541,10 +2542,16 @@ export default function BacktestPage() {
                         </p>
                       </div>
                       {!currentPlanPolicy.canEditCapitalPlan ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-2.5 py-1 text-[11px] font-medium text-sky-500">
+                        <Link
+                          to="/pricing"
+                          className="inline-flex items-center gap-1 rounded-full border border-primary/15 bg-primary/8 px-2.5 py-1 text-[11px] font-medium text-primary transition-colors hover:bg-primary/12 hover:text-primary/80"
+                        >
                           <Lock className="h-3.5 w-3.5" />
-                          Plus
-                        </span>
+                          <span className="sm:hidden">Unlock</span>
+                          <span className="hidden sm:inline">
+                            Unlock on paid plan
+                          </span>
+                        </Link>
                       ) : null}
                     </div>
 
@@ -2697,16 +2704,20 @@ export default function BacktestPage() {
                                 <span>Hedge</span>
                               </p>
                               {!currentPlanPolicy.canUseHedgeMode ? (
-                                <span className="inline-flex items-center gap-1 text-xs font-medium text-sky-500">
+                                <Link
+                                  to="/pricing"
+                                  className="inline-flex items-center gap-1 rounded-full border border-primary/15 bg-primary/8 px-2 py-0.5 text-xs font-medium text-primary transition-colors hover:bg-primary/12 hover:text-primary/80"
+                                >
                                   <Lock className="h-3 w-3" />
-                                  <span>Plus</span>
-                                </span>
+                                  <span className="sm:hidden">Unlock</span>
+                                  <span className="hidden sm:inline">
+                                    Unlock on paid plan
+                                  </span>
+                                </Link>
                               ) : null}
                             </div>
                             <p className="text-xs text-muted-foreground">
-                              {hedgeMode
-                                ? "Allow long and short positions at the same time."
-                                : "Keep a single net position per market."}
+                              Allow long and short positions at the same time.
                             </p>
                           </div>
                           <Switch

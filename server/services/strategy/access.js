@@ -59,6 +59,62 @@ export function getStrategyIndicatorLimit(viewerPlan = "free") {
   return 2;
 }
 
+export function getStrategyRuleLimit(viewerPlan = "free") {
+  if (viewerPlan === "pro") {
+    return 10;
+  }
+
+  if (viewerPlan === "plus") {
+    return 5;
+  }
+
+  return 2;
+}
+
+function getStrategyPlanLabel(viewerPlan = "free") {
+  if (viewerPlan === "pro") {
+    return "Pro";
+  }
+
+  if (viewerPlan === "plus") {
+    return "Plus";
+  }
+
+  return "Free";
+}
+
+function countStrategyConditionNodes(nodes = []) {
+  return nodes.reduce((count, node) => {
+    if (Array.isArray(node?.conditions)) {
+      return count + countStrategyConditionNodes(node.conditions);
+    }
+
+    return count + 1;
+  }, 0);
+}
+
+export function ensureStrategyRuleLimit(strategy, viewerPlan = "free") {
+  const maxRules = getStrategyRuleLimit(viewerPlan);
+  const buyRuleCount = countStrategyConditionNodes(strategy?.entry?.buy?.conditions);
+  const sellRuleCount = countStrategyConditionNodes(
+    strategy?.entry?.sell?.conditions,
+  );
+
+  if (buyRuleCount <= maxRules && sellRuleCount <= maxRules) {
+    return;
+  }
+
+  const overLimitEntries = [
+    buyRuleCount > maxRules ? `Buy Entry has ${buyRuleCount}` : null,
+    sellRuleCount > maxRules ? `Sell Entry has ${sellRuleCount}` : null,
+  ].filter(Boolean);
+
+  throw resError(
+    403,
+    `${getStrategyPlanLabel(viewerPlan)} plan allows up to ${maxRules} rules per entry. ${overLimitEntries.join(". ")}.`,
+  );
+}
+
 export function canManagePaidStrategyAccess(viewerPlan = "free") {
   return PAID_ELIGIBLE_PLANS.has(viewerPlan);
 }

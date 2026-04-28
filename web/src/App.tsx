@@ -9,6 +9,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import Navbar from "./components/Navbar";
 
 import Home from "./pages/home";
+import Dashboard from "./pages/dashboard";
 import Auth from "./pages/auth";
 import Leaderboard from "./pages/leaderboard";
 import Backtest from "./pages/backtest/index";
@@ -74,6 +75,7 @@ export default function App() {
             <Route path="/pricing" element={<Pricing />} />
 
             <Route element={<ProtectedRoute />}>
+              <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/strategy" element={<Strategy />} />
               <Route

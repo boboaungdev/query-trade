@@ -21,7 +21,7 @@ import { useSidebar } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 import {
-  Home,
+  Gauge,
   Trophy,
   Target,
   Bookmark,
@@ -132,10 +132,10 @@ export function AppSidebar() {
       <SidebarContent className="px-2">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={isRouteActive("/")}>
-              <Link to="/" onClick={handleMenuNavigation}>
-                <Home />
-                <span>Home</span>
+            <SidebarMenuButton asChild isActive={isRouteActive("/dashboard")}>
+              <Link to="/dashboard" onClick={handleMenuNavigation}>
+                <Gauge />
+                <span>Dashboard</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

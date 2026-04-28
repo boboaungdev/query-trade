@@ -4,6 +4,7 @@ import { UserDB } from "../../models/user.js";
 import { resError, resJson } from "../../utils/response.js";
 import {
   canManagePaidStrategyAccess,
+  ensureStrategyRuleLimit,
   getStrategyIndicatorLimit,
   getViewerPlan,
   sanitizeStrategyAccessPayload,
@@ -60,6 +61,8 @@ export const createStrategy = async (req, res, next) => {
         `Missing indicator definitions for: ${missingIndicatorKeys.join(", ")}`,
       );
     }
+
+    ensureStrategyRuleLimit(strategyPayload, viewerPlan);
 
     const indicatorIds = indicators.map((item) => item.indicator);
     const uniqueIndicatorIds = [...new Set(indicatorIds)];

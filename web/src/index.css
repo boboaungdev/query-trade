@@ -489,6 +489,16 @@
   }
 }
 
+@keyframes homeReviewMarquee {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(calc(-50% - 0.5rem));
+  }
+}
+
 .home-reveal-up {
   opacity: 0;
   transform: translateY(22px);
@@ -544,11 +554,17 @@
   );
 }
 
+.home-review-track {
+  animation: homeReviewMarquee 28s linear infinite;
+  will-change: transform;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .home-reveal-up,
   .home-float,
   .home-orb,
-  .home-bar-rise {
+  .home-bar-rise,
+  .home-review-track {
     animation: none;
     opacity: 1;
     transform: none;
