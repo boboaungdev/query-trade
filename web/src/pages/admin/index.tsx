@@ -1043,7 +1043,7 @@ export default function AdminDashboard() {
   }
 
   if (user.role !== "admin") {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   const openPlanDialog = (plan: SubscriptionPlan) => {

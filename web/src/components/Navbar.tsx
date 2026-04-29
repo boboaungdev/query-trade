@@ -49,13 +49,14 @@ export default function Navbar() {
   const navigate = useNavigate();
   const isAuthPage = location.pathname === "/auth";
   const isMobile = useIsMobile();
+  const homeHref = user ? "/dashboard" : "/auth";
   const profileHref = user?.username ? `/${user.username}` : "/profile";
 
   const handleSignout = async () => {
     try {
       await signout();
       logout();
-      navigate("/");
+      navigate("/auth");
     } catch (error) {
       toast.error(getApiErrorMessage(error, "Sign out failed on server."));
     }
@@ -82,7 +83,7 @@ export default function Navbar() {
         {user && isMobile ? <SidebarTrigger /> : null}
 
         <Link
-          to="/"
+          to={homeHref}
           className="flex items-center gap-2.5 text-xl font-bold tracking-tight text-primary"
         >
           <img

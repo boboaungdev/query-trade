@@ -67,7 +67,7 @@ export function AppSidebar() {
     try {
       await signout();
       logout();
-      navigate("/");
+      navigate("/auth");
     } catch (error) {
       toast.error(getApiErrorMessage(error, "Sign out failed on server."));
     }

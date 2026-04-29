@@ -8,7 +8,6 @@ import { AppSidebar } from "@/components/AppSidebar";
 
 import Navbar from "./components/Navbar";
 
-import Home from "./pages/home";
 import Dashboard from "./pages/dashboard";
 import Auth from "./pages/auth";
 import Leaderboard from "./pages/leaderboard";
@@ -41,7 +40,7 @@ function AuthRoute() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   if (isAuthenticated) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <Auth />;
@@ -51,7 +50,7 @@ function AdminRoute() {
   const user = useAuthStore((state) => state.user);
 
   if (user?.role !== "admin") {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <AdminDashboard />;
@@ -70,7 +69,15 @@ export default function App() {
 
         <main className="flex-1 p-6">
           <Routes>
-            <Route path="/" element={<Home />} />
+            <Route
+              path="/"
+              element={
+                <Navigate
+                  to={isAuthenticated ? "/dashboard" : "/auth"}
+                  replace
+                />
+              }
+            />
             <Route path="/auth" element={<AuthRoute />} />
             <Route path="/pricing" element={<Pricing />} />
 
