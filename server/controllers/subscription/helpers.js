@@ -80,8 +80,12 @@ export const recordWalletTransaction = async ({
   planKey = null,
   description = "",
   metadata = {},
+  session = null,
 }) => {
-  const user = await UserDB.findById(userId).select("tokenBalance").lean();
+  const user = await UserDB.findById(userId)
+    .select("tokenBalance")
+    .session(session)
+    .lean();
 
   if (!user) {
     throw resError(404, "User not found.");
@@ -107,6 +111,7 @@ export const recordWalletTransaction = async ({
       },
     },
     {
+      session,
       returnDocument: "after",
     },
   )
@@ -133,12 +138,14 @@ export const recordWalletTransaction = async ({
   }
 
   const walletTransaction = await WalletTransactionModel.create(
-    walletTransactionPayload,
+    [walletTransactionPayload],
+    { session },
   );
 
   return {
-    walletTransaction,
+    walletTransaction: walletTransaction[0],
     tokenBalance: Number(updatedUser.tokenBalance || 0),
+    balanceBefore,
   };
 };
 

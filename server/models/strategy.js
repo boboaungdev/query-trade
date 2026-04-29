@@ -141,6 +141,16 @@ const strategySchema = new Schema(
         default: 0,
         min: 0,
       },
+      earningViewCount: {
+        type: Number,
+        default: 0,
+        min: 0,
+      },
+      earnedToken: {
+        type: Number,
+        default: 0,
+        min: 0,
+      },
       bookmarkCount: {
         type: Number,
         default: 0,

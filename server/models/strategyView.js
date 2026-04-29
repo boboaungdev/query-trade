@@ -16,6 +16,15 @@ const strategyViewSchema = new Schema(
       required: true,
       index: true,
     },
+    rewardGrantedAt: {
+      type: Date,
+      default: null,
+    },
+    rewardTokenAmount: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
   },
   {
     timestamps: true,
@@ -28,4 +37,7 @@ strategyViewSchema.index(
   { unique: true, name: "unique_strategy_user_view" },
 );
 
-export const StrategyViewDB = mongoose.model("strategyView", strategyViewSchema);
+export const StrategyViewDB = mongoose.model(
+  "strategyView",
+  strategyViewSchema,
+);

@@ -54,6 +54,7 @@ import {
 } from "@/api/user";
 import { createBookmark, deleteBookmark } from "@/api/bookmark";
 import { useAuthStore } from "@/store/auth";
+import { useMySubscriptionStore } from "@/store/my-subscription";
 import { useWalletStore } from "@/store/wallet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -111,6 +112,8 @@ import {
   type UserMembership,
 } from "@/components/user-membership";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { getEffectivePlanTier } from "@/lib/membership";
+import { isStrategyPreviewLocked } from "@/lib/strategy-access";
 import { cn } from "@/lib/utils";
 
 const NAME_REGEX = /^[A-Za-z0-9 ]{1,20}$/;
@@ -224,6 +227,7 @@ type ProfileStrategyListItem = {
   accessType?: "free" | "paid";
   access?: {
     accessType?: "free" | "paid";
+    canUse?: boolean;
   };
   createdAt?: string;
   updatedAt?: string;
@@ -360,6 +364,7 @@ export default function Profile() {
   const location = useLocation();
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
+  const subscription = useMySubscriptionStore((state) => state.subscription);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const updateUser = useAuthStore((state) => state.updateUser);
   const walletTokenBalance = useWalletStore((state) => state.tokenBalance);
@@ -367,6 +372,10 @@ export default function Profile() {
     (state) => state.fetchWalletSummary,
   );
   const setWalletSummary = useWalletStore((state) => state.setWalletSummary);
+  const viewerPlanTier = getEffectivePlanTier({
+    membership: user?.membership,
+    subscription,
+  });
   const [updatingStrategyIds, setUpdatingStrategyIds] = useState<Set<string>>(
     new Set(),
   );
@@ -2752,11 +2761,16 @@ export default function Profile() {
                                                     {item.name || "Strategy"}
                                                   </p>
                                                   <p className="block w-full truncate text-xs text-muted-foreground">
-                                                    {!canEditProfile &&
-                                                    item.isPublic !== false &&
-                                                    (item.access?.accessType ??
-                                                      item.accessType) ===
-                                                      "paid" ? (
+                                                    {isStrategyPreviewLocked({
+                                                      isPublic: item.isPublic,
+                                                      accessType:
+                                                        item.accessType,
+                                                      access: item.access,
+                                                      ownerId: viewedUser?._id,
+                                                      viewerId: user?._id,
+                                                      planTier:
+                                                        viewerPlanTier,
+                                                    }) ? (
                                                       <>
                                                         Description hidden -{" "}
                                                         <span className="text-primary">

@@ -12,6 +12,11 @@ import {
   buildPaginationResult,
   getPagination,
 } from "../../utils/pagination.js";
+import {
+  getStrategyAccessState,
+  getViewerPlan,
+} from "../../services/strategy/access.js";
+import { getEffectiveSubscription } from "../subscription/helpers.js";
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -155,6 +160,10 @@ export const getUserStrategies = async (req, res, next) => {
     const profileUser = await getProfileUserByUsername(username);
     const { skip } = getPagination({ page, limit });
     const isOwner = req.user?._id?.toString?.() === profileUser._id.toString();
+    const viewerSubscription = req.user?._id
+      ? await getEffectiveSubscription(req.user._id)
+      : null;
+    const viewerPlan = getViewerPlan(viewerSubscription);
     const andConditions = [{ user: profileUser._id }];
 
     if (!isOwner) {
@@ -223,6 +232,7 @@ export const getUserStrategies = async (req, res, next) => {
 
     const strategiesWithBookmarkState = items.map((strategy) => ({
       ...strategy,
+      access: getStrategyAccessState(strategy, req.user?._id, viewerPlan),
       isBookmarked: bookmarkedStrategyIds.includes(String(strategy._id)),
     }));
 

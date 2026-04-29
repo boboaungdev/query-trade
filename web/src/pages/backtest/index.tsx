@@ -96,6 +96,9 @@ import {
   type UserMembership,
 } from "@/components/user-membership";
 import { useAuthStore } from "@/store/auth";
+import { useMySubscriptionStore } from "@/store/my-subscription";
+import { getEffectivePlanTier } from "@/lib/membership";
+import { isStrategyPreviewLocked } from "@/lib/strategy-access";
 import { cn } from "@/lib/utils";
 
 type TimeframeMap = Record<string, string>;
@@ -192,6 +195,7 @@ type StrategyItem = {
   accessType?: "free" | "paid";
   access?: {
     accessType?: "free" | "paid";
+    canUse?: boolean;
   };
   stats?: {
     viewCount?: number;
@@ -299,24 +303,6 @@ function formatRangeDurationLabel(totalDays: number) {
   if (totalDays === 365 || totalDays === 366) return "1 year";
 
   return `${totalDays} days`;
-}
-
-function getBacktestPlanTier(membership?: UserMembership): BacktestPlanTier {
-  const rawPlan =
-    membership?.plan ?? membership?.verifiedVariant ?? membership?.badgeVariant;
-  const normalizedPlan = String(rawPlan ?? "free")
-    .trim()
-    .toLowerCase();
-
-  if (normalizedPlan === "pro") {
-    return "pro";
-  }
-
-  if (normalizedPlan === "plus") {
-    return "plus";
-  }
-
-  return "free";
 }
 
 function getBacktestPlanUiPolicy(tier: BacktestPlanTier): BacktestPlanUiPolicy {
@@ -765,6 +751,7 @@ export default function BacktestPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
+  const subscription = useMySubscriptionStore((state) => state.subscription);
   const isEditing = Boolean(backtestId);
   const backtestFormId = "backtest-run-form";
 
@@ -851,7 +838,10 @@ export default function BacktestPage() {
       : preselectedStrategy?.name
         ? preselectedStrategy.name
         : "";
-  const currentPlanTier = getBacktestPlanTier(user?.membership);
+  const currentPlanTier = getEffectivePlanTier({
+    membership: user?.membership,
+    subscription,
+  });
   const currentPlanPolicy = useMemo(
     () => getBacktestPlanUiPolicy(currentPlanTier),
     [currentPlanTier],
@@ -2293,6 +2283,15 @@ export default function BacktestPage() {
                                             item.user?._id === user?._id;
                                           const isDisabledStrategy =
                                             !canSelectStrategy(item);
+                                          const isLockedStrategyPreview =
+                                            isStrategyPreviewLocked({
+                                              isPublic: item.isPublic,
+                                              accessType,
+                                              access: item.access,
+                                              ownerId: item.user?._id,
+                                              viewerId: user?._id,
+                                              planTier: currentPlanTier,
+                                            });
 
                                           return (
                                             <CommandItem
@@ -2329,8 +2328,7 @@ export default function BacktestPage() {
                                                       : "text-muted-foreground",
                                                   )}
                                                 >
-                                                  {isDisabledStrategy &&
-                                                  isPaidStrategy ? (
+                                                  {isLockedStrategyPreview ? (
                                                     <>
                                                       Description hidden -{" "}
                                                       <span className="text-primary">

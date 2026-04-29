@@ -9,7 +9,7 @@ import {
   getViewerPlan,
   ensureStrategyAccessible,
 } from "../../services/strategy/access.js";
-import { recordUniqueStrategyView } from "../../services/strategy/views.js";
+import { recordStrategyView } from "../../services/strategy/views.js";
 import { getEffectiveSubscription } from "../subscription/helpers.js";
 import { serializePublicUser } from "../../services/user/serializePublicUser.js";
 import { resError, resJson } from "../../utils/response.js";
@@ -40,10 +40,10 @@ export const getStrategyById = async (req, res, next) => {
 
     ensureStrategyAccessible(strategy, user?._id, viewerPlan);
 
-    const countedNewView = await recordUniqueStrategyView({
-      strategyId,
-      viewerId: user?._id,
-      ownerId: strategy.user?._id,
+    const { countedNewView } = await recordStrategyView({
+      strategy,
+      viewer: user,
+      viewerPlan,
     });
 
     if (countedNewView) {

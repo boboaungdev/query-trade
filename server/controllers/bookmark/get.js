@@ -3,8 +3,13 @@ import { BacktestDB } from "../../models/backtest.js";
 import { BookmarkDB } from "../../models/bookmark.js";
 import { StrategyDB } from "../../models/strategy.js";
 import { SubscriptionModel } from "../../models/subscription.js";
-import { canViewStrategy } from "../../services/strategy/access.js";
+import {
+  canViewStrategy,
+  getStrategyAccessState,
+  getViewerPlan,
+} from "../../services/strategy/access.js";
 import { serializePublicUser } from "../../services/user/serializePublicUser.js";
+import { getEffectiveSubscription } from "../subscription/helpers.js";
 
 const bookmarkTargetMatchesSearch = (bookmark, searchValue) => {
   const target = bookmark?.target;
@@ -163,6 +168,8 @@ export const getBookmarks = async (req, res, next) => {
     const user = req.user;
     const { page, limit, targetType, sortBy, order, search } =
       req.validatedQuery;
+    const viewerSubscription = await getEffectiveSubscription(user._id);
+    const viewerPlan = getViewerPlan(viewerSubscription);
 
     const filter = {
       user: user._id,
@@ -205,6 +212,15 @@ export const getBookmarks = async (req, res, next) => {
         allBookmarks,
         user._id,
       );
+      for (const bookmark of visibleBookmarks) {
+        if (bookmark.targetType === "strategy" && bookmark.target) {
+          bookmark.target.access = getStrategyAccessState(
+            bookmark.target,
+            user._id,
+            viewerPlan,
+          );
+        }
+      }
       await attachBookmarkUserMembership(visibleBookmarks);
 
       const matchedBookmarks = visibleBookmarks.filter((bookmark) =>
@@ -225,6 +241,15 @@ export const getBookmarks = async (req, res, next) => {
 
       await populateBookmarkTargets(bookmarks);
       bookmarks = await pruneInaccessibleStrategyBookmarks(bookmarks, user._id);
+      for (const bookmark of bookmarks) {
+        if (bookmark.targetType === "strategy" && bookmark.target) {
+          bookmark.target.access = getStrategyAccessState(
+            bookmark.target,
+            user._id,
+            viewerPlan,
+          );
+        }
+      }
       await attachBookmarkUserMembership(bookmarks);
       total = await BookmarkDB.countDocuments(filter);
     }

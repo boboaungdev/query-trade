@@ -125,7 +125,10 @@ import {
   UserMembershipMark,
   type UserMembership,
 } from "@/components/user-membership";
+import { getEffectivePlanTier } from "@/lib/membership";
+import { isStrategyPreviewLocked } from "@/lib/strategy-access";
 import { useAuthStore } from "@/store/auth";
+import { useMySubscriptionStore } from "@/store/my-subscription";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
@@ -173,19 +176,6 @@ function mergeStrategyPages(prev: StrategyItem[], nextItems: StrategyItem[]) {
   );
 }
 
-function getStrategyPlanTier(membership?: UserMembership) {
-  const rawPlan =
-    membership?.plan ?? membership?.verifiedVariant ?? membership?.badgeVariant;
-  const normalizedPlan = String(rawPlan ?? "free")
-    .trim()
-    .toLowerCase();
-
-  if (normalizedPlan === "pro") return "pro";
-  if (normalizedPlan === "plus") return "plus";
-
-  return "free";
-}
-
 function getStrategyIndicatorLimit(planTier: "free" | "plus" | "pro") {
   if (planTier === "pro") return 10;
   if (planTier === "plus") return 5;
@@ -208,6 +198,7 @@ export default function StrategyPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
+  const subscription = useMySubscriptionStore((state) => state.subscription);
   const isMobile = useIsMobile();
   const [strategies, setStrategies] = useState<StrategyItem[]>([]);
   const [search, setSearch] = useState("");
@@ -265,6 +256,10 @@ export default function StrategyPage() {
       .duplicateStrategyId === "string"
       ? (location.state as { duplicateStrategyId: string }).duplicateStrategyId
       : "";
+  const strategyPlanTier = getEffectivePlanTier({
+    membership: user?.membership,
+    subscription,
+  });
 
   useEffect(() => {
     if (shouldOpenStrategyBuilder) {
@@ -868,8 +863,14 @@ export default function StrategyPage() {
               const isBookmarked = Boolean(item.isBookmarked);
               const description = item.description?.trim() || "No description";
               const accessType = item.access?.accessType ?? item.accessType;
-              const isLockedPublicPaidFromOtherUser =
-                !isMine && item.isPublic !== false && accessType === "paid";
+              const isLockedPublicPaidFromOtherUser = isStrategyPreviewLocked({
+                isPublic: item.isPublic,
+                accessType,
+                access: item.access,
+                ownerId: item.user?._id,
+                viewerId: user?._id,
+                planTier: strategyPlanTier,
+              });
 
               return (
                 <Card
@@ -3682,6 +3683,7 @@ export function StrategyBuilder({
 }: StrategyBuilderProps = {}) {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
+  const subscription = useMySubscriptionStore((state) => state.subscription);
   const { strategyId: routeStrategyId = "" } = useParams();
   const strategyId = strategyIdProp || routeStrategyId;
   const isEditing = Boolean(strategyId);
@@ -3721,7 +3723,10 @@ export function StrategyBuilder({
   const previousDebouncedIndicatorSearchRef = useRef(
     debouncedIndicatorSearch.trim(),
   );
-  const strategyPlanTier = getStrategyPlanTier(user?.membership);
+  const strategyPlanTier = getEffectivePlanTier({
+    membership: user?.membership,
+    subscription,
+  });
   const canManagePaidAccess = strategyPlanTier !== "free";
   const maxIndicators = getStrategyIndicatorLimit(strategyPlanTier);
   const maxRulesPerEntry = getStrategyRuleLimit(strategyPlanTier);

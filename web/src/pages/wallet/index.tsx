@@ -446,6 +446,7 @@ function getActivityLabel(activity: WalletActivity) {
   if (activity.activityType === "withdraw") return "Withdraw";
   if (activity.activityType === "send") return "Send";
   if (activity.activityType === "receive") return "Receive";
+  if (activity.activityType === "reward") return "Earn";
   if (activity.activityType === "refund") return "Refund";
   if (activity.activityType === "adjustment") return "Adjustment";
   return "Spend";
@@ -470,6 +471,10 @@ function getActivityIcon(activity: WalletActivity) {
 
   if (activity.activityType === "receive") {
     return <ArrowDownLeft className="size-4 text-emerald-500" />;
+  }
+
+  if (activity.activityType === "reward") {
+    return <DollarSign className="size-4 text-emerald-500" />;
   }
 
   return getStatusIcon(activity.status);
@@ -527,6 +532,13 @@ function getReceiptTitle(activity: WalletActivity) {
 }
 
 function getReceiptDescription(activity: WalletActivity) {
+  if (
+    activity.activityType === "send" ||
+    activity.activityType === "receive"
+  ) {
+    return getActivityDescription(activity);
+  }
+
   return activity.description || getReceiptTitle(activity);
 }
 
@@ -552,6 +564,38 @@ function getReceiptNetworkLabel(payCurrency?: PayCurrency) {
   return "";
 }
 
+function getRewardSourceLabel(rewardSource?: string) {
+  if (rewardSource === "paid_strategy_view") {
+    return "Paid strategy view";
+  }
+
+  return rewardSource || "";
+}
+
+function ReceiptRow({
+  label,
+  value,
+  valueClassName,
+}: {
+  label: string;
+  value: React.ReactNode;
+  valueClassName?: string;
+}) {
+  return (
+    <div className="grid grid-cols-[minmax(0,7rem)_minmax(0,1fr)] items-start gap-4">
+      <span className="min-w-0 text-muted-foreground">{label}</span>
+      <span
+        className={cn(
+          "min-w-0 text-right [overflow-wrap:anywhere]",
+          valueClassName,
+        )}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
 function getActivityDescription(activity: WalletActivity) {
   if (activity.activityType === "send" && activity.counterparty?.username) {
     return `Sent to @${activity.counterparty.username}`;
@@ -573,7 +617,14 @@ function getActivitySecondaryText(activity: WalletActivity) {
     return `After balance: ${formatFullTokenAmount(activity.balanceAfter)} token`;
   }
 
-  return getActivityDescription(activity);
+  const description = getActivityDescription(activity);
+  const primaryDescription = activity.description || getActivityLabel(activity);
+
+  if (description === primaryDescription) {
+    return "";
+  }
+
+  return description;
 }
 
 function getActivitySecondaryTextTone() {
@@ -1671,14 +1722,16 @@ export default function WalletPage() {
                       </span>
                     </div>
 
-                    <p
-                      className={cn(
-                        "mt-1 text-xs",
-                        getActivitySecondaryTextTone(),
-                      )}
-                    >
-                      {getActivitySecondaryText(activity)}
-                    </p>
+                    {getActivitySecondaryText(activity) ? (
+                      <p
+                        className={cn(
+                          "mt-1 text-xs",
+                          getActivitySecondaryTextTone(),
+                        )}
+                      >
+                        {getActivitySecondaryText(activity)}
+                      </p>
+                    ) : null}
 
                     {activity.sourceType === "payment" &&
                     activity.status === "pending" ? (
@@ -1785,7 +1838,7 @@ export default function WalletPage() {
                 {(selectedReceiptActivity.activityType === "send" ||
                   selectedReceiptActivity.activityType === "receive") &&
                 (receiptSender || receiptReceiver) ? (
-                  <div className="py-2">
+                  <div className="space-y-3 py-2">
                     <div className="flex items-center justify-center gap-3">
                       {receiptSender ? (
                         <div className="flex min-w-0 items-center gap-2">
@@ -1870,161 +1923,244 @@ export default function WalletPage() {
                   </div>
                 ) : null}
 
-                {selectedReceiptActivity.activityType === "send" ||
-                selectedReceiptActivity.activityType === "receive" ? null : (
-                  <div className="min-w-0 space-y-1">
-                    <p className="font-medium">
-                      {getReceiptTitle(selectedReceiptActivity)}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {getReceiptDescription(selectedReceiptActivity)}
-                    </p>
-                  </div>
-                )}
+                <div className="min-w-0 space-y-1">
+                  <p className="flex items-center gap-2 font-medium">
+                    {getActivityIcon(selectedReceiptActivity)}
+                    {getReceiptTitle(selectedReceiptActivity)}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {getReceiptDescription(selectedReceiptActivity)}
+                  </p>
+                </div>
 
                 <div className="space-y-2 text-sm">
-                  {selectedReceiptActivity.confirmedAt ? (
-                    <div className="flex items-center justify-between gap-4">
-                      <span className="text-muted-foreground">Confirmed</span>
-                      <span className="text-right">
-                        {formatDateTime(selectedReceiptActivity.confirmedAt)}
-                      </span>
-                    </div>
+                  <ReceiptRow
+                    label="Status"
+                    value={selectedReceiptActivity.status}
+                    valueClassName={cn(
+                      "capitalize text-muted-foreground",
+                      getStatusTone(selectedReceiptActivity.status),
+                    )}
+                  />
+
+                  <ReceiptRow
+                    label="Token amount"
+                    value={`${formatFullTokenAmount(
+                      selectedReceiptActivity.tokenAmount,
+                    )} token`}
+                  />
+
+                  {typeof selectedReceiptActivity.amountUsd === "number" ? (
+                    <ReceiptRow
+                      label="USD amount"
+                      value={`${formatUsdAmount(selectedReceiptActivity.amountUsd)} USD`}
+                    />
                   ) : null}
 
-                  <div className="flex items-center justify-between gap-4">
-                    <span className="text-muted-foreground">Created</span>
-                    <span className="text-right">
-                      {formatDateTime(selectedReceiptActivity.createdAt)}
-                    </span>
-                  </div>
-
-                  {selectedReceiptActivity.payCurrency ? (
-                    <div className="flex items-center justify-between gap-4">
-                      <span className="text-muted-foreground">Currency</span>
-                      <span className="text-right uppercase">
-                        {selectedReceiptActivity.payCurrency}
-                      </span>
-                    </div>
-                  ) : null}
-
-                  {receiptSender ? (
-                    <div className="flex items-start justify-between gap-4">
-                      <span className="text-muted-foreground">From</span>
-                      <span className="max-w-[16rem] text-right">
-                        {getReceiptPartyLabel(receiptSender)}
-                      </span>
-                    </div>
-                  ) : null}
-
-                  {receiptReceiver ? (
-                    <div className="flex items-start justify-between gap-4">
-                      <span className="text-muted-foreground">To</span>
-                      <span className="max-w-[16rem] text-right">
-                        {getReceiptPartyLabel(receiptReceiver)}
-                      </span>
-                    </div>
-                  ) : null}
-
-                  {selectedReceiptActivity.payCurrency ? (
-                    <div className="flex items-center justify-between gap-4">
-                      <span className="text-muted-foreground">Network</span>
-                      <span className="text-right">
-                        {getReceiptNetworkLabel(
-                          selectedReceiptActivity.payCurrency,
-                        )}
-                      </span>
-                    </div>
-                  ) : null}
-
-                  {selectedReceiptActivity.note ? (
-                    <div className="flex items-start justify-between gap-4">
-                      <span className="text-muted-foreground">Note</span>
-                      <p className="max-w-[16rem] text-right">
-                        {selectedReceiptActivity.note}
-                      </p>
-                    </div>
+                  {typeof selectedReceiptActivity.balanceAfter === "number" ? (
+                    <ReceiptRow
+                      label="After balance"
+                      value={`${formatFullTokenAmount(
+                        selectedReceiptActivity.balanceAfter,
+                      )} token`}
+                    />
                   ) : null}
 
                   {selectedReceiptActivity.plan ? (
-                    <div className="flex items-center justify-between gap-4">
-                      <span className="text-muted-foreground">Plan</span>
-                      <span className="text-right">
-                        {selectedReceiptActivity.plan}
-                      </span>
-                    </div>
+                    <ReceiptRow
+                      label="Plan"
+                      value={selectedReceiptActivity.plan}
+                    />
+                  ) : null}
+
+                  {selectedReceiptActivity.activityType === "subscription" &&
+                  typeof selectedReceiptActivity.metadata?.durationDays ===
+                    "number" ? (
+                    <ReceiptRow
+                      label="Duration"
+                      value={`${selectedReceiptActivity.metadata.durationDays} days`}
+                    />
+                  ) : null}
+
+                  {selectedReceiptActivity.activityType === "subscription" &&
+                  typeof selectedReceiptActivity.metadata?.originalAmountToken ===
+                    "number" ? (
+                    <ReceiptRow
+                      label="Original price"
+                      value={`${formatFullTokenAmount(
+                        selectedReceiptActivity.metadata.originalAmountToken,
+                      )} token`}
+                    />
+                  ) : null}
+
+                  {selectedReceiptActivity.activityType === "subscription" &&
+                  typeof selectedReceiptActivity.metadata?.discountAmountToken ===
+                    "number" &&
+                  selectedReceiptActivity.metadata.discountAmountToken > 0 ? (
+                    <ReceiptRow
+                      label="Discount"
+                      value={`-${formatFullTokenAmount(
+                        selectedReceiptActivity.metadata.discountAmountToken,
+                      )} token`}
+                      valueClassName="text-emerald-600"
+                    />
+                  ) : null}
+
+                  {selectedReceiptActivity.activityType === "reward" &&
+                  selectedReceiptActivity.metadata?.strategyName ? (
+                    <ReceiptRow
+                      label="Strategy"
+                      value={selectedReceiptActivity.metadata.strategyName}
+                    />
+                  ) : null}
+
+                  {selectedReceiptActivity.activityType === "reward" &&
+                  selectedReceiptActivity.metadata?.viewerUsername ? (
+                    <ReceiptRow
+                      label="Viewer"
+                      value={`@${selectedReceiptActivity.metadata.viewerUsername}`}
+                    />
+                  ) : null}
+
+                  {selectedReceiptActivity.activityType === "reward" &&
+                  getRewardSourceLabel(
+                    selectedReceiptActivity.metadata?.rewardSource,
+                  ) ? (
+                    <ReceiptRow
+                      label="Reward type"
+                      value={getRewardSourceLabel(
+                        selectedReceiptActivity.metadata?.rewardSource,
+                      )}
+                    />
+                  ) : null}
+
+                  {receiptSender ? (
+                    <ReceiptRow
+                      label="From"
+                      value={getReceiptPartyLabel(receiptSender)}
+                    />
+                  ) : null}
+
+                  {receiptReceiver ? (
+                    <ReceiptRow
+                      label="To"
+                      value={getReceiptPartyLabel(receiptReceiver)}
+                    />
+                  ) : null}
+
+                  {(selectedReceiptActivity.activityType === "send" ||
+                    selectedReceiptActivity.activityType === "receive") &&
+                  selectedReceiptActivity.metadata?.transferId ? (
+                    <ReceiptRow
+                      label="Transfer ID"
+                      value={selectedReceiptActivity.metadata.transferId}
+                      valueClassName="text-xs"
+                    />
+                  ) : null}
+
+                  {selectedReceiptActivity.payCurrency ? (
+                    <ReceiptRow
+                      label="Currency"
+                      value={selectedReceiptActivity.payCurrency}
+                      valueClassName="uppercase"
+                    />
+                  ) : null}
+
+                  {selectedReceiptActivity.payCurrency ? (
+                    <ReceiptRow
+                      label="Network"
+                      value={getReceiptNetworkLabel(
+                        selectedReceiptActivity.payCurrency,
+                      )}
+                    />
                   ) : null}
 
                   {typeof selectedReceiptActivity.rateSnapshot === "number" ? (
-                    <div className="flex items-center justify-between gap-4">
-                      <span className="text-muted-foreground">Rate</span>
-                      <span className="text-right">
-                        {formatFullTokenAmount(
-                          selectedReceiptActivity.rateSnapshot,
-                        )}{" "}
-                        token / USD
-                      </span>
-                    </div>
+                    <ReceiptRow
+                      label="Rate"
+                      value={`${formatFullTokenAmount(
+                        selectedReceiptActivity.rateSnapshot,
+                      )} token / USD`}
+                    />
                   ) : null}
 
-                  <div className="flex items-center justify-between gap-4">
-                    <span className="text-muted-foreground">Source</span>
-                    <span className="text-right capitalize">
-                      {selectedReceiptActivity.sourceType.replace("_", " ")}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-4">
-                    <span className="text-muted-foreground">Status</span>
-                    <span
-                      className={cn(
-                        "text-right capitalize text-muted-foreground",
-                        getStatusTone(selectedReceiptActivity.status),
+                  {selectedReceiptActivity.activityType === "deposit" &&
+                  selectedReceiptActivity.metadata?.provider ? (
+                    <ReceiptRow
+                      label="Provider"
+                      value={selectedReceiptActivity.metadata.provider.replaceAll(
+                        "_",
+                        " ",
                       )}
-                    >
-                      {selectedReceiptActivity.status}
-                    </span>
-                  </div>
+                      valueClassName="capitalize"
+                    />
+                  ) : null}
 
-                  <div className="flex items-center justify-between gap-4">
-                    <span className="text-muted-foreground">Token amount</span>
-                    <span className="text-right">
-                      {formatFullTokenAmount(
-                        selectedReceiptActivity.tokenAmount,
-                      )}{" "}
-                      token
-                    </span>
-                  </div>
+                  {selectedReceiptActivity.activityType === "deposit" &&
+                  selectedReceiptActivity.metadata?.providerReference ? (
+                    <ReceiptRow
+                      label="Provider ref"
+                      value={selectedReceiptActivity.metadata.providerReference}
+                    />
+                  ) : null}
+
+                  {selectedReceiptActivity.activityType === "deposit" &&
+                  selectedReceiptActivity.metadata?.orderId ? (
+                    <ReceiptRow
+                      label="Order ID"
+                      value={selectedReceiptActivity.metadata.orderId}
+                    />
+                  ) : null}
+
+                  {selectedReceiptActivity.activityType === "deposit" &&
+                  selectedReceiptActivity.metadata?.payAddress ? (
+                    <ReceiptRow
+                      label="Pay address"
+                      value={selectedReceiptActivity.metadata.payAddress}
+                    />
+                  ) : null}
+
+                  <ReceiptRow
+                    label="Created"
+                    value={formatDateTime(selectedReceiptActivity.createdAt)}
+                  />
+
+                  {selectedReceiptActivity.confirmedAt ? (
+                    <ReceiptRow
+                      label="Confirmed"
+                      value={formatDateTime(selectedReceiptActivity.confirmedAt)}
+                    />
+                  ) : null}
+
+                  {selectedReceiptActivity.note ? (
+                    <ReceiptRow
+                      label="Note"
+                      value={selectedReceiptActivity.note}
+                    />
+                  ) : null}
+
+                  <ReceiptRow
+                    label="Source"
+                    value={selectedReceiptActivity.sourceType.replace("_", " ")}
+                    valueClassName="capitalize"
+                  />
 
                   {selectedReceiptActivity.txHash ? (
-                    <div className="space-y-1">
-                      <span className="text-muted-foreground">
-                        Transaction hash
-                      </span>
-                      <p className="break-all text-right text-xs">
-                        {selectedReceiptActivity.txHash}
-                      </p>
-                    </div>
+                    <ReceiptRow
+                      label="Transaction hash"
+                      value={selectedReceiptActivity.txHash}
+                      valueClassName="text-xs"
+                    />
                   ) : null}
 
-                  <div className="flex items-start justify-between gap-4">
-                    <span className="text-muted-foreground">
-                      Transaction ID
-                    </span>
-                    <p className="max-w-[16rem] break-all text-right text-xs">
-                      {selectedReceiptActivity.transactionId ||
-                        selectedReceiptActivity._id}
-                    </p>
-                  </div>
-
-                  {typeof selectedReceiptActivity.amountUsd === "number" ? (
-                    <div className="flex items-center justify-between gap-4">
-                      <span className="text-muted-foreground">USD amount</span>
-                      <span className="text-right">
-                        {formatUsdAmount(selectedReceiptActivity.amountUsd)} USD
-                      </span>
-                    </div>
-                  ) : null}
+                  <ReceiptRow
+                    label="Transaction ID"
+                    value={
+                      selectedReceiptActivity.transactionId ||
+                      selectedReceiptActivity._id
+                    }
+                    valueClassName="text-xs"
+                  />
                 </div>
               </div>
             </>

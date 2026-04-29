@@ -26,7 +26,14 @@ export type Payment = {
 
 export type WalletTransaction = {
   _id: string;
-  type: "deposit" | "spend" | "send" | "receive" | "refund" | "adjustment";
+  type:
+    | "deposit"
+    | "spend"
+    | "send"
+    | "receive"
+    | "reward"
+    | "refund"
+    | "adjustment";
   amount: number;
   balanceBefore: number;
   balanceAfter: number;
@@ -55,6 +62,7 @@ export type WalletActivity = {
     | "withdraw"
     | "send"
     | "receive"
+    | "reward"
     | "refund"
     | "adjustment"
     | "spend";
@@ -69,6 +77,21 @@ export type WalletActivity = {
   plan?: string | null;
   description?: string;
   note?: string;
+  metadata?: {
+    transferId?: string;
+    durationDays?: number;
+    originalAmountToken?: number;
+    discountAmountToken?: number;
+    provider?: string;
+    providerReference?: string;
+    payAddress?: string;
+    orderId?: string;
+    rewardSource?: string;
+    strategyId?: string;
+    strategyName?: string;
+    viewerId?: string;
+    viewerUsername?: string;
+  };
   actor?: {
     _id?: string | null;
     username?: string;

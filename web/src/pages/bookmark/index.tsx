@@ -63,7 +63,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getEffectivePlanTier, type PlanTier } from "@/lib/membership";
+import { isStrategyPreviewLocked } from "@/lib/strategy-access";
 import { useAuthStore } from "@/store/auth";
+import { useMySubscriptionStore } from "@/store/my-subscription";
 import { cn } from "@/lib/utils";
 
 type BookmarkFilter = BookmarkTargetType;
@@ -76,6 +79,7 @@ type BookmarkTarget = {
   accessType?: "free" | "paid";
   access?: {
     accessType?: "free" | "paid";
+    canUse?: boolean;
   };
   user?:
     | string
@@ -173,11 +177,12 @@ type BookmarkCardRenderProps = {
 function renderBookmarkStrategyCard({
   item,
   userId,
+  planTier,
   removingBookmarkIds,
   onOpenBookmark,
   onCopyBookmarkLink,
   onRequestRemove,
-}: BookmarkCardRenderProps) {
+}: BookmarkCardRenderProps & { planTier: PlanTier }) {
   const target = item.target;
   const targetId = target?._id;
   const targetPath = targetId ? `/strategy/${targetId}` : "";
@@ -185,8 +190,14 @@ function renderBookmarkStrategyCard({
     Boolean(userId) &&
     (typeof target?.user === "object" ? target.user?._id === userId : false);
   const accessType = target?.access?.accessType ?? target?.accessType;
-  const isLockedPublicPaidFromOtherUser =
-    !isMine && target?.isPublic !== false && accessType === "paid";
+  const isLockedPublicPaidFromOtherUser = isStrategyPreviewLocked({
+    isPublic: target?.isPublic,
+    accessType,
+    access: target?.access,
+    ownerId: typeof target?.user === "object" ? target.user?._id : undefined,
+    viewerId: userId,
+    planTier,
+  });
   const targetUserName =
     typeof target?.user === "object" ? target.user?.name?.trim() : "";
   const targetUsername =
@@ -644,7 +655,12 @@ function renderBookmarkBacktestCard({
 
 export default function BookmarkPage() {
   const user = useAuthStore((state) => state.user);
+  const subscription = useMySubscriptionStore((state) => state.subscription);
   const navigate = useNavigate();
+  const planTier = getEffectivePlanTier({
+    membership: user?.membership,
+    subscription,
+  });
 
   const [bookmarks, setBookmarks] = useState<BookmarkItem[]>([]);
   const [filter, setFilter] = useState<BookmarkFilter>("backtest");
@@ -1059,6 +1075,7 @@ export default function BookmarkPage() {
                 ? renderBookmarkStrategyCard({
                     item,
                     userId: user?._id,
+                    planTier,
                     removingBookmarkIds,
                     onOpenBookmark,
                     onCopyBookmarkLink,

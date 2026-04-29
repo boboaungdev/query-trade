@@ -42,7 +42,7 @@ export type Subscription = {
 
 export type SubscriptionWalletTransaction = {
   _id: string;
-  type: "deposit" | "spend" | "refund" | "adjustment";
+  type: "deposit" | "spend" | "reward" | "refund" | "adjustment";
   amount: number;
   balanceBefore: number;
   balanceAfter: number;

@@ -9,6 +9,7 @@ export const TRANSACTION_TYPES = {
   transfer: "transfer",
   withdraw: "withdraw",
   subscription: "subscription",
+  creatorReward: "creator_reward",
   refund: "refund",
   adjustment: "adjustment",
   spend: "spend",

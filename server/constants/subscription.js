@@ -50,6 +50,7 @@ export const WALLET_TRANSACTION_TYPES = {
   spend: "spend",
   send: "send",
   receive: "receive",
+  reward: "reward",
   refund: "refund",
   adjustment: "adjustment",
 };

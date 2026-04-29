@@ -7,8 +7,33 @@ import {
   TRANSACTION_TYPES,
 } from "../../models/transaction.js";
 import { UserDB } from "../../models/user.js";
+import { WalletTransactionModel } from "../../models/walletTransaction.js";
 import { serializeMembership } from "../../services/subscription/serializeMembership.js";
 import { resError, resJson } from "../../utils/response.js";
+
+function getWalletTransactionForUser(
+  transaction,
+  currentUserId,
+  walletTransactionMap = new Map(),
+) {
+  const currentUserIdString = String(currentUserId || "");
+  const walletTransactionIds = Array.isArray(transaction.walletTransactions)
+    ? transaction.walletTransactions
+    : [];
+
+  for (const walletTransactionId of walletTransactionIds) {
+    const walletTransaction = walletTransactionMap.get(String(walletTransactionId));
+
+    if (
+      walletTransaction &&
+      String(walletTransaction.user || "") === currentUserIdString
+    ) {
+      return walletTransaction;
+    }
+  }
+
+  return null;
+}
 
 export const getWalletSummary = async (req, res, next) => {
   try {
@@ -69,6 +94,7 @@ function serializeUniversalWalletActivity(
   currentUserId,
   userMap = new Map(),
   subscriptionMap = new Map(),
+  walletTransactionMap = new Map(),
 ) {
   const currentUserIdString = String(currentUserId || "");
   const actorId = String(transaction.user || "");
@@ -77,6 +103,11 @@ function serializeUniversalWalletActivity(
   const actorUser = userMap.get(actorId);
   const fromUser = userMap.get(fromUserId);
   const toUser = userMap.get(toUserId);
+  const walletTransaction = getWalletTransactionForUser(
+    transaction,
+    currentUserId,
+    walletTransactionMap,
+  );
 
   if (transaction.type === TRANSACTION_TYPES.transfer) {
     const isSender = fromUserId === currentUserIdString;
@@ -96,6 +127,23 @@ function serializeUniversalWalletActivity(
       plan: transaction.planKey || null,
       description: transaction.description || "Token transfer",
       note: transaction.note || "",
+      metadata:
+        transaction.metadata && typeof transaction.metadata === "object"
+          ? {
+              transferId:
+                typeof transaction.metadata.transferId === "string"
+                  ? transaction.metadata.transferId
+                  : undefined,
+            }
+          : undefined,
+      balanceBefore:
+        typeof walletTransaction?.balanceBefore === "number"
+          ? Number(walletTransaction.balanceBefore || 0)
+          : undefined,
+      balanceAfter:
+        typeof walletTransaction?.balanceAfter === "number"
+          ? Number(walletTransaction.balanceAfter || 0)
+          : undefined,
       actor: actor
         ? {
             _id: actor._id,
@@ -130,6 +178,8 @@ function serializeUniversalWalletActivity(
     activityType:
       transaction.type === TRANSACTION_TYPES.subscription
         ? "subscription"
+        : transaction.type === TRANSACTION_TYPES.creatorReward
+          ? "reward"
         : transaction.type,
     status: transaction.status,
     amountUsd:
@@ -146,6 +196,67 @@ function serializeUniversalWalletActivity(
     plan: transaction.planKey || null,
     description: transaction.description || "Transaction",
     note: transaction.note || "",
+    metadata:
+      transaction.metadata && typeof transaction.metadata === "object"
+        ? {
+            durationDays:
+              typeof transaction.metadata.durationDays === "number"
+                ? Number(transaction.metadata.durationDays || 0)
+                : undefined,
+            originalAmountToken:
+              typeof transaction.metadata.originalAmountToken === "number"
+                ? Number(transaction.metadata.originalAmountToken || 0)
+                : undefined,
+            discountAmountToken:
+              typeof transaction.metadata.discountAmountToken === "number"
+                ? Number(transaction.metadata.discountAmountToken || 0)
+                : undefined,
+            provider:
+              typeof transaction.metadata.provider === "string"
+                ? transaction.metadata.provider
+                : undefined,
+            providerReference:
+              typeof transaction.metadata.providerReference === "string"
+                ? transaction.metadata.providerReference
+                : undefined,
+            payAddress:
+              typeof transaction.metadata.payAddress === "string"
+                ? transaction.metadata.payAddress
+                : undefined,
+            orderId:
+              typeof transaction.metadata.orderId === "string"
+                ? transaction.metadata.orderId
+                : undefined,
+            rewardSource:
+              typeof transaction.metadata.rewardSource === "string"
+                ? transaction.metadata.rewardSource
+                : undefined,
+            strategyId:
+              typeof transaction.metadata.strategyId === "string"
+                ? transaction.metadata.strategyId
+                : undefined,
+            strategyName:
+              typeof transaction.metadata.strategyName === "string"
+                ? transaction.metadata.strategyName
+                : undefined,
+            viewerId:
+              typeof transaction.metadata.viewerId === "string"
+                ? transaction.metadata.viewerId
+                : undefined,
+            viewerUsername:
+              typeof transaction.metadata.viewerUsername === "string"
+                ? transaction.metadata.viewerUsername
+                : undefined,
+          }
+        : undefined,
+    balanceBefore:
+      typeof walletTransaction?.balanceBefore === "number"
+        ? Number(walletTransaction.balanceBefore || 0)
+        : undefined,
+    balanceAfter:
+      typeof walletTransaction?.balanceAfter === "number"
+        ? Number(walletTransaction.balanceAfter || 0)
+        : undefined,
     actor: actorUser
       ? {
           _id: actorUser._id,
@@ -180,6 +291,16 @@ export const getWalletActivity = async (req, res, next) => {
         participants: user._id,
       }),
     ]);
+    const walletTransactionIds = Array.from(
+      new Set(
+        transactions.flatMap((transaction) =>
+          (Array.isArray(transaction.walletTransactions)
+            ? transaction.walletTransactions
+            : []
+          ).map((value) => String(value)),
+        ),
+      ),
+    );
 
     const relatedUserIds = Array.from(
       new Set(
@@ -203,6 +324,13 @@ export const getWalletActivity = async (req, res, next) => {
           user: { $in: relatedUserIds },
         }).lean()
       : [];
+    const walletTransactions = walletTransactionIds.length
+      ? await WalletTransactionModel.find({
+          _id: { $in: walletTransactionIds },
+        })
+          .select("_id user balanceBefore balanceAfter")
+          .lean()
+      : [];
 
     const userMap = new Map(
       relatedUsers.map((user) => [String(user._id), user]),
@@ -213,12 +341,19 @@ export const getWalletActivity = async (req, res, next) => {
         subscription,
       ]),
     );
+    const walletTransactionMap = new Map(
+      walletTransactions.map((walletTransaction) => [
+        String(walletTransaction._id),
+        walletTransaction,
+      ]),
+    );
     const activities = transactions.map((transaction) =>
       serializeUniversalWalletActivity(
         transaction,
         user._id,
         userMap,
         subscriptionMap,
+        walletTransactionMap,
       ),
     );
 
@@ -256,6 +391,9 @@ export const getTransactionReceipt = async (req, res, next) => {
           .map((value) => String(value)),
       ),
     );
+    const walletTransactionIds = Array.isArray(transaction.walletTransactions)
+      ? transaction.walletTransactions.map((value) => String(value))
+      : [];
     const relatedUsers = relatedUserIds.length
       ? await UserDB.find({
           _id: { $in: relatedUserIds },
@@ -268,6 +406,13 @@ export const getTransactionReceipt = async (req, res, next) => {
           user: { $in: relatedUserIds },
         }).lean()
       : [];
+    const walletTransactions = walletTransactionIds.length
+      ? await WalletTransactionModel.find({
+          _id: { $in: walletTransactionIds },
+        })
+          .select("_id user balanceBefore balanceAfter")
+          .lean()
+      : [];
     const userMap = new Map(
       relatedUsers.map((relatedUser) => [String(relatedUser._id), relatedUser]),
     );
@@ -277,6 +422,12 @@ export const getTransactionReceipt = async (req, res, next) => {
         subscription,
       ]),
     );
+    const walletTransactionMap = new Map(
+      walletTransactions.map((walletTransaction) => [
+        String(walletTransaction._id),
+        walletTransaction,
+      ]),
+    );
 
     return resJson(res, 200, "Transaction receipt.", {
       transaction: serializeUniversalWalletActivity(
@@ -284,6 +435,7 @@ export const getTransactionReceipt = async (req, res, next) => {
         user._id,
         userMap,
         subscriptionMap,
+        walletTransactionMap,
       ),
     });
   } catch (error) {
