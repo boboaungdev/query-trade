@@ -9,6 +9,7 @@ import {
   getViewerPlan,
   ensureStrategyAccessible,
 } from "../../services/strategy/access.js";
+import { recordUniqueStrategyView } from "../../services/strategy/views.js";
 import { getEffectiveSubscription } from "../subscription/helpers.js";
 import { serializePublicUser } from "../../services/user/serializePublicUser.js";
 import { resError, resJson } from "../../utils/response.js";
@@ -39,14 +40,18 @@ export const getStrategyById = async (req, res, next) => {
 
     ensureStrategyAccessible(strategy, user?._id, viewerPlan);
 
-    await StrategyDB.updateOne(
-      { _id: strategyId },
-      { $inc: { "stats.viewCount": 1 } },
-    );
-    strategy.stats = {
-      ...strategy.stats,
-      viewCount: Number(strategy.stats?.viewCount ?? 0) + 1,
-    };
+    const countedNewView = await recordUniqueStrategyView({
+      strategyId,
+      viewerId: user?._id,
+      ownerId: strategy.user?._id,
+    });
+
+    if (countedNewView) {
+      strategy.stats = {
+        ...strategy.stats,
+        viewCount: Number(strategy.stats?.viewCount ?? 0) + 1,
+      };
+    }
 
     if (user?._id) {
       const [bookmark, follow] = await Promise.all([

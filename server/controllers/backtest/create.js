@@ -116,11 +116,6 @@ export const createBacktest = async (req, res, next) => {
       { $inc: { "stats.backtestCount": 1 } },
     );
 
-    await StrategyDB.updateOne(
-      { _id: strategy._id },
-      { $inc: { "stats.viewCount": 1 } },
-    );
-
     const savedBacktest = await BacktestDB.findById(backtest._id)
       .populate("strategy", "name description")
       .lean();

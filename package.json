@@ -1,0 +1,10 @@
+{
+  "name": "query-trade",
+  "private": true,
+  "scripts": {
+    "dev:web": "npm --prefix web run dev",
+    "dev:server": "npm --prefix server run dev",
+    "dev:seo": "npm --prefix seo-web run dev",
+    "dev:all": "powershell -ExecutionPolicy Bypass -File ./scripts/dev-all.ps1"
+  }
+}
