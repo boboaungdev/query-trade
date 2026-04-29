@@ -55,6 +55,7 @@ export type WalletTransfer = {
 export type WalletActivity = {
   _id: string;
   transactionId?: string;
+  shareId?: string | null;
   sourceType: "payment" | "wallet_transaction" | "transaction";
   activityType:
     | "deposit"
@@ -182,6 +183,16 @@ export async function getTransactionReceipt(transactionId: string) {
       transaction: WalletActivity;
     };
   }>(`/wallet/transactions/${transactionId}`);
+
+  return data.result;
+}
+
+export async function getSharedTransactionReceipt(shareId: string) {
+  const { data } = await api.get<{
+    result: {
+      transaction: WalletActivity;
+    };
+  }>(`/wallet/shared/${shareId}`);
 
   return data.result;
 }

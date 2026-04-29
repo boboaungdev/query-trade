@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import html2canvas from "html2canvas";
 import {
   ArrowDownLeft,
   ArrowRight,
@@ -32,6 +33,7 @@ import {
   cancelWalletPayment,
   createTokenDeposit,
   createWalletTransfer,
+  getSharedTransactionReceipt,
   type PayCurrency,
   type Payment,
   type WalletActivity,
@@ -110,10 +112,17 @@ type SendRecipientPreview = {
 
 type SendDialogStep = "recipient" | "details";
 
-type ParsedWalletQrPayload = {
-  userId: string;
-  amount?: number;
-};
+type ParsedWalletQrPayload =
+  | {
+      type: "pay";
+      userId: string;
+      amount?: number;
+    }
+  | {
+      type: "receipt";
+      shareId: string;
+      activityType?: WalletActivity["activityType"];
+    };
 
 function drawRoundedRect(
   context: CanvasRenderingContext2D,
@@ -266,7 +275,7 @@ function sanitizeReceiveAmountInput(value: string) {
   return sanitized;
 }
 
-function buildWalletQrValue({
+function buildWalletPayQrValue({
   userId,
   amount,
 }: {
@@ -281,7 +290,28 @@ function buildWalletQrValue({
     params.set("amount", String(amount));
   }
 
-  return `${WALLET_QR_APP_PREFIX}:pay?${params.toString()}`;
+  params.set("type", "pay");
+
+  return `${WALLET_QR_APP_PREFIX}:qr?${params.toString()}`;
+}
+
+function buildWalletReceiptQrValue({
+  shareId,
+  activityType,
+}: {
+  shareId: string;
+  activityType?: WalletActivity["activityType"];
+}) {
+  const params = new URLSearchParams({
+    type: "receipt",
+    shareId: shareId.trim(),
+  });
+
+  if (activityType) {
+    params.set("activityType", activityType);
+  }
+
+  return `${WALLET_QR_APP_PREFIX}:qr?${params.toString()}`;
 }
 
 function parseWalletQrValue(rawValue: string): ParsedWalletQrPayload | null {
@@ -291,11 +321,45 @@ function parseWalletQrValue(rawValue: string): ParsedWalletQrPayload | null {
     return null;
   }
 
-  const appPayPrefix = `${WALLET_QR_APP_PREFIX}:pay?`;
+  const appQrPrefix = `${WALLET_QR_APP_PREFIX}:qr?`;
+  const legacyPayPrefix = `${WALLET_QR_APP_PREFIX}:pay?`;
 
-  if (trimmedValue.startsWith(appPayPrefix)) {
-    const queryString = trimmedValue.slice(appPayPrefix.length);
+  if (
+    trimmedValue.startsWith(appQrPrefix) ||
+    trimmedValue.startsWith(legacyPayPrefix)
+  ) {
+    const queryString = trimmedValue.startsWith(appQrPrefix)
+      ? trimmedValue.slice(appQrPrefix.length)
+      : trimmedValue.slice(legacyPayPrefix.length);
     const params = new URLSearchParams(queryString);
+    const type = params.get("type")?.trim() || "pay";
+
+    if (type === "receipt") {
+      const shareId = params.get("shareId")?.trim() || "";
+      const activityType = params.get("activityType")?.trim() || "";
+
+      if (!/^[a-fA-F0-9]{24}$/.test(shareId)) {
+        return null;
+      }
+
+      return {
+        type: "receipt",
+        shareId,
+        activityType:
+          activityType === "send" ||
+          activityType === "receive" ||
+          activityType === "deposit" ||
+          activityType === "subscription" ||
+          activityType === "withdraw" ||
+          activityType === "reward" ||
+          activityType === "refund" ||
+          activityType === "adjustment" ||
+          activityType === "spend"
+            ? activityType
+            : undefined,
+      };
+    }
+
     const userId = params.get("userId")?.trim() || "";
     const amountParam = params.get("amount")?.trim() || "";
     const amount = amountParam ? Number(amountParam) : undefined;
@@ -312,6 +376,7 @@ function parseWalletQrValue(rawValue: string): ParsedWalletQrPayload | null {
     }
 
     return {
+      type: "pay",
       userId,
       amount,
     };
@@ -321,6 +386,7 @@ function parseWalletQrValue(rawValue: string): ParsedWalletQrPayload | null {
     const username = trimmedValue.slice(1).trim().toLowerCase();
     return USERNAME_REGEX.test(username)
       ? {
+          type: "pay",
           userId: "",
           amount: undefined,
         }
@@ -410,6 +476,22 @@ function formatDateTime(date?: string | null) {
     hour: "numeric",
     minute: "2-digit",
   }).format(new Date(date));
+}
+
+function resolveCssVariableColor(variableName: string) {
+  const probe = document.createElement("div");
+
+  probe.style.color = `var(${variableName})`;
+  probe.style.position = "fixed";
+  probe.style.pointerEvents = "none";
+  probe.style.opacity = "0";
+  document.body.appendChild(probe);
+
+  try {
+    return window.getComputedStyle(probe).color || "";
+  } finally {
+    document.body.removeChild(probe);
+  }
 }
 
 function getStatusTone(status?: string | null) {
@@ -532,10 +614,7 @@ function getReceiptTitle(activity: WalletActivity) {
 }
 
 function getReceiptDescription(activity: WalletActivity) {
-  if (
-    activity.activityType === "send" ||
-    activity.activityType === "receive"
-  ) {
+  if (activity.activityType === "send" || activity.activityType === "receive") {
     return getActivityDescription(activity);
   }
 
@@ -705,9 +784,13 @@ export default function WalletPage() {
   const [isScanningQr, setIsScanningQr] = useState(false);
   const [isStartingQrCamera, setIsStartingQrCamera] = useState(false);
   const [isCancellingPayment, setIsCancellingPayment] = useState(false);
+  const [isSavingReceipt, setIsSavingReceipt] = useState(false);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [selectedReceiptActivity, setSelectedReceiptActivity] =
     useState<WalletActivity | null>(null);
+  const [receiptViewMode, setReceiptViewMode] = useState<"local" | "shared">(
+    "local",
+  );
   const [isUsernameCopied, setIsUsernameCopied] = useState(false);
   const [qrScanError, setQrScanError] = useState("");
   const [activityPage, setActivityPage] = useState(1);
@@ -718,6 +801,7 @@ export default function WalletPage() {
   const receiveQrRef = useRef<HTMLDivElement | null>(null);
   const receiveQrExportRef = useRef<HTMLDivElement | null>(null);
   const qrVideoRef = useRef<HTMLVideoElement | null>(null);
+  const receiptContentRef = useRef<HTMLDivElement | null>(null);
   const qrStreamRef = useRef<MediaStream | null>(null);
   const qrScanFrameRef = useRef<number | null>(null);
   const qrScanLockRef = useRef(false);
@@ -934,6 +1018,13 @@ export default function WalletPage() {
       : selectedReceiptActivity?.activityType === "send"
         ? selectedReceiptActivity.counterparty
         : null;
+  const canShowPrivateReceiptFields = receiptViewMode === "local";
+  const selectedReceiptQrValue = selectedReceiptActivity?.shareId
+    ? buildWalletReceiptQrValue({
+        shareId: selectedReceiptActivity.shareId,
+        activityType: selectedReceiptActivity.activityType,
+      })
+    : "";
 
   const refreshActivity = () => {
     setActivityPage(1);
@@ -1277,7 +1368,38 @@ export default function WalletPage() {
   const applyScannedQrPayload = async (rawQrValue: string) => {
     const parsedPayload = parseWalletQrValue(rawQrValue);
 
-    if (!parsedPayload?.userId) {
+    if (!parsedPayload) {
+      throw new Error(
+        "Unsupported QR code. Use a Query Trade pay or receipt QR.",
+      );
+    }
+
+    if (parsedPayload.type === "receipt") {
+      const receiptData = await getSharedTransactionReceipt(
+        parsedPayload.shareId,
+      );
+      const transaction = receiptData.transaction;
+
+      if (
+        transaction.activityType !== parsedPayload.activityType &&
+        (parsedPayload.activityType === "send" ||
+          parsedPayload.activityType === "receive") &&
+        (transaction.activityType === "send" ||
+          transaction.activityType === "receive")
+      ) {
+        transaction.activityType = parsedPayload.activityType;
+        const nextActor = transaction.counterparty;
+        transaction.counterparty = transaction.actor;
+        transaction.actor = nextActor;
+      }
+
+      setReceiptViewMode("shared");
+      setSelectedReceiptActivity(transaction);
+      setIsScanQrDialogOpen(false);
+      return;
+    }
+
+    if (!parsedPayload.userId) {
       throw new Error("Unsupported QR code. Use a Query Trade user QR.");
     }
 
@@ -1327,8 +1449,77 @@ export default function WalletPage() {
     }
 
     setIsScanQrDialogOpen(false);
+    setReceiptViewMode("local");
     setIsSendDialogOpen(true);
     setSendDialogStep("details");
+  };
+
+  const handleSaveReceipt = async () => {
+    if (!receiptContentRef.current || !selectedReceiptActivity) {
+      return;
+    }
+
+    setIsSavingReceipt(true);
+
+    try {
+      const exportColorVariables = [
+        "--background",
+        "--foreground",
+        "--card",
+        "--card-foreground",
+        "--popover",
+        "--popover-foreground",
+        "--primary",
+        "--primary-foreground",
+        "--secondary",
+        "--secondary-foreground",
+        "--muted",
+        "--muted-foreground",
+        "--accent",
+        "--accent-foreground",
+        "--destructive",
+        "--border",
+        "--input",
+        "--ring",
+      ];
+      const resolvedExportColors = exportColorVariables.map((variableName) => [
+        variableName,
+        resolveCssVariableColor(variableName),
+      ]);
+      const canvas = await html2canvas(receiptContentRef.current, {
+        backgroundColor: "#ffffff",
+        scale: Math.min(window.devicePixelRatio || 2, 3),
+        useCORS: true,
+        onclone: (clonedDocument) => {
+          resolvedExportColors.forEach(([variableName, value]) => {
+            if (value) {
+              clonedDocument.documentElement.style.setProperty(
+                variableName,
+                value,
+              );
+            }
+          });
+
+          clonedDocument.documentElement.style.colorScheme = "light";
+          clonedDocument.body.style.backgroundColor = "#ffffff";
+          clonedDocument.body.style.color = "#111827";
+        },
+      });
+      const link = document.createElement("a");
+      const transactionId =
+        selectedReceiptActivity.transactionId || selectedReceiptActivity._id;
+
+      link.href = canvas.toDataURL("image/png");
+      link.download = `${APP_NAME.trim().toLowerCase().replace(/\s+/g, "-")}-receipt-${transactionId}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success("Receipt saved.");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Failed to save receipt."));
+    } finally {
+      setIsSavingReceipt(false);
+    }
   };
 
   const startQrCamera = async () => {
@@ -1679,12 +1870,16 @@ export default function WalletPage() {
                   <div
                     key={`${activity.sourceType}-${activity._id}`}
                     className="cursor-pointer rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted/60"
-                    onClick={() => setSelectedReceiptActivity(activity)}
+                    onClick={() => {
+                      setReceiptViewMode("local");
+                      setSelectedReceiptActivity(activity);
+                    }}
                     role="button"
                     tabIndex={0}
                     onKeyDown={(event) => {
                       if (event.key === "Enter" || event.key === " ") {
                         event.preventDefault();
+                        setReceiptViewMode("local");
                         setSelectedReceiptActivity(activity);
                       }
                     }}
@@ -1823,6 +2018,7 @@ export default function WalletPage() {
         onOpenChange={(open) => {
           if (!open) {
             setSelectedReceiptActivity(null);
+            setReceiptViewMode("local");
           }
         }}
       >
@@ -1834,7 +2030,7 @@ export default function WalletPage() {
                 <DialogDescription>Transaction details.</DialogDescription>
               </DialogHeader>
 
-              <div className="space-y-4">
+              <div ref={receiptContentRef} className="space-y-4">
                 {(selectedReceiptActivity.activityType === "send" ||
                   selectedReceiptActivity.activityType === "receive") &&
                 (receiptSender || receiptReceiver) ? (
@@ -1957,15 +2153,6 @@ export default function WalletPage() {
                     />
                   ) : null}
 
-                  {typeof selectedReceiptActivity.balanceAfter === "number" ? (
-                    <ReceiptRow
-                      label="After balance"
-                      value={`${formatFullTokenAmount(
-                        selectedReceiptActivity.balanceAfter,
-                      )} token`}
-                    />
-                  ) : null}
-
                   {selectedReceiptActivity.plan ? (
                     <ReceiptRow
                       label="Plan"
@@ -1983,8 +2170,8 @@ export default function WalletPage() {
                   ) : null}
 
                   {selectedReceiptActivity.activityType === "subscription" &&
-                  typeof selectedReceiptActivity.metadata?.originalAmountToken ===
-                    "number" ? (
+                  typeof selectedReceiptActivity.metadata
+                    ?.originalAmountToken === "number" ? (
                     <ReceiptRow
                       label="Original price"
                       value={`${formatFullTokenAmount(
@@ -1994,8 +2181,8 @@ export default function WalletPage() {
                   ) : null}
 
                   {selectedReceiptActivity.activityType === "subscription" &&
-                  typeof selectedReceiptActivity.metadata?.discountAmountToken ===
-                    "number" &&
+                  typeof selectedReceiptActivity.metadata
+                    ?.discountAmountToken === "number" &&
                   selectedReceiptActivity.metadata.discountAmountToken > 0 ? (
                     <ReceiptRow
                       label="Discount"
@@ -2128,11 +2315,14 @@ export default function WalletPage() {
                   {selectedReceiptActivity.confirmedAt ? (
                     <ReceiptRow
                       label="Confirmed"
-                      value={formatDateTime(selectedReceiptActivity.confirmedAt)}
+                      value={formatDateTime(
+                        selectedReceiptActivity.confirmedAt,
+                      )}
                     />
                   ) : null}
 
-                  {selectedReceiptActivity.note ? (
+                  {canShowPrivateReceiptFields &&
+                  selectedReceiptActivity.note ? (
                     <ReceiptRow
                       label="Note"
                       value={selectedReceiptActivity.note}
@@ -2162,6 +2352,39 @@ export default function WalletPage() {
                     valueClassName="text-xs"
                   />
                 </div>
+
+                {selectedReceiptQrValue ? (
+                  <div className="space-y-3 pt-2">
+                    <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                      Receipt QR
+                    </p>
+                    <div className="flex items-end justify-between gap-4">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void handleSaveReceipt()}
+                        disabled={isSavingReceipt}
+                      >
+                        {isSavingReceipt ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          <Download className="size-4" />
+                        )}
+                        Save this receipt
+                      </Button>
+                      <div className="rounded-md border bg-white p-1 shadow-sm">
+                        <QRCodeSVG
+                          value={selectedReceiptQrValue}
+                          size={80}
+                          marginSize={0}
+                          bgColor="#ffffff"
+                          fgColor="#111827"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             </>
           ) : null}
@@ -2580,7 +2803,7 @@ export default function WalletPage() {
               <div ref={receiveQrRef} className="flex justify-center">
                 <div className="bg-white p-1 shadow-sm">
                   <QRCodeSVG
-                    value={buildWalletQrValue({
+                    value={buildWalletPayQrValue({
                       userId,
                       amount: qrReceiveAmount,
                     })}
@@ -2601,7 +2824,7 @@ export default function WalletPage() {
               </div>
               <div ref={receiveQrExportRef} className="sr-only">
                 <QRCodeCanvas
-                  value={buildWalletQrValue({
+                  value={buildWalletPayQrValue({
                     userId,
                     amount: qrReceiveAmount,
                   })}

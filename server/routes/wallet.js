@@ -10,6 +10,7 @@ import {
 import {
   getPayment,
   getPaymentHistory,
+  getPublicTransactionReceipt,
   getTransactionReceipt,
   getWalletActivity,
   getWalletSummary,
@@ -20,6 +21,12 @@ import { cancelPayment } from "../controllers/wallet/cancelPayment.js";
 import { verifyPayment } from "../controllers/wallet/verifyPayment.js";
 
 const router = express.Router();
+
+router.get(
+  "/shared/:shareId",
+  validateParam(WalletSchema.params.shareId),
+  getPublicTransactionReceipt,
+);
 
 router.use(validateToken());
 

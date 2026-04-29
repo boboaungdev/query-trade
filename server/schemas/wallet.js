@@ -49,5 +49,8 @@ export const WalletSchema = {
     transactionId: Joi.object({
       transactionId: Joi.string().hex().length(24).required(),
     }),
+    shareId: Joi.object({
+      shareId: Joi.string().hex().length(24).required(),
+    }),
   },
 };

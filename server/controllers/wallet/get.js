@@ -117,6 +117,7 @@ function serializeUniversalWalletActivity(
     return {
       _id: transaction._id,
       transactionId: String(transaction._id || ""),
+      shareId: transaction.shareId || null,
       sourceType: "transaction",
       activityType: isSender ? "send" : "receive",
       status: transaction.status,
@@ -174,6 +175,7 @@ function serializeUniversalWalletActivity(
   return {
     _id: transaction._id,
     transactionId: String(transaction._id || ""),
+    shareId: transaction.shareId || null,
     sourceType: "transaction",
     activityType:
       transaction.type === TRANSACTION_TYPES.subscription
@@ -436,6 +438,59 @@ export const getTransactionReceipt = async (req, res, next) => {
         userMap,
         subscriptionMap,
         walletTransactionMap,
+      ),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getPublicTransactionReceipt = async (req, res, next) => {
+  try {
+    const { shareId } = req.params;
+    const transaction = await TransactionModel.findOne({
+      shareId,
+    }).lean();
+
+    if (!transaction) {
+      throw resError(404, "Transaction receipt not found.");
+    }
+
+    const relatedUserIds = Array.from(
+      new Set(
+        [transaction.user, transaction.fromUser, transaction.toUser]
+          .filter(Boolean)
+          .map((value) => String(value)),
+      ),
+    );
+    const relatedUsers = relatedUserIds.length
+      ? await UserDB.find({
+          _id: { $in: relatedUserIds },
+        })
+          .select("_id username name avatar")
+          .lean()
+      : [];
+    const relatedSubscriptions = relatedUserIds.length
+      ? await SubscriptionModel.find({
+          user: { $in: relatedUserIds },
+        }).lean()
+      : [];
+    const userMap = new Map(
+      relatedUsers.map((relatedUser) => [String(relatedUser._id), relatedUser]),
+    );
+    const subscriptionMap = new Map(
+      relatedSubscriptions.map((subscription) => [
+        String(subscription.user),
+        subscription,
+      ]),
+    );
+
+    return resJson(res, 200, "Public transaction receipt.", {
+      transaction: serializeUniversalWalletActivity(
+        transaction,
+        transaction.user || transaction.toUser || transaction.fromUser || "",
+        userMap,
+        subscriptionMap,
       ),
     });
   } catch (error) {

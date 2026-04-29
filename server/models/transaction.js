@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import mongoose from "mongoose";
 
 import { PAYMENT_CURRENCIES, PAYMENT_STATUSES } from "../constants/subscription.js";
@@ -109,6 +110,14 @@ const transactionSchema = new Schema(
       trim: true,
       maxlength: 140,
       default: "",
+    },
+    shareId: {
+      type: String,
+      trim: true,
+      unique: true,
+      sparse: true,
+      index: true,
+      default: () => crypto.randomBytes(12).toString("hex"),
     },
     note: {
       type: String,
