@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import html2canvas from "html2canvas";
+import { toPng } from "html-to-image";
 import {
   ArrowDownLeft,
   ArrowRight,
@@ -33,6 +33,7 @@ import {
   cancelWalletPayment,
   createTokenDeposit,
   createWalletTransfer,
+  getTransactionReceipt,
   getSharedTransactionReceipt,
   type PayCurrency,
   type Payment,
@@ -93,6 +94,7 @@ const WALLET_QR_RECEIVE_TITLE = "Receive Token";
 const WALLET_QR_SCAN_LABEL = "Scan with";
 const WALLET_QR_USAGE_NOTE = "Only use this QR inside the app";
 const WALLET_QR_SECURITY_NOTE = "Protected by wallet";
+const WALLET_QR_LOGO_SRC = "/query-trade.svg";
 type SendUsernameStatus =
   | "idle"
   | "invalid"
@@ -411,7 +413,7 @@ async function detectQrValueFromFile(file: File) {
   context.drawImage(imageBitmap, 0, 0);
 
   try {
-    const rawValue = await detectQrValueFromCanvas(canvas);
+    const rawValue = await detectQrValueFromCanvasVariants(canvas);
 
     if (!rawValue) {
       throw new Error("No QR code found in that image.");
@@ -421,6 +423,88 @@ async function detectQrValueFromFile(file: File) {
   } finally {
     imageBitmap.close();
   }
+}
+
+async function detectQrValueFromCanvasVariants(
+  sourceCanvas: HTMLCanvasElement,
+) {
+  const directValue = await detectQrValueFromCanvas(sourceCanvas);
+
+  if (directValue) {
+    return directValue;
+  }
+
+  const scanCanvas = document.createElement("canvas");
+  const scanContext = scanCanvas.getContext("2d", { willReadFrequently: true });
+
+  if (!scanContext) {
+    return "";
+  }
+
+  const fullImageTargetSizes = [2048, 1536, 1024, 768, 512];
+  for (const targetSize of fullImageTargetSizes) {
+    const scale = Math.min(
+      targetSize / sourceCanvas.width,
+      targetSize / sourceCanvas.height,
+    );
+    const drawWidth = Math.max(1, Math.floor(sourceCanvas.width * scale));
+    const drawHeight = Math.max(1, Math.floor(sourceCanvas.height * scale));
+
+    scanCanvas.width = drawWidth;
+    scanCanvas.height = drawHeight;
+    scanContext.clearRect(0, 0, drawWidth, drawHeight);
+    scanContext.drawImage(sourceCanvas, 0, 0, drawWidth, drawHeight);
+
+    const resizedValue = await detectQrValueFromCanvas(scanCanvas);
+
+    if (resizedValue) {
+      return resizedValue;
+    }
+  }
+
+  const shortestSide = Math.min(sourceCanvas.width, sourceCanvas.height);
+  const cropScales = [1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4];
+  const targetSizes = [2048, 1536, 1024, 768, 512];
+  const cropAnchors = [0, 0.25, 0.5, 0.75, 1];
+
+  for (const cropScale of cropScales) {
+    const cropSize = Math.max(1, Math.floor(shortestSide * cropScale));
+    const maxCropX = Math.max(0, sourceCanvas.width - cropSize);
+    const maxCropY = Math.max(0, sourceCanvas.height - cropSize);
+
+    for (const anchorY of cropAnchors) {
+      const cropY = Math.floor(maxCropY * anchorY);
+
+      for (const anchorX of cropAnchors) {
+        const cropX = Math.floor(maxCropX * anchorX);
+
+        for (const targetSize of targetSizes) {
+          scanCanvas.width = targetSize;
+          scanCanvas.height = targetSize;
+          scanContext.clearRect(0, 0, targetSize, targetSize);
+          scanContext.drawImage(
+            sourceCanvas,
+            cropX,
+            cropY,
+            cropSize,
+            cropSize,
+            0,
+            0,
+            targetSize,
+            targetSize,
+          );
+
+          const croppedValue = await detectQrValueFromCanvas(scanCanvas);
+
+          if (croppedValue) {
+            return croppedValue;
+          }
+        }
+      }
+    }
+  }
+
+  return "";
 }
 
 function getBarcodeDetector() {
@@ -461,7 +545,9 @@ async function detectQrValueFromCanvas(canvas: HTMLCanvasElement) {
   }
 
   const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-  const qrResult = jsQR(imageData.data, imageData.width, imageData.height);
+  const qrResult = jsQR(imageData.data, imageData.width, imageData.height, {
+    inversionAttempts: "attemptBoth",
+  });
 
   return qrResult?.data?.trim() || "";
 }
@@ -1031,6 +1117,22 @@ export default function WalletPage() {
     setActivityReloadKey((current) => current + 1);
   };
 
+  const handleOpenReceipt = async (activity: WalletActivity) => {
+    setReceiptViewMode("local");
+    setSelectedReceiptActivity(activity);
+
+    if (!activity.transactionId) {
+      return;
+    }
+
+    try {
+      const receiptData = await getTransactionReceipt(activity.transactionId);
+      setSelectedReceiptActivity(receiptData.transaction);
+    } catch {
+      // Fall back to the list item data if the receipt refresh fails.
+    }
+  };
+
   const toggleShowBalance = () => {
     setShowBalance((current) => !current);
   };
@@ -1404,7 +1506,7 @@ export default function WalletPage() {
     }
 
     if (parsedPayload.userId === userId) {
-      throw new Error("You cannot scan your own QR code.");
+      throw new Error("You cannot scan your own receive QR code.");
     }
 
     const userData = await fetchUserById(parsedPayload.userId);
@@ -1462,7 +1564,7 @@ export default function WalletPage() {
     setIsSavingReceipt(true);
 
     try {
-      const exportColorVariables = [
+      const exportThemeVariables = [
         "--background",
         "--foreground",
         "--card",
@@ -1481,35 +1583,45 @@ export default function WalletPage() {
         "--border",
         "--input",
         "--ring",
-      ];
-      const resolvedExportColors = exportColorVariables.map((variableName) => [
-        variableName,
-        resolveCssVariableColor(variableName),
-      ]);
-      const canvas = await html2canvas(receiptContentRef.current, {
-        backgroundColor: "#ffffff",
-        scale: Math.min(window.devicePixelRatio || 2, 3),
-        useCORS: true,
-        onclone: (clonedDocument) => {
-          resolvedExportColors.forEach(([variableName, value]) => {
-            if (value) {
-              clonedDocument.documentElement.style.setProperty(
-                variableName,
-                value,
-              );
-            }
-          });
-
-          clonedDocument.documentElement.style.colorScheme = "light";
-          clonedDocument.body.style.backgroundColor = "#ffffff";
-          clonedDocument.body.style.color = "#111827";
+      ] as const;
+      const resolvedExportTheme = Object.fromEntries(
+        exportThemeVariables.map((variableName) => [
+          variableName,
+          resolveCssVariableColor(variableName),
+        ]),
+      ) as Record<(typeof exportThemeVariables)[number], string>;
+      const exportPadding = 24;
+      const exportWidth =
+        receiptContentRef.current.scrollWidth + exportPadding * 2;
+      const exportHeight =
+        receiptContentRef.current.scrollHeight + exportPadding * 2;
+      const dataUrl = await toPng(receiptContentRef.current, {
+        cacheBust: true,
+        backgroundColor:
+          resolvedExportTheme["--popover"] ||
+          resolvedExportTheme["--background"] ||
+          "#ffffff",
+        width: exportWidth,
+        height: exportHeight,
+        pixelRatio: Math.min(window.devicePixelRatio || 2, 3),
+        style: {
+          width: `${receiptContentRef.current.scrollWidth}px`,
+          height: `${receiptContentRef.current.scrollHeight}px`,
+          padding: `${exportPadding}px`,
+          boxSizing: "border-box",
+          color: resolvedExportTheme["--foreground"] || "",
+          backgroundColor:
+            resolvedExportTheme["--popover"] ||
+            resolvedExportTheme["--background"] ||
+            "#ffffff",
+          ...resolvedExportTheme,
         },
       });
       const link = document.createElement("a");
       const transactionId =
         selectedReceiptActivity.transactionId || selectedReceiptActivity._id;
 
-      link.href = canvas.toDataURL("image/png");
+      link.href = dataUrl;
       link.download = `${APP_NAME.trim().toLowerCase().replace(/\s+/g, "-")}-receipt-${transactionId}.png`;
       document.body.appendChild(link);
       link.click();
@@ -1871,16 +1983,14 @@ export default function WalletPage() {
                     key={`${activity.sourceType}-${activity._id}`}
                     className="cursor-pointer rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted/60"
                     onClick={() => {
-                      setReceiptViewMode("local");
-                      setSelectedReceiptActivity(activity);
+                      void handleOpenReceipt(activity);
                     }}
                     role="button"
                     tabIndex={0}
                     onKeyDown={(event) => {
                       if (event.key === "Enter" || event.key === " ") {
                         event.preventDefault();
-                        setReceiptViewMode("local");
-                        setSelectedReceiptActivity(activity);
+                        void handleOpenReceipt(activity);
                       }
                     }}
                   >
@@ -2025,12 +2135,16 @@ export default function WalletPage() {
         <DialogContent onOpenAutoFocus={(event) => event.preventDefault()}>
           {selectedReceiptActivity ? (
             <>
-              <DialogHeader>
-                <DialogTitle>Transaction Receipt</DialogTitle>
-                <DialogDescription>Transaction details.</DialogDescription>
-              </DialogHeader>
+              <div
+                ref={receiptContentRef}
+                data-receipt-export
+                className="space-y-4"
+              >
+                <DialogHeader>
+                  <DialogTitle>Transaction Receipt</DialogTitle>
+                  <DialogDescription>Transaction details.</DialogDescription>
+                </DialogHeader>
 
-              <div ref={receiptContentRef} className="space-y-4">
                 {(selectedReceiptActivity.activityType === "send" ||
                   selectedReceiptActivity.activityType === "receive") &&
                 (receiptSender || receiptReceiver) ? (
@@ -2129,7 +2243,7 @@ export default function WalletPage() {
                   </p>
                 </div>
 
-                <div className="space-y-2 text-sm">
+                <div className="space-y-2">
                   <ReceiptRow
                     label="Status"
                     value={selectedReceiptActivity.status}
@@ -2355,36 +2469,51 @@ export default function WalletPage() {
 
                 {selectedReceiptQrValue ? (
                   <div className="space-y-3 pt-2">
-                    <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                      Receipt QR
-                    </p>
-                    <div className="flex items-end justify-between gap-4">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => void handleSaveReceipt()}
-                        disabled={isSavingReceipt}
-                      >
-                        {isSavingReceipt ? (
-                          <Loader2 className="size-4 animate-spin" />
-                        ) : (
-                          <Download className="size-4" />
-                        )}
-                        Save this receipt
-                      </Button>
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="space-y-1">
+                        <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                          Receipt QR
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Scan to open this transaction receipt in Query Trade.
+                        </p>
+                      </div>
                       <div className="rounded-md border bg-white p-1 shadow-sm">
                         <QRCodeSVG
                           value={selectedReceiptQrValue}
                           size={80}
+                          level="H"
                           marginSize={0}
                           bgColor="#ffffff"
                           fgColor="#111827"
+                          imageSettings={{
+                            src: WALLET_QR_LOGO_SRC,
+                            width: 18,
+                            height: 18,
+                            excavate: true,
+                          }}
                         />
                       </div>
                     </div>
                   </div>
                 ) : null}
+              </div>
+
+              <div className="flex justify-start">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void handleSaveReceipt()}
+                  disabled={isSavingReceipt}
+                >
+                  {isSavingReceipt ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Download className="size-4" />
+                  )}
+                  Save this receipt
+                </Button>
               </div>
             </>
           ) : null}
@@ -2814,7 +2943,7 @@ export default function WalletPage() {
                     fgColor="#111827"
                     className="h-[220px] w-[220px]"
                     imageSettings={{
-                      src: "/query-trade.svg",
+                      src: WALLET_QR_LOGO_SRC,
                       width: 48,
                       height: 48,
                       excavate: true,
@@ -2834,7 +2963,7 @@ export default function WalletPage() {
                   bgColor="#ffffff"
                   fgColor="#111827"
                   imageSettings={{
-                    src: "/query-trade.svg",
+                    src: WALLET_QR_LOGO_SRC,
                     width: 144,
                     height: 144,
                     excavate: true,
