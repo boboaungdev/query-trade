@@ -3,12 +3,14 @@ import Link from "next/link";
 import { ArrowRight, Check, Sparkles } from "lucide-react";
 
 import Navbar from "@/components/Navbar";
+import AuthenticatedAppRedirect from "@/components/AuthenticatedAppRedirect";
 import RevealOnScroll from "@/components/RevealOnScroll";
 import SiteFooter from "@/components/SiteFooter";
 import { UserMembershipMark } from "@/components/user-membership";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { APP_NAME, APP_URL } from "@/lib/constants";
+import { requireMarketingGuest } from "@/lib/marketing-guest";
 import { getSubscriptionPlans } from "@/lib/subscription-plans";
 
 const pricingGuides = [
@@ -56,6 +58,7 @@ export const metadata: Metadata = {
 };
 
 export default async function PricingPage() {
+  await requireMarketingGuest();
   const homePlans = await getSubscriptionPlans();
   const structuredData = {
     "@context": "https://schema.org",
@@ -77,6 +80,7 @@ export default async function PricingPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <AuthenticatedAppRedirect />
       <Navbar />
 
       <main className="overflow-hidden">

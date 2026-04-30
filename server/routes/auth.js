@@ -21,6 +21,7 @@ import { UserSchema } from "../schemas/user.js";
 import { update } from "../controllers/auth/update.js";
 import { signout } from "../controllers/auth/signout.js";
 import { refresh } from "../controllers/auth/refresh.js";
+import { getSession } from "../controllers/auth/session.js";
 import { existUser } from "../controllers/auth/existUser.js";
 import {
   deleteAccount,
@@ -87,6 +88,7 @@ router.post(
 router.post("/signout", validateCookie(), signout);
 
 router.post("/refresh", validateCookie(), refresh);
+router.get("/session", validateCookie(), getSession);
 
 router.post(
   "/check-change-email",

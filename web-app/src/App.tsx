@@ -23,6 +23,7 @@ import PaymentPage from "./pages/payment";
 import WalletPage from "./pages/wallet";
 import AdminDashboard from "./pages/admin";
 
+import { SITE_URL } from "@/constants";
 import { useAuthStore } from "@/store/auth";
 import Settings from "./pages/settings";
 
@@ -56,6 +57,17 @@ function AdminRoute() {
   return <AdminDashboard />;
 }
 
+function PricingRoute() {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+
+  if (!isAuthenticated) {
+    window.location.replace(SITE_URL);
+    return null;
+  }
+
+  return <Pricing />;
+}
+
 export default function App() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
@@ -79,7 +91,7 @@ export default function App() {
               }
             />
             <Route path="/auth" element={<AuthRoute />} />
-            <Route path="/pricing" element={<Pricing />} />
+            <Route path="/pricing" element={<PricingRoute />} />
 
             <Route element={<ProtectedRoute />}>
               <Route path="/dashboard" element={<Dashboard />} />

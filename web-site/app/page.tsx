@@ -12,6 +12,7 @@ import {
 
 import HomeProductPreviewChart from "@/components/HomeProductPreviewChart";
 import HomeReviewsMarquee from "@/components/HomeReviewsMarquee";
+import AuthenticatedAppRedirect from "@/components/AuthenticatedAppRedirect";
 import RevealOnScroll from "@/components/RevealOnScroll";
 import SiteFooter from "@/components/SiteFooter";
 import Navbar from "@/components/Navbar";
@@ -28,6 +29,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription } from "@/components/ui/card";
 import { APP_NAME, APP_TAGLINE, APP_URL } from "@/lib/constants";
+import { requireMarketingGuest } from "@/lib/marketing-guest";
 import { getSubscriptionPlans } from "@/lib/subscription-plans";
 
 const proofCards = [
@@ -72,6 +74,7 @@ export const metadata: Metadata = {
 };
 
 export default async function Page() {
+  await requireMarketingGuest();
   const homePlans = await getSubscriptionPlans();
   const [taglineLead, taglineBridge, taglineFocus] = APP_TAGLINE.replace(
     ".",
@@ -102,6 +105,7 @@ export default async function Page() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <AuthenticatedAppRedirect />
       <Navbar />
 
       <main className="overflow-hidden">

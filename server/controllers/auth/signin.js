@@ -8,7 +8,7 @@ import { UserDB } from "../../models/user.js";
 import { Encoder } from "../../utils/encoder.js";
 import { sendEmail } from "../../utils/sendEmail.js";
 import { uploadAvatar } from "../../utils/uploadAvatar.js";
-import { APP_NAME, APP_URL, GOOGLE_CLIENT_ID } from "../../constants/index.js";
+import { APP_NAME, SITE_URL, GOOGLE_CLIENT_ID } from "../../constants/index.js";
 import { renderTemplate } from "../../utils/renderTemplate.js";
 import { resCookie, resError, resJson } from "../../utils/response.js";
 
@@ -185,7 +185,7 @@ export const signinGoogle = async (req, res, next) => {
 
     htmlFile = renderTemplate(htmlFile, {
       appName: APP_NAME,
-      appUrl: APP_URL,
+      appUrl: SITE_URL,
       year: new Date().getFullYear(),
       title: "Google Sign-in Successful",
       name: user.name,

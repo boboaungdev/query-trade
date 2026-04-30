@@ -6,7 +6,7 @@ import { UserDB } from "../../models/user.js";
 import { VerificationModel } from "../../models/verify.js";
 import { sendEmail } from "../../utils/sendEmail.js";
 import { resError, resJson } from "../../utils/response.js";
-import { APP_NAME, APP_URL } from "../../constants/index.js";
+import { APP_NAME, SITE_URL } from "../../constants/index.js";
 import { renderTemplate } from "../../utils/renderTemplate.js";
 import { generateEmailCode } from "../../utils/generateEmailCode.js";
 
@@ -48,7 +48,7 @@ export const forgotPassword = async (req, res, next) => {
 
     htmlFile = renderTemplate(htmlFile, {
       appName: APP_NAME,
-      appUrl: APP_URL,
+      appUrl: SITE_URL,
       year: new Date().getFullYear(),
       title: "Forgot Password Verification",
       message: "Use the verification code below to reset your password.",

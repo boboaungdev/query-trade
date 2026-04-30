@@ -5,7 +5,7 @@ import { fileURLToPath } from "url";
 import { UserDB } from "../../models/user.js";
 import { sendEmail } from "../../utils/sendEmail.js";
 import { resError, resJson } from "../../utils/response.js";
-import { APP_NAME, APP_URL } from "../../constants/index.js";
+import { APP_NAME, SITE_URL } from "../../constants/index.js";
 import { renderTemplate } from "../../utils/renderTemplate.js";
 
 export const connectGoogle = async (req, res, next) => {
@@ -66,7 +66,7 @@ export const connectGoogle = async (req, res, next) => {
 
     htmlFile = renderTemplate(htmlFile, {
       appName: APP_NAME,
-      appUrl: APP_URL,
+      appUrl: SITE_URL,
       year: new Date().getFullYear(),
       title: "Google Account Connected",
       message:
@@ -138,7 +138,7 @@ export const disconnectGoogle = async (req, res, next) => {
 
     htmlFile = renderTemplate(htmlFile, {
       appName: APP_NAME,
-      appUrl: APP_URL,
+      appUrl: SITE_URL,
       year: new Date().getFullYear(),
       title: "Google Account Disconnected",
       message: "Your Google account has been disconnected from your profile.",

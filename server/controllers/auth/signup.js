@@ -10,7 +10,7 @@ import { sendEmail } from "../../utils/sendEmail.js";
 import { renderTemplate } from "../../utils/renderTemplate.js";
 import { generateEmailCode } from "../../utils/generateEmailCode.js";
 import { resCookie, resError, resJson } from "../../utils/response.js";
-import { APP_NAME, APP_URL, EXPIRE_MINUTE } from "../../constants/index.js";
+import { APP_NAME, SITE_URL, EXPIRE_MINUTE } from "../../constants/index.js";
 
 export const signup = async (req, res, next) => {
   try {
@@ -56,7 +56,7 @@ export const signup = async (req, res, next) => {
 
     htmlFile = renderTemplate(htmlFile, {
       appName: APP_NAME,
-      appUrl: APP_URL,
+      appUrl: SITE_URL,
       year: new Date().getFullYear(),
       title: "Verify Your Email",
       message: "Use the verification code below to complete your signup.",
@@ -164,7 +164,7 @@ export const signupVerify = async (req, res, next) => {
 
     htmlFile = renderTemplate(htmlFile, {
       appName: APP_NAME,
-      appUrl: APP_URL,
+      appUrl: SITE_URL,
       year: new Date().getFullYear(),
       title: "Signup Successful",
       message: "Your account has been successfully created.",

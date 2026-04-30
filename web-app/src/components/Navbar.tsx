@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from "react";
-import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import ThemeToggle from "./ThemeToggle";
@@ -23,7 +23,6 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { getApiErrorMessage } from "@/api/axios";
 import { signout } from "@/api/auth";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 import { formatCompactTokenAmount } from "@/lib/formatTokenAmount";
 import {
   Settings,
@@ -31,7 +30,6 @@ import {
   Wallet,
   Eye,
   EyeOff,
-  TicketPercent,
 } from "lucide-react";
 
 export default function Navbar() {
@@ -94,38 +92,6 @@ export default function Navbar() {
           {APP_NAME}
         </Link>
       </div>
-
-      {!user ? (
-        <div className="absolute left-1/2 hidden -translate-x-1/2 md:flex">
-          <div className="inline-flex w-fit items-center justify-center gap-1 rounded-none bg-transparent p-[3px] text-muted-foreground">
-            <NavLink
-              to="/"
-              end
-              className={({ isActive }) =>
-                cn(
-                  "relative inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-1.5 py-0.5 text-sm font-medium whitespace-nowrap text-foreground/60 transition-all hover:text-foreground focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:outline-1 focus-visible:outline-primary dark:text-muted-foreground dark:hover:text-foreground after:absolute after:inset-x-0 after:bottom-[-5px] after:h-0.5 after:bg-foreground after:opacity-0 after:transition-opacity",
-                  isActive &&
-                    "text-primary after:bg-primary after:opacity-100 dark:text-primary dark:after:bg-primary",
-                )
-              }
-            >
-              Home
-            </NavLink>
-            <NavLink
-              to="/pricing"
-              className={({ isActive }) =>
-                cn(
-                  "relative inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-1.5 py-0.5 text-sm font-medium whitespace-nowrap text-foreground/60 transition-all hover:text-foreground focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:outline-1 focus-visible:outline-primary dark:text-muted-foreground dark:hover:text-foreground after:absolute after:inset-x-0 after:bottom-[-5px] after:h-0.5 after:bg-foreground after:opacity-0 after:transition-opacity",
-                  isActive &&
-                    "text-primary after:bg-primary after:opacity-100 dark:text-primary dark:after:bg-primary",
-                )
-              }
-            >
-              Pricing
-            </NavLink>
-          </div>
-        </div>
-      ) : null}
 
       {/* RIGHT */}
 
@@ -214,12 +180,6 @@ export default function Navbar() {
                 </button>
               </DropdownMenuItem>
 
-              <DropdownMenuItem asChild>
-                <Link to="/pricing" className="flex items-center gap-2">
-                  <TicketPercent className="h-4 w-4" />
-                  <span>Pricing</span>
-                </Link>
-              </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link to="/settings" className="flex items-center gap-2">
                   <Settings className="h-4 w-4" />

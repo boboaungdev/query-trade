@@ -1,6 +1,10 @@
-import { APP_URL, EXTRA_ALLOWED_ORIGINS } from "../constants/index.js";
+import {
+  SITE_URL,
+  EXTRA_ALLOWED_ORIGINS,
+  APP_URL,
+} from "../constants/index.js";
 
-const baseOrigins = [APP_URL];
+const baseOrigins = [SITE_URL, APP_URL];
 
 // Parse additional origins from .env
 const extraOrigins = EXTRA_ALLOWED_ORIGINS

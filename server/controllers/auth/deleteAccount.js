@@ -12,7 +12,7 @@ import { sendEmail } from "../../utils/sendEmail.js";
 import { renderTemplate } from "../../utils/renderTemplate.js";
 import { generateEmailCode } from "../../utils/generateEmailCode.js";
 import { clearCookie, resError, resJson } from "../../utils/response.js";
-import { APP_NAME, APP_URL, EXPIRE_MINUTE } from "../../constants/index.js";
+import { APP_NAME, SITE_URL, EXPIRE_MINUTE } from "../../constants/index.js";
 
 export const deleteAccountVerify = async (req, res, next) => {
   try {
@@ -44,7 +44,7 @@ export const deleteAccountVerify = async (req, res, next) => {
 
     htmlFile = renderTemplate(htmlFile, {
       appName: APP_NAME,
-      appUrl: APP_URL,
+      appUrl: SITE_URL,
       year: new Date().getFullYear(),
       title: "Delete Account Verification",
       message:
@@ -158,7 +158,7 @@ export const deleteAccount = async (req, res, next) => {
 
     htmlFile = renderTemplate(htmlFile, {
       appName: APP_NAME,
-      appUrl: APP_URL,
+      appUrl: SITE_URL,
       year: new Date().getFullYear(),
       title: "Account Deleted Successfully",
       message: "Your account has been deleted successfully.",

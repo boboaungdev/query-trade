@@ -9,7 +9,7 @@ import { sendEmail } from "../../utils/sendEmail.js";
 import { resError, resJson } from "../../utils/response.js";
 import { renderTemplate } from "../../utils/renderTemplate.js";
 import { generateEmailCode } from "../../utils/generateEmailCode.js";
-import { APP_NAME, APP_URL, EXPIRE_MINUTE } from "../../constants/index.js";
+import { APP_NAME, SITE_URL, EXPIRE_MINUTE } from "../../constants/index.js";
 
 export const checkChangeEmail = async (req, res, next) => {
   try {
@@ -59,7 +59,7 @@ export const checkChangeEmail = async (req, res, next) => {
     // 🔹 Replace template placeholders
     htmlFile = renderTemplate(htmlFile, {
       appName: APP_NAME,
-      appUrl: APP_URL,
+      appUrl: SITE_URL,
       year: new Date().getFullYear(),
       title: "Change Email Verification",
       message: "Use the verification code below to confirm your email change.",
@@ -126,7 +126,7 @@ export const verifyChangeEmail = async (req, res, next) => {
 
     htmlFile = renderTemplate(htmlFile, {
       appName: APP_NAME,
-      appUrl: APP_URL,
+      appUrl: SITE_URL,
       year: new Date().getFullYear(),
       title: "Email Changed Successfully",
       message: "Your account email has been successfully updated.",

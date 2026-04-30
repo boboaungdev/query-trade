@@ -6,7 +6,7 @@ import { Token } from "../../utils/token.js";
 import { UserDB } from "../../models/user.js";
 import { Encoder } from "../../utils/encoder.js";
 import { sendEmail } from "../../utils/sendEmail.js";
-import { APP_NAME, APP_URL } from "../../constants/index.js";
+import { APP_NAME, SITE_URL } from "../../constants/index.js";
 import { renderTemplate } from "../../utils/renderTemplate.js";
 import { resCookie, resError, resJson } from "../../utils/response.js";
 
@@ -56,7 +56,7 @@ export const resetPassword = async (req, res, next) => {
 
     htmlFile = renderTemplate(htmlFile, {
       appName: APP_NAME,
-      appUrl: APP_URL,
+      appUrl: SITE_URL,
       year: new Date().getFullYear(),
       title: "Password Reset Successful",
       message: "Your password has been successfully reset.",

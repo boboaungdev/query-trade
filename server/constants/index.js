@@ -20,12 +20,15 @@ export const USDT_RECEIVE_ADDRESS =
 
 // Token
 export const TOKEN_PER_USD =
-  parseInt(process.env.TOKEN_PER_USD || process.env.TOKEN_PER_USD || "100", 10) ||
-  1000;
+  parseInt(
+    process.env.TOKEN_PER_USD || process.env.TOKEN_PER_USD || "100",
+    10,
+  ) || 1000;
 export const PAID_STRATEGY_VIEW_REWARD_TOKENS =
   Number(process.env.PAID_STRATEGY_VIEW_REWARD_TOKENS || "1") || 1;
 
 // Required env
+export const SITE_URL = process.env.SITE_URL;
 export const APP_URL = process.env.APP_URL;
 export const MONGO_URI = process.env.MONGO_URI;
 export const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET;

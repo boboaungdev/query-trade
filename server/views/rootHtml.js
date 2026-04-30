@@ -1,4 +1,4 @@
-import { APP_URL } from "../constants/index.js";
+import { SITE_URL } from "../constants/index.js";
 
 export const rootHtml = `<!doctype html>
 <html lang="en">
@@ -281,7 +281,7 @@ export const rootHtml = `<!doctype html>
             simulations and exchange-connected workflows.
           </p>
           <div class="actions">
-            <a class="button button-primary" href="${APP_URL || "/"}" target="_blank" rel="noreferrer">Open Client App</a>
+            <a class="button button-primary" href="${SITE_URL || "/"}" target="_blank" rel="noreferrer">Open Client App</a>
             <a class="button button-secondary" href="/query-trade.svg" target="_blank" rel="noreferrer">Open Brand Asset</a>
           </div>
         </div>
