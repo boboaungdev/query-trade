@@ -33,7 +33,7 @@ router.use(validateToken());
 router.get("/summary", getWalletSummary);
 router.get(
   "/activity",
-  validateQuery(WalletSchema.paginationQuery),
+  validateQuery(WalletSchema.activityQuery),
   getWalletActivity,
 );
 router.get(

@@ -111,6 +111,8 @@ export type WalletActivity = {
   confirmedAt?: string | null;
 };
 
+export type WalletActivityType = WalletActivity["activityType"];
+
 export async function getWalletSummary() {
   const { data } = await api.get<{
     result: {
@@ -153,9 +155,11 @@ export async function getPaymentHistory({
 export async function getWalletActivity({
   page,
   limit,
+  activityType,
 }: {
   page?: number;
   limit?: number;
+  activityType?: WalletActivityType;
 } = {}) {
   const { data } = await api.get<{
     result: {
@@ -171,6 +175,7 @@ export async function getWalletActivity({
     params: {
       page,
       limit,
+      activityType,
     },
   });
 

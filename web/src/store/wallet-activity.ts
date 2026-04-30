@@ -1,7 +1,11 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-import { getWalletActivity, type WalletActivity } from "@/api/wallet";
+import {
+  getWalletActivity,
+  type WalletActivity,
+  type WalletActivityType,
+} from "@/api/wallet";
 
 type WalletActivityPage = {
   activities: WalletActivity[];
@@ -19,16 +23,24 @@ type WalletActivityStoreState = {
   fetchActivityPage: (params: {
     page: number;
     limit: number;
+    activityType?: WalletActivityType | "all";
     force?: boolean;
   }) => Promise<WalletActivityPage>;
   clearActivityCache: () => void;
 };
 
-function getActivityCacheKey(page: number, limit: number) {
-  return `activity:${page}:${limit}`;
+function getActivityCacheKey(
+  page: number,
+  limit: number,
+  activityType: WalletActivityType | "all" = "all",
+) {
+  return `activity:${activityType}:${page}:${limit}`;
 }
 
-const walletActivityRequestCache = new Map<string, Promise<WalletActivityPage>>();
+const walletActivityRequestCache = new Map<
+  string,
+  Promise<WalletActivityPage>
+>();
 
 export const useWalletActivityStore = create<WalletActivityStoreState>()(
   persist(
@@ -36,8 +48,13 @@ export const useWalletActivityStore = create<WalletActivityStoreState>()(
       pages: {},
       isLoading: false,
 
-      fetchActivityPage: async ({ page, limit, force = false }) => {
-        const cacheKey = getActivityCacheKey(page, limit);
+      fetchActivityPage: async ({
+        page,
+        limit,
+        activityType = "all",
+        force = false,
+      }) => {
+        const cacheKey = getActivityCacheKey(page, limit, activityType);
         const cachedPage = get().pages[cacheKey];
 
         if (!force && cachedPage) {
@@ -52,7 +69,11 @@ export const useWalletActivityStore = create<WalletActivityStoreState>()(
 
         set({ isLoading: true });
 
-        const request = getWalletActivity({ page, limit })
+        const request = getWalletActivity({
+          page,
+          limit,
+          activityType: activityType === "all" ? undefined : activityType,
+        })
           .then((data) => {
             set((state) => ({
               pages: {
@@ -88,7 +109,9 @@ export const useWalletActivityStore = create<WalletActivityStoreState>()(
       name: "wallet-activity-store",
       partialize: (state) => ({
         pages: Object.fromEntries(
-          Object.entries(state.pages).filter(([key]) => key.startsWith("activity:1:")),
+          Object.entries(state.pages).filter(([key]) =>
+            key.startsWith("activity:all:1:"),
+          ),
         ),
       }),
     },

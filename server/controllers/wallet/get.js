@@ -279,19 +279,31 @@ export const getWalletActivity = async (req, res, next) => {
     const user = req.user;
     const page = Number(req.query.page || 1);
     const limit = Number(req.query.limit || 10);
+    const activityType = String(req.query.activityType || "").trim();
     const skip = (page - 1) * limit;
+    const activityQuery = {
+      participants: user._id,
+    };
+
+    if (activityType === "send") {
+      activityQuery.type = TRANSACTION_TYPES.transfer;
+      activityQuery.fromUser = user._id;
+    } else if (activityType === "receive") {
+      activityQuery.type = TRANSACTION_TYPES.transfer;
+      activityQuery.toUser = user._id;
+    } else if (activityType === "reward") {
+      activityQuery.type = TRANSACTION_TYPES.creatorReward;
+    } else if (activityType) {
+      activityQuery.type = activityType;
+    }
 
     const [transactions, total] = await Promise.all([
-      TransactionModel.find({
-        participants: user._id,
-      })
+      TransactionModel.find(activityQuery)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .lean(),
-      TransactionModel.countDocuments({
-        participants: user._id,
-      }),
+      TransactionModel.countDocuments(activityQuery),
     ]);
     const walletTransactionIds = Array.from(
       new Set(

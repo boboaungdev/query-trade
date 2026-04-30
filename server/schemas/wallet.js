@@ -1,6 +1,17 @@
 import Joi from "joi";
 
 import { PAYMENT_CURRENCIES } from "../constants/subscription.js";
+const walletActivityTypes = [
+  "deposit",
+  "subscription",
+  "withdraw",
+  "send",
+  "receive",
+  "reward",
+  "refund",
+  "adjustment",
+  "spend",
+];
 
 export const WalletSchema = {
   deposit: Joi.object({
@@ -40,6 +51,14 @@ export const WalletSchema = {
   paginationQuery: Joi.object({
     page: Joi.number().integer().min(1).default(1),
     limit: Joi.number().integer().min(1).max(50).default(10),
+  }),
+
+  activityQuery: Joi.object({
+    page: Joi.number().integer().min(1).default(1),
+    limit: Joi.number().integer().min(1).max(50).default(10),
+    activityType: Joi.string()
+      .valid(...walletActivityTypes)
+      .optional(),
   }),
 
   params: {

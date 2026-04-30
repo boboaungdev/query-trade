@@ -7,6 +7,7 @@ import {
   ArrowUpRight,
   Check,
   CheckCircle2,
+  ChevronDown,
   Clock,
   Copy,
   CreditCard,
@@ -38,6 +39,7 @@ import {
   type PayCurrency,
   type Payment,
   type WalletActivity,
+  type WalletActivityType,
 } from "@/api/wallet";
 import {
   AlertDialog,
@@ -66,6 +68,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   Pagination,
@@ -95,6 +106,18 @@ const WALLET_QR_SCAN_LABEL = "Scan with";
 const WALLET_QR_USAGE_NOTE = "Only use this QR inside the app";
 const WALLET_QR_SECURITY_NOTE = "Protected by wallet";
 const WALLET_QR_LOGO_SRC = "/query-trade.svg";
+const WALLET_ACTIVITY_FILTER_OPTIONS = [
+  { value: "all", label: "All activity" },
+  { value: "reward", label: "Earn" },
+  { value: "deposit", label: "Deposit" },
+  { value: "subscription", label: "Subscription" },
+  { value: "send", label: "Send" },
+  { value: "receive", label: "Receive" },
+  { value: "withdraw", label: "Withdraw" },
+  { value: "refund", label: "Refund" },
+  { value: "adjustment", label: "Adjustment" },
+  { value: "spend", label: "Spend" },
+] as const;
 type SendUsernameStatus =
   | "idle"
   | "invalid"
@@ -113,6 +136,7 @@ type SendRecipientPreview = {
 };
 
 type SendDialogStep = "recipient" | "details";
+type WalletActivityFilterValue = WalletActivityType | "all";
 
 type ParsedWalletQrPayload =
   | {
@@ -880,6 +904,8 @@ export default function WalletPage() {
   const [isUsernameCopied, setIsUsernameCopied] = useState(false);
   const [qrScanError, setQrScanError] = useState("");
   const [activityPage, setActivityPage] = useState(1);
+  const [activityFilter, setActivityFilter] =
+    useState<WalletActivityFilterValue>("all");
   const [activityReloadKey, setActivityReloadKey] = useState(0);
   const sendUsernameRequestIdRef = useRef(0);
   const skipNextSendUsernameValidationRef = useRef(false);
@@ -891,7 +917,7 @@ export default function WalletPage() {
   const qrStreamRef = useRef<MediaStream | null>(null);
   const qrScanFrameRef = useRef<number | null>(null);
   const qrScanLockRef = useRef(false);
-  const activityCacheKey = `activity:${activityPage}:10`;
+  const activityCacheKey = `activity:${activityFilter}:${activityPage}:10`;
   const cachedActivityPage = useWalletActivityStore(
     (state) => state.pages[activityCacheKey],
   );
@@ -899,6 +925,10 @@ export default function WalletPage() {
   const tokenPerUsd = tokenPerUsdValue ?? 1000;
   const activities = cachedActivityPage?.activities ?? [];
   const totalActivityPages = Math.max(1, cachedActivityPage?.totalPage ?? 1);
+  const activeActivityFilterLabel =
+    WALLET_ACTIVITY_FILTER_OPTIONS.find(
+      (option) => option.value === activityFilter,
+    )?.label || "All activity";
   const depositAmountNumber = Number(depositAmount);
   const sendAmountNumber = Number(sendAmount);
   const receiveAmountNumber = Number(receiveAmount);
@@ -954,6 +984,7 @@ export default function WalletPage() {
           fetchActivityPage({
             page: activityPage,
             limit: 10,
+            activityType: activityFilter,
             force: true,
           }),
         ]);
@@ -976,6 +1007,7 @@ export default function WalletPage() {
     };
   }, [
     activityPage,
+    activityFilter,
     activityReloadKey,
     fetchActivityPage,
     fetchWalletSummary,
@@ -1977,10 +2009,48 @@ export default function WalletPage() {
 
       <Card className="rounded-lg border-0 shadow-none">
         <CardHeader>
-          <CardTitle>Transaction History</CardTitle>
-          <CardDescription>
-            All deposits, subscriptions, and future wallet transactions.
-          </CardDescription>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-1">
+              <CardTitle>Transaction History</CardTitle>
+              <CardDescription>
+                All deposits, subscriptions, and future wallet transactions.
+              </CardDescription>
+            </div>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="justify-between gap-2 sm:min-w-44"
+                >
+                  {activeActivityFilterLabel}
+                  <ChevronDown className="size-4 text-muted-foreground" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Filter by activity</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuRadioGroup
+                  value={activityFilter}
+                  onValueChange={(value) => {
+                    setActivityFilter(value as WalletActivityFilterValue);
+                    setActivityPage(1);
+                  }}
+                >
+                  {WALLET_ACTIVITY_FILTER_OPTIONS.map((option) => (
+                    <DropdownMenuRadioItem
+                      key={option.value}
+                      value={option.value}
+                    >
+                      {option.label}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </CardHeader>
         <CardContent>
           {activities.length ? (
@@ -2485,6 +2555,16 @@ export default function WalletPage() {
                         <p className="text-xs text-muted-foreground">
                           Scan to open this transaction receipt in Query Trade.
                         </p>
+                        <div className="flex items-center gap-2 pt-1">
+                          <img
+                            src={WALLET_QR_LOGO_SRC}
+                            alt={APP_NAME}
+                            className="size-8 object-contain"
+                          />
+                          <span className="text-sm font-medium text-foreground">
+                            {APP_NAME}
+                          </span>
+                        </div>
                       </div>
                       <div className="rounded-md border bg-white p-1 shadow-sm">
                         <QRCodeSVG
