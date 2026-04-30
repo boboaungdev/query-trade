@@ -1,9 +1,13 @@
 import { TOKEN_PER_USD } from "../../constants/index.js";
-import { PAYMENT_PURPOSES } from "../../constants/subscription.js";
+import {
+  PAYMENT_PURPOSES,
+  PAYMENT_STATUSES,
+} from "../../constants/subscription.js";
 import { PaymentModel } from "../../models/payment.js";
 import { SubscriptionModel } from "../../models/subscription.js";
 import {
   TransactionModel,
+  TRANSACTION_STATUSES,
   TRANSACTION_TYPES,
 } from "../../models/transaction.js";
 import { UserDB } from "../../models/user.js";
@@ -35,20 +39,288 @@ function getWalletTransactionForUser(
   return null;
 }
 
+function getEmptyWalletStats() {
+  return {
+    totalRewardEarned: 0,
+    totalDeposited: 0,
+    totalSubscriptionSpent: 0,
+    totalSent: 0,
+    totalReceived: 0,
+    totalWithdrawn: 0,
+    totalRefunded: 0,
+    totalAdjusted: 0,
+    totalSpent: 0,
+  };
+}
+
+function buildIncomeChartBuckets(days) {
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+
+  return Array.from({ length: days }, (_, index) => {
+    const date = new Date(today);
+    date.setUTCDate(today.getUTCDate() - (days - 1 - index));
+
+    return {
+      key: date.toISOString().slice(0, 10),
+      earned: 0,
+    };
+  });
+}
+
+function buildIncomeChartBucketsFromDate(startDateInput) {
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+
+  const startDate = new Date(startDateInput);
+  startDate.setUTCHours(0, 0, 0, 0);
+
+  if (Number.isNaN(startDate.getTime()) || startDate > today) {
+    return [];
+  }
+
+  const buckets = [];
+  const currentDate = new Date(startDate);
+
+  while (currentDate <= today) {
+    buckets.push({
+      key: currentDate.toISOString().slice(0, 10),
+      earned: 0,
+    });
+    currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+  }
+
+  return buckets;
+}
+
 export const getWalletSummary = async (req, res, next) => {
   try {
     const user = req.user;
-    const latestPayment = await PaymentModel.findOne({
-      user: user._id,
-      purpose: PAYMENT_PURPOSES.tokenTopup,
-    })
-      .sort({ createdAt: -1 })
-      .lean();
+    const [latestPayment, walletStatsResult] = await Promise.all([
+      PaymentModel.findOne({
+        user: user._id,
+        purpose: PAYMENT_PURPOSES.tokenTopup,
+      })
+        .sort({ createdAt: -1 })
+        .lean(),
+      TransactionModel.aggregate([
+        {
+          $match: {
+            participants: user._id,
+            status: {
+              $in: [
+                PAYMENT_STATUSES.confirmed,
+                TRANSACTION_STATUSES.completed,
+              ],
+            },
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            totalRewardEarned: {
+              $sum: {
+                $cond: [
+                  { $eq: ["$type", TRANSACTION_TYPES.creatorReward] },
+                  "$tokenAmount",
+                  0,
+                ],
+              },
+            },
+            totalDeposited: {
+              $sum: {
+                $cond: [
+                  { $eq: ["$type", TRANSACTION_TYPES.deposit] },
+                  "$tokenAmount",
+                  0,
+                ],
+              },
+            },
+            totalSubscriptionSpent: {
+              $sum: {
+                $cond: [
+                  { $eq: ["$type", TRANSACTION_TYPES.subscription] },
+                  "$tokenAmount",
+                  0,
+                ],
+              },
+            },
+            totalSent: {
+              $sum: {
+                $cond: [
+                  {
+                    $and: [
+                      { $eq: ["$type", TRANSACTION_TYPES.transfer] },
+                      { $eq: ["$fromUser", user._id] },
+                    ],
+                  },
+                  "$tokenAmount",
+                  0,
+                ],
+              },
+            },
+            totalReceived: {
+              $sum: {
+                $cond: [
+                  {
+                    $and: [
+                      { $eq: ["$type", TRANSACTION_TYPES.transfer] },
+                      { $eq: ["$toUser", user._id] },
+                    ],
+                  },
+                  "$tokenAmount",
+                  0,
+                ],
+              },
+            },
+            totalWithdrawn: {
+              $sum: {
+                $cond: [
+                  { $eq: ["$type", TRANSACTION_TYPES.withdraw] },
+                  "$tokenAmount",
+                  0,
+                ],
+              },
+            },
+            totalRefunded: {
+              $sum: {
+                $cond: [
+                  { $eq: ["$type", TRANSACTION_TYPES.refund] },
+                  "$tokenAmount",
+                  0,
+                ],
+              },
+            },
+            totalAdjusted: {
+              $sum: {
+                $cond: [
+                  { $eq: ["$type", TRANSACTION_TYPES.adjustment] },
+                  "$tokenAmount",
+                  0,
+                ],
+              },
+            },
+            totalSpent: {
+              $sum: {
+                $cond: [
+                  { $eq: ["$type", TRANSACTION_TYPES.spend] },
+                  "$tokenAmount",
+                  0,
+                ],
+              },
+            },
+          },
+        },
+      ]),
+    ]);
+    const walletStats = walletStatsResult[0]
+      ? {
+          totalRewardEarned: Number(walletStatsResult[0].totalRewardEarned || 0),
+          totalDeposited: Number(walletStatsResult[0].totalDeposited || 0),
+          totalSubscriptionSpent: Number(
+            walletStatsResult[0].totalSubscriptionSpent || 0,
+          ),
+          totalSent: Number(walletStatsResult[0].totalSent || 0),
+          totalReceived: Number(walletStatsResult[0].totalReceived || 0),
+          totalWithdrawn: Number(walletStatsResult[0].totalWithdrawn || 0),
+          totalRefunded: Number(walletStatsResult[0].totalRefunded || 0),
+          totalAdjusted: Number(walletStatsResult[0].totalAdjusted || 0),
+          totalSpent: Number(walletStatsResult[0].totalSpent || 0),
+        }
+      : getEmptyWalletStats();
 
     return resJson(res, 200, "Wallet summary.", {
       latestPayment,
+      stats: walletStats,
       tokenBalance: Number(user.tokenBalance || 0),
       tokenPerUsd: TOKEN_PER_USD,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getWalletIncomeChart = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const requestedDays =
+      req.query.days === "all" ? "all" : Number(req.query.days || 7);
+    let buckets = [];
+    let startDate = null;
+
+    if (requestedDays === "all") {
+      const firstRewardTransaction = await TransactionModel.findOne({
+        participants: user._id,
+        type: TRANSACTION_TYPES.creatorReward,
+        status: TRANSACTION_STATUSES.completed,
+      })
+        .sort({ createdAt: 1 })
+        .select("createdAt")
+        .lean();
+
+      if (firstRewardTransaction?.createdAt) {
+        buckets = buildIncomeChartBucketsFromDate(firstRewardTransaction.createdAt);
+        startDate = new Date(`${buckets[0]?.key || ""}T00:00:00.000Z`);
+      } else {
+        buckets = buildIncomeChartBuckets(7);
+        startDate = new Date(`${buckets[0].key}T00:00:00.000Z`);
+      }
+    } else {
+      buckets = buildIncomeChartBuckets(requestedDays);
+      startDate = new Date(`${buckets[0].key}T00:00:00.000Z`);
+    }
+
+    if (!buckets.length || !startDate) {
+      return resJson(res, 200, "Wallet income chart.", {
+        days: requestedDays,
+        points: [],
+      });
+    }
+
+    const chartRows = await TransactionModel.aggregate([
+      {
+        $match: {
+          participants: user._id,
+          type: TRANSACTION_TYPES.creatorReward,
+          status: TRANSACTION_STATUSES.completed,
+          createdAt: { $gte: startDate },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            $dateToString: {
+              format: "%Y-%m-%d",
+              date: "$createdAt",
+              timezone: "UTC",
+            },
+          },
+          earned: {
+            $sum: "$tokenAmount",
+          },
+        },
+      },
+      {
+        $sort: {
+          _id: 1,
+        },
+      },
+    ]);
+
+    const earnedByDay = new Map(
+      chartRows.map((row) => [
+        String(row._id),
+        Number(row.earned || 0),
+      ]),
+    );
+    const points = buckets.map((bucket) => ({
+      key: bucket.key,
+      earned: earnedByDay.get(bucket.key) ?? 0,
+    }));
+
+    return resJson(res, 200, "Wallet income chart.", {
+      days: requestedDays,
+      points,
     });
   } catch (error) {
     next(error);

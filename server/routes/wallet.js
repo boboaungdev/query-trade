@@ -12,6 +12,7 @@ import {
   getPaymentHistory,
   getPublicTransactionReceipt,
   getTransactionReceipt,
+  getWalletIncomeChart,
   getWalletActivity,
   getWalletSummary,
 } from "../controllers/wallet/get.js";
@@ -31,6 +32,11 @@ router.get(
 router.use(validateToken());
 
 router.get("/summary", getWalletSummary);
+router.get(
+  "/income-chart",
+  validateQuery(WalletSchema.incomeChartQuery),
+  getWalletIncomeChart,
+);
 router.get(
   "/activity",
   validateQuery(WalletSchema.activityQuery),

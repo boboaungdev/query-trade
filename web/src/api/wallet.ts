@@ -113,10 +113,30 @@ export type WalletActivity = {
 
 export type WalletActivityType = WalletActivity["activityType"];
 
+export type WalletSummaryStats = {
+  totalRewardEarned: number;
+  totalDeposited: number;
+  totalSubscriptionSpent: number;
+  totalSent: number;
+  totalReceived: number;
+  totalWithdrawn: number;
+  totalRefunded: number;
+  totalAdjusted: number;
+  totalSpent: number;
+};
+
+export type WalletIncomeChartPoint = {
+  key: string;
+  earned: number;
+};
+
+export type WalletIncomeChartRange = 7 | 30 | 90 | "all";
+
 export async function getWalletSummary() {
   const { data } = await api.get<{
     result: {
       latestPayment?: Payment | null;
+      stats: WalletSummaryStats;
       tokenBalance: number;
       tokenPerUsd: number;
     };
@@ -176,6 +196,25 @@ export async function getWalletActivity({
       page,
       limit,
       activityType,
+    },
+  });
+
+  return data.result;
+}
+
+export async function getWalletIncomeChart({
+  days,
+}: {
+  days: WalletIncomeChartRange;
+}) {
+  const { data } = await api.get<{
+    result: {
+      days: WalletIncomeChartRange;
+      points: WalletIncomeChartPoint[];
+    };
+  }>("/wallet/income-chart", {
+    params: {
+      days,
     },
   });
 

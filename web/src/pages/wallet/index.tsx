@@ -919,7 +919,7 @@ export default function WalletPage() {
   const qrStreamRef = useRef<MediaStream | null>(null);
   const qrScanFrameRef = useRef<number | null>(null);
   const qrScanLockRef = useRef(false);
-  const activityCacheKey = `activity:${activityFilter}:${activityPage}:10`;
+  const activityCacheKey = `activity:${activityFilter}:${activityPage}:default`;
   const cachedActivityPage = useWalletActivityStore(
     (state) => state.pages[activityCacheKey],
   );
@@ -985,7 +985,6 @@ export default function WalletPage() {
           fetchWalletSummary(true),
           fetchActivityPage({
             page: activityPage,
-            limit: 10,
             activityType: activityFilter,
             force: true,
           }),

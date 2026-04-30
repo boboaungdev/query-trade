@@ -3,15 +3,15 @@ import { useTheme } from "@/components/theme-provider"
 import { Button } from "@/components/ui/button"
 
 export default function ThemeToggle() {
-  const { theme, setTheme } = useTheme()
+  const { resolvedTheme, setTheme } = useTheme()
 
   return (
     <Button
       variant="ghost"
       size="icon"
-      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+      onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
     >
-      {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+      {resolvedTheme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
     </Button>
   )
 }

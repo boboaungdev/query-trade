@@ -22,7 +22,7 @@ type WalletActivityStoreState = {
   isLoading: boolean;
   fetchActivityPage: (params: {
     page: number;
-    limit: number;
+    limit?: number;
     activityType?: WalletActivityType | "all";
     force?: boolean;
   }) => Promise<WalletActivityPage>;
@@ -31,10 +31,10 @@ type WalletActivityStoreState = {
 
 function getActivityCacheKey(
   page: number,
-  limit: number,
+  limit?: number,
   activityType: WalletActivityType | "all" = "all",
 ) {
-  return `activity:${activityType}:${page}:${limit}`;
+  return `activity:${activityType}:${page}:${limit ?? "default"}`;
 }
 
 const walletActivityRequestCache = new Map<
@@ -71,7 +71,7 @@ export const useWalletActivityStore = create<WalletActivityStoreState>()(
 
         const request = getWalletActivity({
           page,
-          limit,
+          ...(typeof limit === "number" ? { limit } : {}),
           activityType: activityType === "all" ? undefined : activityType,
         })
           .then((data) => {

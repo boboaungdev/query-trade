@@ -5,11 +5,11 @@ import { Switch } from "@/components/ui/switch";
 import { useAuthStore } from "@/store/auth";
 
 export function PreferencesSection() {
-  const { theme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
   const user = useAuthStore((state) => state.user);
   const updateUser = useAuthStore((state) => state.updateUser);
   const hideWalletBalance = Boolean(user?.preferences?.hideWalletBalance);
-  const isDarkMode = theme === "dark";
+  const isDarkMode = resolvedTheme === "dark";
 
   return (
     <section className="rounded-xl bg-card p-4 shadow-sm md:p-5">

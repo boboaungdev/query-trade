@@ -61,6 +61,12 @@ export const WalletSchema = {
       .optional(),
   }),
 
+  incomeChartQuery: Joi.object({
+    days: Joi.alternatives()
+      .try(Joi.number().integer().valid(7, 30, 90), Joi.string().valid("all"))
+      .default(7),
+  }),
+
   params: {
     paymentId: Joi.object({
       paymentId: Joi.string().hex().length(24).required(),
