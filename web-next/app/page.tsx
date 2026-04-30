@@ -1,11 +1,22 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  BarChart3,
+  Check,
+  ShieldAlert,
+  Sparkles,
+  Target,
+  TrendingUp,
+} from "lucide-react";
 
+import HomeProductPreviewChart from "@/components/HomeProductPreviewChart";
 import HomeReviewsMarquee from "@/components/HomeReviewsMarquee";
 import ScrollToTopLink from "@/components/ScrollToTopLink";
 import Navbar from "@/components/Navbar";
 import { homeFaqItems } from "@/data/home-faq";
+import { homeFeaturedStrategies } from "@/data/home-featured-strategies";
+import { homePlans } from "@/data/home-plans";
 import { homeReviewItems } from "@/data/home-reviews";
 import {
   Accordion,
@@ -143,6 +154,64 @@ export default function Page() {
         </section>
 
         <section className="px-6 py-18 md:py-22">
+          <div className="mx-auto w-full max-w-6xl space-y-8">
+            <div className="space-y-4 text-center">
+              <span className="inline-flex items-center gap-2 rounded-full bg-primary/8 px-3 py-1 text-[11px] font-medium tracking-[0.2em] text-primary uppercase ring-1 ring-primary/10">
+                <Sparkles className="size-3.5" />
+                Featured strategies
+              </span>
+              <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+                Strategy ideas worth exploring
+              </h2>
+              <p className="mx-auto max-w-2xl text-base leading-7 text-muted-foreground">
+                A sample of strategy directions traders can build, test, and
+                refine inside {APP_NAME}.
+              </p>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-2">
+              {homeFeaturedStrategies.map((strategy) => (
+                <Card
+                  key={`${strategy.name}-${strategy.creator}`}
+                  className="rounded-[1.7rem] border-0 bg-card py-0 shadow-[0_16px_40px_rgba(15,23,42,0.05)] ring-1 ring-black/5"
+                >
+                  <CardContent className="space-y-5 px-5 py-5">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="inline-flex rounded-full bg-primary/8 px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-primary ring-1 ring-primary/10">
+                            {strategy.access}
+                          </span>
+                          <span className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                            {strategy.symbol} • {strategy.timeframe}
+                          </span>
+                        </div>
+                        <h3 className="text-xl font-semibold tracking-tight">
+                          {strategy.name}
+                        </h3>
+                      </div>
+
+                      <div className="text-right">
+                        <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                          Sample ROI
+                        </p>
+                        <p className="mt-2 text-2xl font-semibold text-foreground">
+                          {strategy.roi}
+                        </p>
+                      </div>
+                    </div>
+
+                    <p className="text-sm leading-7 text-muted-foreground">
+                      {strategy.description}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="px-6 py-18 md:py-22">
           <div className="mx-auto w-full max-w-6xl space-y-8 overflow-hidden">
             <div className="space-y-4 text-center">
               <span className="inline-flex items-center gap-2 rounded-full bg-primary/8 px-3 py-1 text-[11px] font-medium tracking-[0.2em] text-primary uppercase ring-1 ring-primary/10">
@@ -162,18 +231,271 @@ export default function Page() {
           </div>
         </section>
 
+        <section className="px-6 py-18 md:py-22">
+          <div className="mx-auto grid w-full max-w-6xl gap-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-center">
+            <div className="space-y-4">
+              <span className="inline-flex items-center gap-2 rounded-full bg-primary/8 px-3 py-1 text-[11px] font-medium tracking-[0.2em] text-primary uppercase ring-1 ring-primary/10">
+                <Sparkles className="size-3.5" />
+                Product preview
+              </span>
+              <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">
+                See how a strategy becomes a reviewable workflow
+              </h2>
+              <p className="max-w-xl text-base leading-7 text-muted-foreground">
+                Build the logic, check the structure, and keep results close to
+                the setup so every idea stays easier to understand and improve.
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {[
+                  "Readable logic blocks",
+                  "Backtest context nearby",
+                  "Connected wallet flow",
+                  "Faster iteration cycles",
+                ].map((item) => (
+                  <div
+                    key={item}
+                    className="flex items-center gap-2 rounded-2xl bg-card px-4 py-3 text-sm text-muted-foreground ring-1 ring-black/5"
+                  >
+                    <span className="inline-flex size-5 items-center justify-center rounded-full bg-primary/8 text-primary">
+                      <Check className="size-3" />
+                    </span>
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <Card className="overflow-hidden rounded-[2rem] border-0 bg-[linear-gradient(180deg,color-mix(in_oklab,var(--color-background)_96%,var(--color-primary)_4%),color-mix(in_oklab,var(--color-background)_90%,var(--color-primary)_10%))] py-0 shadow-[0_24px_70px_rgba(15,23,42,0.08)] ring-1 ring-primary/10">
+              <CardContent className="space-y-5 px-5 py-5 md:px-6 md:py-6">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary">
+                      Workspace snapshot
+                    </p>
+                    <h3 className="mt-2 text-xl font-semibold tracking-tight">
+                      Momentum Breakout Stack
+                    </h3>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {["Draft", "BTC/USDT", "4H"].map((item) => (
+                      <span
+                        key={item}
+                        className="inline-flex rounded-full bg-background/85 px-3 py-1 text-xs font-medium uppercase tracking-[0.16em] text-primary ring-1 ring-primary/10"
+                      >
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid gap-4">
+                  <div className="rounded-[1.5rem] bg-background/88 p-4 ring-1 ring-black/5">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                        Strategy logic
+                      </p>
+                      <span className="text-xs text-muted-foreground">
+                        3 linked conditions
+                      </span>
+                    </div>
+
+                    <div className="mt-4 grid gap-3">
+                      {[
+                        {
+                          title: "Trend direction",
+                          body: "Only look for entries while EMA 20 stays above EMA 50.",
+                        },
+                        {
+                          title: "Entry confirmation",
+                          body: "Trigger when price reclaims EMA 20 and RSI pushes through 55.",
+                        },
+                        {
+                          title: "Risk controls",
+                          body: "Apply fixed sizing with a defined stop loss and reward target.",
+                        },
+                      ].map((item, index) => (
+                        <div
+                          key={item.title}
+                          className="grid grid-cols-[auto_1fr] gap-3 rounded-2xl border border-border/50 bg-background/70 px-3 py-3"
+                        >
+                          <div className="flex flex-col items-center gap-2 pt-0.5">
+                            <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/8 text-[11px] font-semibold text-primary">
+                              {index + 1}
+                            </span>
+                            {index < 2 ? (
+                              <span className="h-full w-px bg-border/70" />
+                            ) : null}
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium text-foreground">
+                              {item.title}
+                            </p>
+                            <p className="text-sm leading-6 text-muted-foreground">
+                              {item.body}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(220px,1.1fr)]">
+                    <div className="rounded-[1.5rem] bg-background/88 p-4 ring-1 ring-black/5">
+                      <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                        Backtest snapshot
+                      </p>
+                      <div className="mt-4 grid grid-cols-2 gap-3">
+                        {[
+                          {
+                            label: "Net return",
+                            value: "+18.4%",
+                            icon: TrendingUp,
+                            valueClassName:
+                              "text-emerald-600 dark:text-emerald-400",
+                          },
+                          {
+                            label: "Win rate",
+                            value: "62%",
+                            icon: Target,
+                          },
+                          {
+                            label: "Profit factor",
+                            value: "1.84",
+                            icon: BarChart3,
+                          },
+                          {
+                            label: "Max drawdown",
+                            value: "8.1%",
+                            icon: ShieldAlert,
+                          },
+                        ].map((item) => (
+                          <div
+                            key={item.label}
+                            className="rounded-2xl border border-border/50 bg-background/70 px-3 py-3"
+                          >
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <span className="inline-flex size-6 items-center justify-center rounded-full bg-primary/8 text-primary">
+                                <item.icon className="size-3.5" />
+                              </span>
+                              <span className="text-[11px] font-medium uppercase tracking-[0.14em]">
+                                {item.label}
+                              </span>
+                            </div>
+                            <span
+                              className={`mt-2 block text-lg font-semibold tracking-tight ${
+                                item.valueClassName ?? "text-foreground"
+                              }`}
+                            >
+                              {item.value}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="rounded-[1.5rem] bg-background/88 p-4 ring-1 ring-black/5">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                          Equity curve
+                        </p>
+                        <span className="text-xs text-muted-foreground">
+                          6 month view
+                        </span>
+                      </div>
+                      <HomeProductPreviewChart />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+
+        <section className="px-6 py-18 md:py-22">
+          <div className="mx-auto w-full max-w-6xl space-y-8">
+            <div className="space-y-4 text-center">
+              <span className="inline-flex items-center gap-2 rounded-full bg-primary/8 px-3 py-1 text-[11px] font-medium tracking-[0.2em] text-primary uppercase ring-1 ring-primary/10">
+                <Sparkles className="size-3.5" />
+                Plan preview
+              </span>
+              <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">
+                Choose the level that fits your workflow
+              </h2>
+              <p className="mx-auto max-w-2xl text-base leading-7 text-muted-foreground">
+                Start free, then move into broader testing access and more
+                advanced controls when you need them.
+              </p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-3">
+              {homePlans.map((plan) => (
+                <Card
+                  key={plan.name}
+                  className={`rounded-[1.7rem] border-0 py-0 shadow-[0_16px_40px_rgba(15,23,42,0.05)] ring-1 ${
+                    plan.highlighted
+                      ? "bg-[linear-gradient(180deg,color-mix(in_oklab,var(--color-background)_97%,var(--color-primary)_3%),color-mix(in_oklab,var(--color-background)_91%,var(--color-primary)_9%))] ring-primary/15"
+                      : "bg-card ring-black/5"
+                  }`}
+                >
+                  <CardContent className="flex h-full flex-col gap-6 px-5 py-6">
+                    <div className="space-y-3">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <h3 className="text-2xl font-semibold tracking-tight">
+                            {plan.name}
+                          </h3>
+                          <p className="mt-2 text-sm leading-7 text-muted-foreground">
+                            {plan.summary}
+                          </p>
+                        </div>
+                        <span className="inline-flex rounded-full bg-background/85 px-3 py-1 text-xs font-medium uppercase tracking-[0.16em] text-primary ring-1 ring-primary/10">
+                          {plan.priceLabel}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      {plan.features.map((feature) => (
+                        <div
+                          key={feature}
+                          className="flex items-start gap-2.5 text-sm leading-6 text-muted-foreground"
+                        >
+                          <span className="mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded-full bg-primary/8 text-primary">
+                            <Check className="size-3" />
+                          </span>
+                          <p>{feature}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-auto pt-2">
+                      <Button
+                        asChild
+                        variant={plan.highlighted ? "default" : "outline"}
+                        className="w-full justify-center"
+                      >
+                        <Link href="/pricing">{plan.cta}</Link>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
+
         <section id="common-questions">
           <div className="mx-auto w-full max-w-6xl px-6 py-18 md:py-22">
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-              <div className="space-y-4">
+            <div className="space-y-8">
+              <div className="space-y-4 text-center">
                 <span className="inline-flex items-center gap-2 rounded-full bg-primary/8 px-3 py-1 text-[11px] font-medium tracking-[0.2em] text-primary uppercase ring-1 ring-primary/10">
                   <Sparkles className="size-3.5" />
                   Frequently asked questions
                 </span>
-                <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+                <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">
                   FAQ
                 </h2>
-                <p className="max-w-md text-base leading-7 text-muted-foreground">
+                <p className="mx-auto max-w-2xl text-base leading-7 text-muted-foreground">
                   Answers to common questions about {APP_NAME}, strategy
                   building, and backtesting.
                 </p>
@@ -183,7 +505,7 @@ export default function Page() {
                 type="single"
                 collapsible
                 defaultValue={homeFaqItems[0]?.question}
-                className="space-y-4"
+                className="mx-auto max-w-4xl space-y-4"
               >
                 {homeFaqItems.map((item) => (
                   <Card
