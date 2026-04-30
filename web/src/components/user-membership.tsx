@@ -42,15 +42,8 @@ export function getUserMembershipMeta(membership?: UserMembership) {
   }
 }
 
-export function getUserAvatarRingClass(membership?: UserMembership) {
-  switch (membership?.verifiedVariant) {
-    case "pro":
-      return "ring-2 ring-amber-500/60 ring-offset-2 ring-offset-background";
-    case "plus":
-      return "ring-2 ring-sky-500/60 ring-offset-2 ring-offset-background";
-    default:
-      return "";
-  }
+export function getUserAvatarRingClass(_membership?: UserMembership) {
+  return "";
 }
 
 export function UserMembershipMark({

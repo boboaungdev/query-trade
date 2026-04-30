@@ -4,6 +4,7 @@ import { connectDB } from "./configs/db.js";
 import { ENABLE_DEFAULT_SEED, PORT } from "./constants/index.js";
 import { seedDefaultIndicators } from "./services/indicator/seedDefaultIndicators.js";
 import { seedDefaultSubscriptionPlans } from "./services/subscription/seedDefaultSubscriptionPlans.js";
+import { seedDefaultUsers } from "./services/user/seedDefaultUsers.js";
 import { verifyEmailTransporter } from "./utils/sendEmail.js";
 
 const startServer = async () => {
@@ -14,6 +15,7 @@ const startServer = async () => {
     if (ENABLE_DEFAULT_SEED) {
       await seedDefaultIndicators();
       await seedDefaultSubscriptionPlans();
+      await seedDefaultUsers();
     }
 
     app.listen(PORT, () => {

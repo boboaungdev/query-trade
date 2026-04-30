@@ -500,14 +500,6 @@
   animation: homeRevealUp 700ms ease both;
 }
 
-.home-review-track {
-  animation: homeMarquee 34s linear infinite;
-}
-
-.home-review-track:hover {
-  animation-play-state: paused;
-}
-
 .home-meter {
   animation: homeMeterFlow 4.2s ease-in-out infinite;
 }
@@ -548,7 +540,6 @@
   .home-hero-panel,
   .home-float,
   .home-orb,
-  .home-review-track,
   .home-reveal-up,
   .home-meter,
   .home-chart-bar {
