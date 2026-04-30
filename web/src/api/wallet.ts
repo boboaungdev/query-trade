@@ -1,6 +1,8 @@
 import api from "./axios";
 import type { UserMembership } from "@/components/user-membership";
 
+const walletRequestCache = new Map<string, Promise<unknown>>();
+
 export type PayCurrency = "usdtbsc";
 export type PaymentStatus = "pending" | "confirmed" | "cancelled" | "expired";
 
@@ -132,6 +134,21 @@ export type WalletIncomeChartPoint = {
 
 export type WalletIncomeChartRange = 7 | 30 | 90 | "all";
 
+function dedupeWalletRequest<T>(key: string, requestFn: () => Promise<T>) {
+  const existingRequest = walletRequestCache.get(key);
+
+  if (existingRequest) {
+    return existingRequest as Promise<T>;
+  }
+
+  const request = requestFn().finally(() => {
+    walletRequestCache.delete(key);
+  });
+
+  walletRequestCache.set(key, request);
+  return request;
+}
+
 export async function getWalletSummary() {
   const { data } = await api.get<{
     result: {
@@ -181,25 +198,34 @@ export async function getWalletActivity({
   limit?: number;
   activityType?: WalletActivityType;
 } = {}) {
-  const { data } = await api.get<{
-    result: {
-      activities: WalletActivity[];
-      total?: number;
-      totalPage?: number;
-      currentPage?: number;
-      limitPerPage?: number;
-      hasNextPage?: boolean;
-      hasPrevPage?: boolean;
-    };
-  }>("/wallet/activity", {
-    params: {
-      page,
-      limit,
-      activityType,
-    },
+  const key = JSON.stringify({
+    endpoint: "wallet-activity",
+    page: page ?? null,
+    limit: limit ?? null,
+    activityType: activityType ?? null,
   });
 
-  return data.result;
+  return dedupeWalletRequest(key, async () => {
+    const { data } = await api.get<{
+      result: {
+        activities: WalletActivity[];
+        total?: number;
+        totalPage?: number;
+        currentPage?: number;
+        limitPerPage?: number;
+        hasNextPage?: boolean;
+        hasPrevPage?: boolean;
+      };
+    }>("/wallet/activity", {
+      params: {
+        page,
+        limit,
+        activityType,
+      },
+    });
+
+    return data.result;
+  });
 }
 
 export async function getWalletIncomeChart({
@@ -207,18 +233,25 @@ export async function getWalletIncomeChart({
 }: {
   days: WalletIncomeChartRange;
 }) {
-  const { data } = await api.get<{
-    result: {
-      days: WalletIncomeChartRange;
-      points: WalletIncomeChartPoint[];
-    };
-  }>("/wallet/income-chart", {
-    params: {
-      days,
-    },
+  const key = JSON.stringify({
+    endpoint: "wallet-income-chart",
+    days,
   });
 
-  return data.result;
+  return dedupeWalletRequest(key, async () => {
+    const { data } = await api.get<{
+      result: {
+        days: WalletIncomeChartRange;
+        points: WalletIncomeChartPoint[];
+      };
+    }>("/wallet/income-chart", {
+      params: {
+        days,
+      },
+    });
+
+    return data.result;
+  });
 }
 
 export async function getTransactionReceipt(transactionId: string) {

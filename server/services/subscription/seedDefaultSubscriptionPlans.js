@@ -10,7 +10,17 @@ export const seedDefaultSubscriptionPlans = async () => {
     updateOne: {
       filter: { key: plan.key },
       update: {
-        $setOnInsert: plan,
+        $setOnInsert: {
+          key: plan.key,
+        },
+        $set: {
+          name: plan.name,
+          amountToken: plan.amountToken,
+          durationDays: plan.durationDays,
+          features: plan.features,
+          isActive: plan.isActive,
+          sortOrder: plan.sortOrder,
+        },
       },
       upsert: true,
     },
