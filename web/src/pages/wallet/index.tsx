@@ -909,6 +909,8 @@ export default function WalletPage() {
   const [activityReloadKey, setActivityReloadKey] = useState(0);
   const sendUsernameRequestIdRef = useRef(0);
   const skipNextSendUsernameValidationRef = useRef(false);
+  const sendUsernameStatusRef = useRef<SendUsernameStatus>("idle");
+  const sendRecipientPreviewUsernameRef = useRef("");
   const qrFileInputRef = useRef<HTMLInputElement | null>(null);
   const receiveQrRef = useRef<HTMLDivElement | null>(null);
   const receiveQrExportRef = useRef<HTMLDivElement | null>(null);
@@ -1019,6 +1021,15 @@ export default function WalletPage() {
   }, [hideWalletBalancePreference]);
 
   useEffect(() => {
+    sendUsernameStatusRef.current = sendUsernameStatus;
+  }, [sendUsernameStatus]);
+
+  useEffect(() => {
+    sendRecipientPreviewUsernameRef.current =
+      sendRecipientPreview?.username?.trim().toLowerCase() || "";
+  }, [sendRecipientPreview?.username]);
+
+  useEffect(() => {
     const trimmedValue = sendUsername.trim();
 
     if (!trimmedValue) {
@@ -1030,9 +1041,8 @@ export default function WalletPage() {
 
     if (
       skipNextSendUsernameValidationRef.current &&
-      sendUsernameStatus === "available" &&
-      sendRecipientPreview?.username?.trim().toLowerCase() ===
-        trimmedValue.toLowerCase()
+      sendUsernameStatusRef.current === "available" &&
+      sendRecipientPreviewUsernameRef.current === trimmedValue.toLowerCase()
     ) {
       skipNextSendUsernameValidationRef.current = false;
       setDebouncedSendUsername("");
@@ -1063,12 +1073,7 @@ export default function WalletPage() {
     return () => {
       window.clearTimeout(timeout);
     };
-  }, [
-    sendRecipientPreview?.username,
-    sendUsername,
-    sendUsernameStatus,
-    username,
-  ]);
+  }, [sendUsername, username]);
 
   useEffect(() => {
     if (!debouncedSendUsername) {
