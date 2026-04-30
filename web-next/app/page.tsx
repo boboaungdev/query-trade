@@ -12,6 +12,7 @@ import {
 
 import HomeProductPreviewChart from "@/components/HomeProductPreviewChart";
 import HomeReviewsMarquee from "@/components/HomeReviewsMarquee";
+import RevealOnScroll from "@/components/RevealOnScroll";
 import SiteFooter from "@/components/SiteFooter";
 import Navbar from "@/components/Navbar";
 import { UserMembershipMark } from "@/components/user-membership";
@@ -184,7 +185,8 @@ export default async function Page() {
           </div>
         </section>
 
-        <section id="reviews" className="px-6 py-18 md:py-22">
+        <RevealOnScroll>
+          <section id="reviews" className="px-6 py-18 md:py-22">
           <div className="mx-auto w-full max-w-6xl space-y-8">
             <div className="space-y-4 text-center">
               <span className="inline-flex items-center gap-2 rounded-full bg-primary/8 px-3 py-1 text-[11px] font-medium tracking-[0.2em] text-primary uppercase ring-1 ring-primary/10">
@@ -240,9 +242,11 @@ export default async function Page() {
               ))}
             </div>
           </div>
-        </section>
+          </section>
+        </RevealOnScroll>
 
-        <section className="px-6 py-18 md:py-22">
+        <RevealOnScroll delayMs={70}>
+          <section className="px-6 py-18 md:py-22">
           <div className="mx-auto w-full max-w-6xl space-y-8 overflow-hidden">
             <div className="space-y-4 text-center">
               <span className="inline-flex items-center gap-2 rounded-full bg-primary/8 px-3 py-1 text-[11px] font-medium tracking-[0.2em] text-primary uppercase ring-1 ring-primary/10">
@@ -260,9 +264,11 @@ export default async function Page() {
 
             <HomeReviewsMarquee items={homeReviewItems} />
           </div>
-        </section>
+          </section>
+        </RevealOnScroll>
 
-        <section className="px-6 py-18 md:py-22">
+        <RevealOnScroll delayMs={110}>
+          <section className="px-6 py-18 md:py-22">
           <div className="mx-auto grid w-full max-w-6xl gap-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-center">
             <div className="space-y-4">
               <span className="inline-flex items-center gap-2 rounded-full bg-primary/8 px-3 py-1 text-[11px] font-medium tracking-[0.2em] text-primary uppercase ring-1 ring-primary/10">
@@ -440,9 +446,11 @@ export default async function Page() {
               </CardContent>
             </Card>
           </div>
-        </section>
+          </section>
+        </RevealOnScroll>
 
-        <section className="px-6 py-18 md:py-22">
+        <RevealOnScroll delayMs={150}>
+          <section className="px-6 py-18 md:py-22">
           <div className="mx-auto w-full max-w-6xl space-y-8">
             <div className="space-y-4 text-center">
               <span className="inline-flex items-center gap-2 rounded-full bg-primary/8 px-3 py-1 text-[11px] font-medium tracking-[0.2em] text-primary uppercase ring-1 ring-primary/10">
@@ -551,9 +559,11 @@ export default async function Page() {
               ))}
             </div>
           </div>
-        </section>
+          </section>
+        </RevealOnScroll>
 
-        <section id="common-questions">
+        <RevealOnScroll delayMs={190}>
+          <section id="common-questions">
           <div className="mx-auto w-full max-w-6xl px-6 py-18 md:py-22">
             <div className="space-y-8">
               <div className="space-y-4 text-center">
@@ -599,9 +609,11 @@ export default async function Page() {
               </Accordion>
             </div>
           </div>
-        </section>
+          </section>
+        </RevealOnScroll>
 
-        <section className="px-6 pb-20">
+        <RevealOnScroll delayMs={230}>
+          <section className="px-6 pb-20">
           <div className="mx-auto w-full max-w-6xl">
             <Card className="overflow-hidden rounded-[2.2rem] border-0 bg-[linear-gradient(135deg,color-mix(in_oklab,var(--color-background)_97%,var(--color-primary)_3%),color-mix(in_oklab,var(--color-background)_88%,var(--color-primary)_12%))] py-0 shadow-[0_28px_80px_rgba(15,23,42,0.08)] ring-1 ring-primary/10">
               <CardContent className="px-6 py-10 md:px-10 md:py-14">
@@ -644,7 +656,8 @@ export default async function Page() {
               </CardContent>
             </Card>
           </div>
-        </section>
+          </section>
+        </RevealOnScroll>
       </main>
 
       <SiteFooter

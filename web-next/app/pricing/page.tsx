@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowRight, Check, Sparkles } from "lucide-react";
 
 import Navbar from "@/components/Navbar";
+import RevealOnScroll from "@/components/RevealOnScroll";
 import SiteFooter from "@/components/SiteFooter";
 import { UserMembershipMark } from "@/components/user-membership";
 import { Button } from "@/components/ui/button";
@@ -85,7 +86,8 @@ export default async function PricingPage() {
             __html: JSON.stringify(structuredData),
           }}
         />
-        <section className="relative px-6 pb-18 pt-18 md:pb-22 md:pt-22">
+        <RevealOnScroll>
+          <section className="relative px-6 pb-18 pt-18 md:pb-22 md:pt-22">
           <div className="absolute inset-x-0 top-0 h-[32rem] bg-[radial-gradient(circle_at_top,color-mix(in_oklab,var(--color-primary)_14%,transparent),transparent_62%)]" />
 
           <div className="relative mx-auto w-full max-w-6xl space-y-12">
@@ -201,9 +203,11 @@ export default async function PricingPage() {
               ))}
             </div>
           </div>
-        </section>
+          </section>
+        </RevealOnScroll>
 
-        <section className="px-6 py-18 md:py-22">
+        <RevealOnScroll delayMs={80}>
+          <section className="px-6 py-18 md:py-22">
           <div className="mx-auto w-full max-w-6xl space-y-8">
             <div className="space-y-4 text-center">
               <span className="inline-flex items-center gap-2 rounded-full bg-primary/8 px-3 py-1 text-[11px] font-medium tracking-[0.2em] text-primary uppercase ring-1 ring-primary/10">
@@ -247,9 +251,11 @@ export default async function PricingPage() {
               ))}
             </div>
           </div>
-        </section>
+          </section>
+        </RevealOnScroll>
 
-        <section className="px-6 pb-20">
+        <RevealOnScroll delayMs={140}>
+          <section className="px-6 pb-20">
           <div className="mx-auto w-full max-w-6xl">
             <Card className="overflow-hidden rounded-[2.2rem] border-0 bg-[linear-gradient(135deg,color-mix(in_oklab,var(--color-background)_97%,var(--color-primary)_3%),color-mix(in_oklab,var(--color-background)_88%,var(--color-primary)_12%))] py-0 shadow-[0_28px_80px_rgba(15,23,42,0.08)] ring-1 ring-primary/10">
               <CardContent className="px-6 py-10 md:px-10 md:py-14">
@@ -292,7 +298,8 @@ export default async function PricingPage() {
               </CardContent>
             </Card>
           </div>
-        </section>
+          </section>
+        </RevealOnScroll>
       </main>
 
       <SiteFooter
