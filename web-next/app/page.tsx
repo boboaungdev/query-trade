@@ -12,11 +12,11 @@ import {
 
 import HomeProductPreviewChart from "@/components/HomeProductPreviewChart";
 import HomeReviewsMarquee from "@/components/HomeReviewsMarquee";
-import ScrollToTopLink from "@/components/ScrollToTopLink";
+import SiteFooter from "@/components/SiteFooter";
 import Navbar from "@/components/Navbar";
+import { UserMembershipMark } from "@/components/user-membership";
 import { homeFaqItems } from "@/data/home-faq";
 import { homeFeaturedStrategies } from "@/data/home-featured-strategies";
-import { homePlans } from "@/data/home-plans";
 import { homeReviewItems } from "@/data/home-reviews";
 import {
   Accordion,
@@ -27,6 +27,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription } from "@/components/ui/card";
 import { APP_NAME, APP_TAGLINE, APP_URL } from "@/lib/constants";
+import { getSubscriptionPlans } from "@/lib/subscription-plans";
 
 const proofCards = [
   {
@@ -50,9 +51,27 @@ export const metadata: Metadata = {
   title: `${APP_NAME} | Strategy Builder and Backtesting App`,
   description:
     "Build trading strategies, run backtests across major market timeframes, and manage your wallet and subscriptions in one connected trading app.",
+  alternates: {
+    canonical: APP_URL,
+  },
+  openGraph: {
+    title: `${APP_NAME} | Strategy Builder and Backtesting App`,
+    description:
+      "Build trading strategies, run backtests across major market timeframes, and manage your wallet and subscriptions in one connected trading app.",
+    url: APP_URL,
+    siteName: APP_NAME,
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${APP_NAME} | Strategy Builder and Backtesting App`,
+    description:
+      "Build trading strategies, run backtests across major market timeframes, and manage your wallet and subscriptions in one connected trading app.",
+  },
 };
 
-export default function Page() {
+export default async function Page() {
+  const homePlans = await getSubscriptionPlans();
   const [taglineLead, taglineBridge, taglineFocus] = APP_TAGLINE.replace(
     ".",
     "",
@@ -66,6 +85,18 @@ export default function Page() {
     name: `${APP_NAME} Home`,
     description: metadata.description,
     url: APP_URL,
+    hasPart: {
+      "@type": "OfferCatalog",
+      name: `${APP_NAME} plans`,
+      itemListElement: homePlans.map((plan) => ({
+        "@type": "Offer",
+        name: plan.name,
+        priceCurrency: "TOKEN",
+        price: String(plan.amountToken),
+        description: plan.summary,
+        category: "Subscription plan",
+      })),
+    },
   };
 
   return (
@@ -153,7 +184,7 @@ export default function Page() {
           </div>
         </section>
 
-        <section className="px-6 py-18 md:py-22">
+        <section id="reviews" className="px-6 py-18 md:py-22">
           <div className="mx-auto w-full max-w-6xl space-y-8">
             <div className="space-y-4 text-center">
               <span className="inline-flex items-center gap-2 rounded-full bg-primary/8 px-3 py-1 text-[11px] font-medium tracking-[0.2em] text-primary uppercase ring-1 ring-primary/10">
@@ -431,26 +462,64 @@ export default function Page() {
               {homePlans.map((plan) => (
                 <Card
                   key={plan.name}
-                  className={`rounded-[1.7rem] border-0 py-0 shadow-[0_16px_40px_rgba(15,23,42,0.05)] ring-1 ${
+                  className={`rounded-[1.9rem] border-0 py-0 shadow-[0_20px_50px_rgba(15,23,42,0.06)] ring-1 ${
                     plan.highlighted
-                      ? "bg-[linear-gradient(180deg,color-mix(in_oklab,var(--color-background)_97%,var(--color-primary)_3%),color-mix(in_oklab,var(--color-background)_91%,var(--color-primary)_9%))] ring-primary/15"
+                      ? "bg-[linear-gradient(180deg,color-mix(in_oklab,var(--color-background)_97%,var(--color-primary)_3%),color-mix(in_oklab,var(--color-background)_90%,var(--color-primary)_10%))] ring-primary/15"
                       : "bg-card ring-black/5"
                   }`}
                 >
-                  <CardContent className="flex h-full flex-col gap-6 px-5 py-6">
-                    <div className="space-y-3">
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
+                  <CardContent className="flex h-full flex-col gap-6 px-6 py-6">
+                    <div className="space-y-4">
+                      <div className="space-y-3">
+                        <div className="flex flex-wrap items-center gap-2">
                           <h3 className="text-2xl font-semibold tracking-tight">
                             {plan.name}
                           </h3>
-                          <p className="mt-2 text-sm leading-7 text-muted-foreground">
-                            {plan.summary}
+                          {plan.key === "plus" ? (
+                            <UserMembershipMark
+                              membership={{
+                                verifiedVariant: "plus",
+                                badgeLabel: "Plus",
+                                title: "Plus membership",
+                              }}
+                            />
+                          ) : null}
+                          {plan.key === "pro" ? (
+                            <UserMembershipMark
+                              membership={{
+                                verifiedVariant: "pro",
+                                badgeLabel: "Pro",
+                                title: "Pro membership",
+                              }}
+                            />
+                          ) : null}
+                          {plan.highlighted ? (
+                            <span className="inline-flex rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-primary ring-1 ring-primary/10">
+                              Popular
+                            </span>
+                          ) : null}
+                          {plan.hasDiscount ? (
+                            <span className="inline-flex rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium tracking-[0.16em] text-emerald-600 ring-1 ring-emerald-500/15 dark:text-emerald-400">
+                              Save {plan.discountAmountToken} token ·{" "}
+                              {plan.discountPercentage}% off
+                            </span>
+                          ) : null}
+                        </div>
+
+                        <div className="space-y-1">
+                          {plan.hasDiscount ? (
+                            <p className="text-sm font-medium text-muted-foreground line-through">
+                              {plan.originalPriceLabel}
+                            </p>
+                          ) : null}
+                          <p className="text-lg font-semibold tracking-[0.16em] text-primary">
+                            {plan.priceLabel}
                           </p>
                         </div>
-                        <span className="inline-flex rounded-full bg-background/85 px-3 py-1 text-xs font-medium uppercase tracking-[0.16em] text-primary ring-1 ring-primary/10">
-                          {plan.priceLabel}
-                        </span>
+
+                        <p className="text-sm leading-7 text-muted-foreground">
+                          {plan.summary}
+                        </p>
                       </div>
                     </div>
 
@@ -578,35 +647,14 @@ export default function Page() {
         </section>
       </main>
 
-      <footer className="border-t border-border/60 px-6 py-6">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
-          <p className="text-center md:text-left">
-            &copy; {new Date().getFullYear()}{" "}
-            <ScrollToTopLink className="font-medium text-primary transition-colors hover:text-primary/80">
-              {APP_NAME}
-            </ScrollToTopLink>
-            . All rights reserved.
-          </p>
-
-          <div className="flex items-center justify-center gap-5 md:justify-end">
-            <ScrollToTopLink className="transition-colors hover:text-foreground">
-              Home
-            </ScrollToTopLink>
-            <Link
-              href="/pricing"
-              className="transition-colors hover:text-foreground"
-            >
-              Pricing
-            </Link>
-            <Link
-              href="#common-questions"
-              className="transition-colors hover:text-foreground"
-            >
-              FAQ
-            </Link>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter
+        links={[
+          { href: "/", label: "Home", scrollToTopOnCurrentPage: true },
+          { href: "#reviews", label: "Reviews" },
+          { href: "/pricing", label: "Pricing", scrollToTopOnCurrentPage: true },
+          { href: "#common-questions", label: "FAQ" },
+        ]}
+      />
     </div>
   );
 }

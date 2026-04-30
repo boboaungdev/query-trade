@@ -51,6 +51,23 @@ export default function Navbar() {
                 return (
                   <ScrollToTopLink
                     key={item.href}
+                    href={item.href}
+                    className={cn(
+                      "relative inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-1.5 py-0.5 text-sm font-medium whitespace-nowrap text-foreground/60 transition-all after:absolute after:inset-x-0 after:bottom-[-5px] after:h-0.5 after:bg-foreground after:opacity-0 after:transition-opacity hover:text-foreground focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:outline-1 focus-visible:outline-primary dark:text-muted-foreground dark:hover:text-foreground",
+                      isActive &&
+                        "text-primary after:bg-primary after:opacity-100 dark:text-primary dark:after:bg-primary",
+                    )}
+                  >
+                    {item.label}
+                  </ScrollToTopLink>
+                );
+              }
+
+              if (item.href === "/pricing") {
+                return (
+                  <ScrollToTopLink
+                    key={item.href}
+                    href={item.href}
                     className={cn(
                       "relative inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-1.5 py-0.5 text-sm font-medium whitespace-nowrap text-foreground/60 transition-all after:absolute after:inset-x-0 after:bottom-[-5px] after:h-0.5 after:bg-foreground after:opacity-0 after:transition-opacity hover:text-foreground focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:outline-1 focus-visible:outline-primary dark:text-muted-foreground dark:hover:text-foreground",
                       isActive &&
@@ -113,6 +130,23 @@ export default function Navbar() {
                 return (
                   <ScrollToTopLink
                     key={item.href}
+                    href={item.href}
+                    className={cn(
+                      "rounded-xl border border-transparent px-3 py-2 text-sm font-medium text-foreground/70 transition-colors hover:bg-muted/60 hover:text-foreground",
+                      isActive && "border-primary/20 bg-primary/8 text-primary",
+                    )}
+                    onClick={() => setIsOpen(false)}
+                  >
+                    {item.label}
+                  </ScrollToTopLink>
+                );
+              }
+
+              if (item.href === "/pricing") {
+                return (
+                  <ScrollToTopLink
+                    key={item.href}
+                    href={item.href}
                     className={cn(
                       "rounded-xl border border-transparent px-3 py-2 text-sm font-medium text-foreground/70 transition-colors hover:bg-muted/60 hover:text-foreground",
                       isActive && "border-primary/20 bg-primary/8 text-primary",
