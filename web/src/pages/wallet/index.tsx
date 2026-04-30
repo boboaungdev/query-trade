@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toPng } from "html-to-image";
 import {
@@ -1031,7 +1031,12 @@ export default function WalletPage() {
     return () => {
       window.clearTimeout(timeout);
     };
-  }, [sendUsername, username]);
+  }, [
+    sendRecipientPreview?.username,
+    sendUsername,
+    sendUsernameStatus,
+    username,
+  ]);
 
   useEffect(() => {
     if (!debouncedSendUsername) {
@@ -1072,12 +1077,6 @@ export default function WalletPage() {
       stopQrCamera();
     };
   }, []);
-
-  useEffect(() => {
-    if (isScanQrDialogOpen) {
-      void startQrCamera();
-    }
-  }, [isScanQrDialogOpen]);
 
   const activityPageItems = buildPageItems(activityPage, totalActivityPages);
   const walletBalanceUsdText = showBalance
@@ -1172,10 +1171,10 @@ export default function WalletPage() {
 
   const handleScanQrDialogOpenChange = (open: boolean) => {
     setIsScanQrDialogOpen(open);
+    setQrScanError("");
 
     if (!open) {
       stopQrCamera();
-      setQrScanError("");
       setIsScanningQr(false);
       setIsStartingQrCamera(false);
 
@@ -1467,94 +1466,97 @@ export default function WalletPage() {
     }
   };
 
-  const applyScannedQrPayload = async (rawQrValue: string) => {
-    const parsedPayload = parseWalletQrValue(rawQrValue);
+  const applyScannedQrPayload = useCallback(
+    async (rawQrValue: string) => {
+      const parsedPayload = parseWalletQrValue(rawQrValue);
 
-    if (!parsedPayload) {
-      throw new Error(
-        "Unsupported QR code. Use a Query Trade pay or receipt QR.",
-      );
-    }
-
-    if (parsedPayload.type === "receipt") {
-      const receiptData = await getSharedTransactionReceipt(
-        parsedPayload.shareId,
-      );
-      const transaction = receiptData.transaction;
-
-      if (
-        transaction.activityType !== parsedPayload.activityType &&
-        (parsedPayload.activityType === "send" ||
-          parsedPayload.activityType === "receive") &&
-        (transaction.activityType === "send" ||
-          transaction.activityType === "receive")
-      ) {
-        transaction.activityType = parsedPayload.activityType;
-        const nextActor = transaction.counterparty;
-        transaction.counterparty = transaction.actor;
-        transaction.actor = nextActor;
+      if (!parsedPayload) {
+        throw new Error(
+          "Unsupported QR code. Use a Query Trade pay or receipt QR.",
+        );
       }
 
-      setReceiptViewMode("shared");
-      setSelectedReceiptActivity(transaction);
+      if (parsedPayload.type === "receipt") {
+        const receiptData = await getSharedTransactionReceipt(
+          parsedPayload.shareId,
+        );
+        const transaction = receiptData.transaction;
+
+        if (
+          transaction.activityType !== parsedPayload.activityType &&
+          (parsedPayload.activityType === "send" ||
+            parsedPayload.activityType === "receive") &&
+          (transaction.activityType === "send" ||
+            transaction.activityType === "receive")
+        ) {
+          transaction.activityType = parsedPayload.activityType;
+          const nextActor = transaction.counterparty;
+          transaction.counterparty = transaction.actor;
+          transaction.actor = nextActor;
+        }
+
+        setReceiptViewMode("shared");
+        setSelectedReceiptActivity(transaction);
+        setIsScanQrDialogOpen(false);
+        return;
+      }
+
+      if (!parsedPayload.userId) {
+        throw new Error("Unsupported QR code. Use a Query Trade user QR.");
+      }
+
+      if (parsedPayload.userId === userId) {
+        throw new Error("You cannot scan your own receive QR code.");
+      }
+
+      const userData = await fetchUserById(parsedPayload.userId);
+      const parsedUsername =
+        userData?.result?.user?.username?.trim()?.toLowerCase() || "";
+
+      if (!USERNAME_REGEX.test(parsedUsername)) {
+        throw new Error("Recipient username is not available.");
+      }
+
+      if (parsedUsername === username.toLowerCase()) {
+        throw new Error("You cannot scan your own QR code.");
+      }
+
+      const recipient = userData?.result?.user;
+
+      skipNextSendUsernameValidationRef.current = true;
+      setSendUsername(parsedUsername);
+      setDebouncedSendUsername("");
+      setSendUsernameStatus("available");
+      setIsSendRecipientLocked(true);
+      setSendRecipientPreview({
+        id: recipient?._id,
+        username: recipient?.username || parsedUsername,
+        name: recipient?.name,
+        avatar: recipient?.avatar,
+        membership: recipient?.membership,
+      });
+
+      if (
+        typeof parsedPayload.amount === "number" &&
+        Number.isFinite(parsedPayload.amount) &&
+        parsedPayload.amount > 0
+      ) {
+        const scannedAmount = Math.trunc(parsedPayload.amount);
+
+        setSendAmount(String(scannedAmount));
+        setIsSendAmountLocked(true);
+      } else {
+        setSendAmount("");
+        setIsSendAmountLocked(false);
+      }
+
       setIsScanQrDialogOpen(false);
-      return;
-    }
-
-    if (!parsedPayload.userId) {
-      throw new Error("Unsupported QR code. Use a Query Trade user QR.");
-    }
-
-    if (parsedPayload.userId === userId) {
-      throw new Error("You cannot scan your own receive QR code.");
-    }
-
-    const userData = await fetchUserById(parsedPayload.userId);
-    const parsedUsername =
-      userData?.result?.user?.username?.trim()?.toLowerCase() || "";
-
-    if (!USERNAME_REGEX.test(parsedUsername)) {
-      throw new Error("Recipient username is not available.");
-    }
-
-    if (parsedUsername === username.toLowerCase()) {
-      throw new Error("You cannot scan your own QR code.");
-    }
-
-    const recipient = userData?.result?.user;
-
-    skipNextSendUsernameValidationRef.current = true;
-    setSendUsername(parsedUsername);
-    setDebouncedSendUsername("");
-    setSendUsernameStatus("available");
-    setIsSendRecipientLocked(true);
-    setSendRecipientPreview({
-      id: recipient?._id,
-      username: recipient?.username || parsedUsername,
-      name: recipient?.name,
-      avatar: recipient?.avatar,
-      membership: recipient?.membership,
-    });
-
-    if (
-      typeof parsedPayload.amount === "number" &&
-      Number.isFinite(parsedPayload.amount) &&
-      parsedPayload.amount > 0
-    ) {
-      const scannedAmount = Math.trunc(parsedPayload.amount);
-
-      setSendAmount(String(scannedAmount));
-      setIsSendAmountLocked(true);
-    } else {
-      setSendAmount("");
-      setIsSendAmountLocked(false);
-    }
-
-    setIsScanQrDialogOpen(false);
-    setReceiptViewMode("local");
-    setIsSendDialogOpen(true);
-    setSendDialogStep("details");
-  };
+      setReceiptViewMode("local");
+      setIsSendDialogOpen(true);
+      setSendDialogStep("details");
+    },
+    [userId, username],
+  );
 
   const handleSaveReceipt = async () => {
     if (!receiptContentRef.current || !selectedReceiptActivity) {
@@ -1634,7 +1636,7 @@ export default function WalletPage() {
     }
   };
 
-  const startQrCamera = async () => {
+  const startQrCamera = useCallback(async () => {
     if (isStartingQrCamera || isScanningQr) {
       return;
     }
@@ -1737,6 +1739,12 @@ export default function WalletPage() {
     } finally {
       setIsStartingQrCamera(false);
     }
+  }, [applyScannedQrPayload, isScanningQr, isStartingQrCamera]);
+
+  const handleOpenScanQrDialog = () => {
+    setIsScanQrDialogOpen(true);
+    setQrScanError("");
+    void startQrCamera();
   };
 
   const handleQrFileChange = async (
@@ -1814,7 +1822,7 @@ export default function WalletPage() {
                   variant="ghost"
                   size="icon"
                   className="size-8 shrink-0"
-                  onClick={() => setIsScanQrDialogOpen(true)}
+                  onClick={handleOpenScanQrDialog}
                   aria-label="Scan QR"
                   title="Scan QR"
                 >
@@ -2657,7 +2665,7 @@ export default function WalletPage() {
                         variant="ghost"
                         size="icon"
                         className="size-7"
-                        onClick={() => setIsScanQrDialogOpen(true)}
+                        onClick={handleOpenScanQrDialog}
                         disabled={isSendingTransfer}
                         aria-label="Scan QR code"
                         title="Scan QR code"
@@ -3091,7 +3099,7 @@ export default function WalletPage() {
                 )}
               </div>
               <div className="px-4 py-3 text-sm text-muted-foreground">
-                Point your camera at a recipient QR.
+                Scan with your camera or upload a QR image.
               </div>
             </div>
 
@@ -3103,22 +3111,9 @@ export default function WalletPage() {
               onChange={(event) => void handleQrFileChange(event)}
             />
 
-            <Button
-              type="button"
-              className="w-full justify-center"
-              variant="ghost"
-              onClick={() => void startQrCamera()}
-              disabled={isStartingQrCamera || isScanningQr}
-            >
-              {isStartingQrCamera ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <>
-                  <ScanLine className="size-4" />
-                  Restart camera
-                </>
-              )}
-            </Button>
+            <p className="text-center text-xs font-medium tracking-wide text-muted-foreground uppercase">
+              or
+            </p>
 
             <Button
               type="button"
