@@ -28,8 +28,9 @@ import {
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription } from "@/components/ui/card";
-import { APP_NAME, APP_TAGLINE, APP_URL } from "@/lib/constants";
+import { APP_NAME, APP_TAGLINE, APP_URL, SITE_URL } from "@/lib/constants";
 import { requireMarketingGuest } from "@/lib/marketing-guest";
+import { createPageMetadata } from "@/lib/seo";
 import { getSubscriptionPlans } from "@/lib/subscription-plans";
 
 const proofCards = [
@@ -50,28 +51,20 @@ const proofCards = [
   },
 ];
 
-export const metadata: Metadata = {
-  title: `${APP_NAME} | Strategy Builder and Backtesting App`,
-  description:
-    "Build trading strategies, run backtests across major market timeframes, and manage your wallet and subscriptions in one connected trading app.",
-  alternates: {
-    canonical: APP_URL,
-  },
-  openGraph: {
-    title: `${APP_NAME} | Strategy Builder and Backtesting App`,
-    description:
-      "Build trading strategies, run backtests across major market timeframes, and manage your wallet and subscriptions in one connected trading app.",
-    url: APP_URL,
-    siteName: APP_NAME,
-    type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: `${APP_NAME} | Strategy Builder and Backtesting App`,
-    description:
-      "Build trading strategies, run backtests across major market timeframes, and manage your wallet and subscriptions in one connected trading app.",
-  },
-};
+const homeDescription =
+  "Build trading strategies, run backtests across major market timeframes, and manage your wallet and subscriptions in one connected trading app.";
+
+export const metadata: Metadata = createPageMetadata({
+  title: "Strategy Builder and Backtesting App",
+  description: homeDescription,
+  path: "/",
+  keywords: [
+    "strategy builder",
+    "trading backtests",
+    "trader subscriptions",
+    "strategy publishing",
+  ],
+});
 
 export default async function Page() {
   await requireMarketingGuest();
@@ -87,8 +80,8 @@ export default async function Page() {
     "@context": "https://schema.org",
     "@type": "WebPage",
     name: `${APP_NAME} Home`,
-    description: metadata.description,
-    url: APP_URL,
+    description: homeDescription,
+    url: SITE_URL,
     hasPart: {
       "@type": "OfferCatalog",
       name: `${APP_NAME} plans`,

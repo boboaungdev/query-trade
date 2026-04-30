@@ -9,8 +9,9 @@ import SiteFooter from "@/components/SiteFooter";
 import { UserMembershipMark } from "@/components/user-membership";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { APP_NAME, APP_URL } from "@/lib/constants";
+import { APP_NAME, APP_URL, SITE_URL } from "@/lib/constants";
 import { requireMarketingGuest } from "@/lib/marketing-guest";
+import { createPageMetadata } from "@/lib/seo";
 import { getSubscriptionPlans } from "@/lib/subscription-plans";
 
 const pricingGuides = [
@@ -34,28 +35,20 @@ const pricingGuides = [
   },
 ];
 
-export const metadata: Metadata = {
-  title: `${APP_NAME} | Pricing`,
-  description:
-    "Compare Free, Plus, and Pro plans for strategy building, backtesting, creator access, and broader trading workflow features.",
-  alternates: {
-    canonical: `${APP_URL}/pricing`,
-  },
-  openGraph: {
-    title: `${APP_NAME} | Pricing`,
-    description:
-      "Compare Free, Plus, and Pro plans for strategy building, backtesting, creator access, and broader trading workflow features.",
-    url: `${APP_URL}/pricing`,
-    siteName: APP_NAME,
-    type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: `${APP_NAME} | Pricing`,
-    description:
-      "Compare Free, Plus, and Pro plans for strategy building, backtesting, creator access, and broader trading workflow features.",
-  },
-};
+const pricingDescription =
+  "Compare Free, Plus, and Pro plans for strategy building, backtesting, creator access, and broader trading workflow features.";
+
+export const metadata: Metadata = createPageMetadata({
+  title: "Pricing",
+  description: pricingDescription,
+  path: "/pricing",
+  keywords: [
+    "pricing plans",
+    "trading app pricing",
+    "backtesting subscription",
+    "creator membership",
+  ],
+});
 
 export default async function PricingPage() {
   await requireMarketingGuest();
@@ -64,7 +57,7 @@ export default async function PricingPage() {
     "@context": "https://schema.org",
     "@type": "OfferCatalog",
     name: `${APP_NAME} pricing`,
-    url: `${APP_URL}/pricing`,
+    url: `${SITE_URL}/pricing`,
     itemListElement: homePlans.map((plan) => ({
       "@type": "Offer",
       name: plan.name,

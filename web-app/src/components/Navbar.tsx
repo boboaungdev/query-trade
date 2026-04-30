@@ -30,6 +30,7 @@ import {
   Wallet,
   Eye,
   EyeOff,
+  TicketPercent,
 } from "lucide-react";
 
 export default function Navbar() {
@@ -178,6 +179,19 @@ export default function Navbar() {
                     <Eye className="h-4 w-4" />
                   )}
                 </button>
+              </DropdownMenuItem>
+
+              <DropdownMenuItem asChild>
+                <Link
+                  to="/pricing"
+                  className="flex items-center gap-2"
+                  onClick={() => {
+                    setIsAvatarMenuOpen(false);
+                  }}
+                >
+                  <TicketPercent className="h-4 w-4" />
+                  <span>Pricing</span>
+                </Link>
               </DropdownMenuItem>
 
               <DropdownMenuItem asChild>
