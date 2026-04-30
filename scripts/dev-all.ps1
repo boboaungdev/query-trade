@@ -7,7 +7,7 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $projects = @(
     @{ Name = "query-trade web"; Path = Join-Path $repoRoot "web"; Command = "npm.cmd run dev" },
     @{ Name = "query-trade server"; Path = Join-Path $repoRoot "server"; Command = "npm.cmd run dev" },
-    @{ Name = "query-trade seo-web"; Path = Join-Path $repoRoot "seo-web"; Command = "npm.cmd run dev" }
+    @{ Name = "query-trade web-next"; Path = Join-Path $repoRoot "web-next"; Command = "npm.cmd run dev" }
 )
 
 foreach ($project in $projects) {
