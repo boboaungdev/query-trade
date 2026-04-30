@@ -7,7 +7,7 @@ import {
 export const Token = {
   makeAccessToken(payload) {
     return jwt.sign(payload, ACCESS_TOKEN_SECRET, {
-      expiresIn: "15m",
+      expiresIn: "30d",
     });
   },
 
