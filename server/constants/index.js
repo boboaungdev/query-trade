@@ -1,6 +1,6 @@
 // App
 export const PORT = process.env.PORT || 3001;
-export const APP_NAME = process.env.APP_NAME || "Query Trade";
+export const APP_NAME = process.env.APP_NAME || "Strat Arena";
 export const EXPIRE_MINUTE = parseInt(process.env.EXPIRE_MINUTE ?? "10", 10);
 export const EXTRA_ALLOWED_ORIGINS = process.env.EXTRA_ALLOWED_ORIGINS || "";
 export const ENABLE_DEFAULT_SEED = process.env.ENABLE_DEFAULT_SEED !== "false";

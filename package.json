@@ -1,5 +1,5 @@
 {
-  "name": "query-trade",
+  "name": "strat-arena-monorepo",
   "private": true,
   "scripts": {
     "dev:web-app": "npm --prefix web-app run dev",

@@ -1508,7 +1508,7 @@ export default function WalletPage() {
 
       if (!parsedPayload) {
         throw new Error(
-          "Unsupported QR code. Use a Query Trade pay or receipt QR.",
+          `Unsupported QR code. Use a ${APP_NAME} pay or receipt QR.`,
         );
       }
 
@@ -1538,7 +1538,7 @@ export default function WalletPage() {
       }
 
       if (!parsedPayload.userId) {
-        throw new Error("Unsupported QR code. Use a Query Trade user QR.");
+        throw new Error(`Unsupported QR code. Use a ${APP_NAME} user QR.`);
       }
 
       if (parsedPayload.userId === userId) {
@@ -2557,7 +2557,7 @@ export default function WalletPage() {
                           Receipt QR
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          Scan to open this transaction receipt in Query Trade.
+                          Scan to open this transaction receipt in {APP_NAME}.
                         </p>
                         <div className="flex items-center gap-2 pt-1">
                           <img
@@ -3162,7 +3162,7 @@ export default function WalletPage() {
           <DialogHeader>
             <DialogTitle>Scan QR</DialogTitle>
             <DialogDescription>
-              Scan a Query Trade QR code with your camera.
+              Scan a {APP_NAME} QR code with your camera.
             </DialogDescription>
           </DialogHeader>
 

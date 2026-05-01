@@ -1,11 +1,13 @@
-import { SITE_URL } from "../constants/index.js";
+import { APP_NAME, SITE_URL } from "../constants/index.js";
+
+const apiAppName = `${APP_NAME} API`;
 
 export const rootHtml = `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Query Trade API</title>
+    <title>${apiAppName}</title>
     <link rel="icon" type="image/svg+xml" href="/query-trade.svg" />
     <style>
       :root {
@@ -267,11 +269,11 @@ export const rootHtml = `<!doctype html>
     <main>
       <section class="hero">
         <div class="hero-media">
-          <img class="logo" src="/query-trade.svg" alt="Query Trade logo" />
+          <img class="logo" src="/query-trade.svg" alt="${APP_NAME} logo" />
         </div>
         <div class="hero-copy">
           <span class="eyebrow"><span class="status-dot" aria-hidden="true"></span>API Status OK</span>
-          <h1>Query Trade API</h1>
+          <h1>${apiAppName}</h1>
           <p class="subtitle">
             Backtesting, execution workflows, and exchange-connected strategy
             tooling in one focused service layer.

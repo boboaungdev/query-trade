@@ -6,7 +6,9 @@ import { GoogleOAuthProvider } from "@react-oauth/google";
 import "./index.css";
 import App from "./App.tsx";
 import { ThemeProvider } from "@/components/theme-provider.tsx";
-import { GOOGLE_CLIENT_ID } from "./constants/index.ts";
+import { APP_NAME, GOOGLE_CLIENT_ID } from "./constants/index.ts";
+
+document.title = APP_NAME;
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

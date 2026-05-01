@@ -1,4 +1,4 @@
-export const APP_NAME = "Query Trade";
+export const APP_NAME = "Strat Arena";
 export const APP_TAGLINE = "Discipline over Emotion.";
 export const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
